@@ -1,0 +1,110 @@
+{
+  "contrast": [
+    {
+      "text": "Bu aya kadar işlenmemiş taksit yok",
+      "ratio": 3.3460542562492495,
+      "fg": "rgb(34, 185, 129)",
+      "bg": [
+        27.20392156862745,
+        51.294117647058826,
+        59.74901960784314,
+        1
+      ],
+      "opacity": 0.7,
+      "font": "11px",
+      "class": "mt-0.5 text-[11px] opacity-70"
+    },
+    {
+      "text": "50.000,00 ₺",
+      "ratio": 3.3460542562492495,
+      "fg": "rgb(34, 185, 129)",
+      "bg": [
+        27.20392156862745,
+        51.294117647058826,
+        59.74901960784314,
+        1
+      ],
+      "opacity": 0.7,
+      "font": "11px",
+      "class": "mt-0.5 text-[11px] opacity-70"
+    },
+    {
+      "text": "Bu ay için bütçe limiti yok",
+      "ratio": 3.3460542562492495,
+      "fg": "rgb(34, 185, 129)",
+      "bg": [
+        27.20392156862745,
+        51.294117647058826,
+        59.74901960784314,
+        1
+      ],
+      "opacity": 0.7,
+      "font": "11px",
+      "class": "mt-0.5 text-[11px] opacity-70"
+    },
+    {
+      "text": "Veri tablolarına erişilebiliyor",
+      "ratio": 3.3460542562492495,
+      "fg": "rgb(34, 185, 129)",
+      "bg": [
+        27.20392156862745,
+        51.294117647058826,
+        59.74901960784314,
+        1
+      ],
+      "opacity": 0.7,
+      "font": "11px",
+      "class": "mt-0.5 text-[11px] opacity-70"
+    }
+  ],
+  "targets": [
+    {
+      "text": "Analiz",
+      "aria": null,
+      "width": 38.640625,
+      "height": 33.328125,
+      "before": "none",
+      "after": "none"
+    },
+    {
+      "text": "Ayrıntılar",
+      "aria": null,
+      "width": 55.078125,
+      "height": 33.328125,
+      "before": "none",
+      "after": "none"
+    },
+    {
+      "text": "Asistan",
+      "aria": null,
+      "width": 45.625,
+      "height": 33.328125,
+      "before": "none",
+      "after": "none"
+    },
+    {
+      "text": "AI özeti",
+      "aria": null,
+      "width": 93.34375,
+      "height": 36,
+      "before": "none",
+      "after": "none"
+    },
+    {
+      "text": "Görsel indir",
+      "aria": null,
+      "width": 120.171875,
+      "height": 36,
+      "before": "none",
+      "after": "none"
+    },
+    {
+      "text": "Sayfayı yazdır",
+      "aria": null,
+      "width": 134.296875,
+      "height": 36,
+      "before": "none",
+      "after": "none"
+    }
+  ]
+}

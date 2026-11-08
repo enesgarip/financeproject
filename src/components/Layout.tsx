@@ -1,5 +1,5 @@
 import { Eye, EyeOff, LogOut, MonitorSmartphone, Moon, MoreHorizontal, Sun } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router'
 import { useDailyNetWorthSnapshot } from '../app/useDailyNetWorthSnapshot'
 import { useAuth } from '../auth/useAuth'
@@ -14,6 +14,7 @@ import { QuickActionsButton, QuickActionsProvider } from './QuickActions'
 import { useDialogA11y } from './ui/use-dialog-a11y'
 import { FinanceDataStatus } from './FinanceDataStatus'
 import { FeatureExplorerLauncher } from './FeatureExplorerLauncher'
+const PendingOperationsPanel = lazy(() => import('./finance/PendingOperationsPanel').then(module => ({ default: module.PendingOperationsPanel })))
 
 /**
  * Uygulama kabuğu — Şerit (`4e`). Kart yok, gölge yok: rail sayfadan 1px
@@ -189,6 +190,7 @@ function LayoutInner() {
         >
           <PullToRefresh>
             <FinanceDataStatus />
+            <Suspense fallback={null}><PendingOperationsPanel /></Suspense>
             {new URLSearchParams(search).get('returnTo') === '/analiz#ay-kapanisi' ? <Link to="/analiz#ay-kapanisi" className="mb-4 inline-flex min-h-11 items-center text-sm font-semibold text-primary">← Ay kapanış kontrolüne dön</Link> : null}
             <Outlet />
           </PullToRefresh>

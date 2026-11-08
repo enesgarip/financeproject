@@ -1,0 +1,190 @@
+import { expect, test, type Page } from '@playwright/test'
+
+// Tüm dış istekler sentetik yanıtlanır: bu test gerçek Supabase'e bağlanamaz.
+const userId = '11111111-1111-4111-8111-111111111111'
+const now = '2026-10-26T09:00:00.000Z'
+const base = { user_id: userId, created_at: now, updated_at: now, note: null }
+const bank = { ...base, id: 'bank-1', bank_name: 'İş Bankası', card_name: 'Örnek hesap', card_type: 'banka_karti', account_kind: 'bank', current_balance: 20000, credit_limit: 0, debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0, provision_amount: 0, statement_day: null, due_day: null, holder_name: null, account_number: null, limit_group_name: null }
+const tables: Record<string, Record<string, unknown>[]> = {
+  cards: [bank, { ...bank, id: 'bank-2', card_name: 'Diğer hesap', bank_name: 'Garanti', current_balance: 5000 }, { ...bank, id: 'credit-1', card_name: 'Örnek kart', card_type: 'kredi_karti', current_balance: 0, credit_limit: 10000, debt_amount: 1000, current_period_spending: 1000, statement_day: 4, due_day: 14 }],
+  assets: [{ ...base, id: 'asset-1', name: 'Örnek yatırım', category: 'Diğer', amount: 1, unit: 'adet', unit_cost: 5000, estimated_value_try: 5000, auto_valued: false, currency: 'TRY', ticker: null, source: null }],
+  payments: [{ ...base, id: 'payment-1', title: 'Örnek aidat', category: 'Kira / aidat', amount: 100, amount_status: 'exact', due_date: '2026-10-28', status: 'bekliyor', payment_method: 'manual', recurrence: 'monthly', recurrence_day: 28, recurrence_end_date: null, auto_source_card_id: null }],
+  salary_history: [{ ...base, id: 'salary-1', title: 'Örnek maaş', amount: 50000, effective_date: '2026-10-01' }],
+  kasa_buckets: [{ ...base, id: 'reserve-1', name: 'Bağımsız pay', reserved_amount: 100, goal_id: null, last_contribution_month: null, sort_order: 0 }, { ...base, id: 'reserve-2', name: 'Hedefe bağlı pay', reserved_amount: 200, goal_id: 'goal-1', last_contribution_month: '2026-10-01', sort_order: 1 }],
+  savings_goals: [{ ...base, id: 'goal-1', name: 'Örnek hedef', value_type: 'TRY', target_amount: 10000, current_amount: 1000, estimated_value_try: 1000, auto_valued: false, valued_at: null, valuation_rate: null, target_date: '2027-10-01', status: 'active', target_anchor: 'manual', target_anchor_units: null, target_anchor_months: null }],
+  wishlist_items: [{ ...base, id: 'wish-1', name: 'Bekleyen ürün', estimated_price: 500, is_purchased: false, purchased_at: null, sort_order: 0 }, { ...base, id: 'wish-2', name: 'Alınmış ürün', estimated_price: 100, is_purchased: true, purchased_at: now, sort_order: 1 }],
+  cars: [{ ...base, id: 'car-1', name: 'Örnek araç', plate: 'TEST', current_odometer_km: 50000, sort_order: 0 }],
+  expense_contexts: [{ ...base, id: 'context-1', name: 'Örnek grup', kind: 'pet', budget_amount: 1000, starts_on: '2026-10-01', ends_on: null, completed_at: null, sort_order: 0 }],
+}
+const snapshotKeys = ['assets', 'cards', 'loans', 'loan_installments', 'debts', 'payments', 'salary_history', 'transaction_history', 'budgets', 'card_expenses', 'card_installments', 'card_statement_archives', 'card_statement_payments', 'savings_goals', 'savings_goal_components', 'savings_goal_sources', 'account_reconciliations', 'missing_tables']
+
+async function mockApp(page: Page, theme: string, overrides: typeof tables = {}) {
+  const rows = { ...tables, ...overrides }
+  const snapshot = Object.fromEntries(snapshotKeys.map(key => [key, rows[key] ?? []]))
+  await page.clock.install({ time: new Date(now) })
+  const user = { id: userId, email: 'synthetic@example.test', aud: 'authenticated', role: 'authenticated', created_at: now, app_metadata: {}, user_metadata: {} }
+  const token = `${Buffer.from('{"alg":"HS256","typ":"JWT"}').toString('base64url')}.${Buffer.from(JSON.stringify({ sub: userId, role: 'authenticated', aud: 'authenticated', exp: 2100000000 })).toString('base64url')}.synthetic`
+  await page.addInitScript(({ user, token, theme, now }) => {
+    localStorage.setItem('sb-example-auth-token', JSON.stringify({ access_token: token, refresh_token: 'synthetic', expires_at: 2100000000, expires_in: 3600, token_type: 'bearer', user }))
+    localStorage.setItem('theme', theme)
+    localStorage.setItem('denge:theme-preference', theme)
+    localStorage.setItem('denge:net-worth-snapshot-day', `${user.id}:2026-10-26`)
+    localStorage.setItem('fp.marketRates.v1', JSON.stringify({ rates: { USD: { buying: 40, selling: 41 }, GRA: { buying: 5000, selling: 5100 }, CEYREKALTIN: { buying: 8000, selling: 8100 } }, asOf: now, fetchedAt: now }))
+  }, { user, token, theme, now })
+  await page.route('**/*', route => {
+    const url = new URL(route.request().url())
+    if (['127.0.0.1', 'localhost'].includes(url.hostname)) {
+      if (url.pathname.startsWith('/_vercel/')) return route.fulfill({ body: '', contentType: 'application/javascript' })
+      return route.continue()
+    }
+    if (url.hostname === 'example.supabase.co') {
+      const name = url.pathname.split('/').at(-1)!
+      let data: unknown = name === 'fetch_finance_snapshot' ? snapshot : name === 'bist-quote' ? { prices: {}, asOf: now } : url.pathname.includes('/rpc/') ? 0 : name === 'user' ? user : rows[name] ?? []
+      if (['card_ledger', 'account_ledger', 'card_expenses', 'card_installments', 'card_statement_archives'].includes(name)) {
+        const before = url.searchParams.get('id')?.replace(/^lt\./, '')
+        const cardId = url.searchParams.get('card_id')?.replace(/^eq\./, '')
+        data = (rows[name] ?? []).filter(row => (!before || String(row.id) < before) && (!cardId || row.card_id === cardId))
+          .toSorted((a, b) => String(b.id).localeCompare(String(a.id))).slice(0, Number(url.searchParams.get('limit') ?? 1000))
+      }
+      return route.fulfill({ json: data })
+    }
+    return route.abort()
+  })
+}
+
+
+
+test('audit karar: eksik rezerv ve eksik taksit tablosunda olumlu karar', async ({ page }) => {
+  await mockApp(page, 'light', { cards: [bank], salary_history: [], missing_tables: ['card_installments'] as any })
+  await page.route('**/rest/v1/kasa_buckets*', route => route.fulfill({ status: 500, json: { message: 'temporary backend failure', code: 'XX000' } }))
+  await page.goto('/odemeler/alsam-mi?tutar=500')
+  await expect(page.getByText('Plana göre uygun', { exact: true })).toBeVisible()
+  await expect(page.getByText(/Kasa rezervi doğrulanamadı/)).toBeVisible()
+  await page.screenshot({ path: 'test-results/audit-unknown-reserve.png', fullPage: true })
+})
+
+test('audit karar: kasa hedefi eksik çözülüyor ve kayıp yanıtta iki kez ayrılıyor', async ({ page }) => {
+  await mockApp(page, 'light', {
+    cards: [bank], salary_history: [],
+    savings_goals: [{ ...tables.savings_goals[0], current_amount: 0, target_amount: 10000 }],
+    kasa_buckets: [{ ...tables.kasa_buckets[1], reserved_amount: 9000 }],
+    savings_goal_sources: [{ ...base, id: 'source-1', goal_id: 'goal-1', component_id: null, kind: 'kasa_bucket', bucket_id: 'reserve-2', asset_id: null, asset_category: null, card_id: null, sort_order: 0 }],
+  })
+  let calls = 0
+  let reserved = 9000
+  await page.route('**/rest/v1/rpc/contribute_to_goal_bucket', route => {
+    calls++
+    reserved += route.request().postDataJSON().p_amount
+    return calls === 1 ? route.abort('connectionreset') : route.fulfill({ json: reserved })
+  })
+  await page.goto('/odemeler/alsam-mi?tutar=2000')
+  await expect(page.getByText(/hedefe.*eklenir|hedefine.*eklenir/)).toBeVisible()
+  await expect(page.getByText(/Bu tutar hedefin kalanını karşılıyor/)).toHaveCount(0)
+  const button = page.getByRole('button', { name: /Vazgeçtim/ })
+  await button.click()
+  await expect(button).toBeEnabled()
+  await button.click()
+  await expect(page.getByText(/kovasına ayrıldı/)).toBeVisible()
+  expect(calls).toBe(2)
+  expect(reserved).toBe(13000)
+  console.log('AUDIT_DOUBLE_RESERVE', { calls, reserved, intended: 11000 })
+  await page.screenshot({ path: 'test-results/audit-target-double-reserve.png', fullPage: true })
+})
+
+test('audit gizlilik: karar gerekçesi tutarı açık gösteriyor', async ({ page }) => {
+  await mockApp(page, 'light', { cards: [bank], salary_history: [] })
+  await page.addInitScript(() => localStorage.setItem('financeproject.balancePrivacy', 'hidden'))
+  await page.goto('/odemeler/alsam-mi?tutar=99000')
+  await page.getByRole('button', { name: '3', exact: true }).click()
+  await expect(page.getByText(/3 ay boyunca aylık 33.000,00/)).toBeVisible()
+  await page.screenshot({ path: 'test-results/audit-privacy-leak.png', fullPage: true })
+})
+
+test('audit ay kapanışı: eksik kısmi ödeme tablosunda erişim yeşil', async ({ page }) => {
+  await mockApp(page, 'light', { cards: [bank], salary_history: [], missing_tables: ['card_statement_payments'] as any })
+  await page.goto('/analiz#ay-kapanisi')
+  await expect(page.getByText('Veri tablolarına erişilebiliyor', { exact: true })).toBeVisible()
+  await page.screenshot({ path: 'test-results/audit-schema-green.png', fullPage: true })
+})
+
+test('audit kredi: taksit sorgusu hatası plan yok diye sunuluyor', async ({ page }) => {
+  const loan = { ...base, id: 'loan-1', bank_name: 'Deneme Bankası', loan_name: 'Deneme kredisi', principal_amount: 12000, total_payment: 12000, monthly_payment: 1000, total_installments: 12, remaining_installments: 12, remaining_amount: 12000, interest_rate: 0, installment_day: 20, start_date: '2026-10-01', end_date: '2027-09-20', status: 'active' }
+  await mockApp(page, 'light', { loans: [loan] })
+  await page.route('**/rest/v1/loan_installments*', route => route.fulfill({ status: 500, json: { message: 'temporary error', code: 'XX000' } }))
+  await page.goto('/borclar/krediler')
+  await expect(page.getByText('Ödeme planı yok', { exact: true })).toBeVisible()
+  await expect(page.getByText('Kredi taksitleri yüklenemedi.', { exact: true })).toHaveCount(0)
+  await page.screenshot({ path: 'test-results/audit-loan-false-empty.png', fullPage: true })
+})
+
+for (const scenario of ['reserve', 'schema']) test(`audit eksik veri ayrık: ${scenario}`, async ({ page }) => {
+  await mockApp(page, 'light', { cards: [bank], salary_history: [], missing_tables: scenario === 'schema' ? ['card_installments'] as any : [] })
+  if (scenario === 'reserve') await page.route('**/rest/v1/kasa_buckets*', route => route.fulfill({ status: 500, json: { message: 'temporary error', code: 'XX000' } }))
+  await page.goto('/odemeler/alsam-mi?tutar=500')
+  await expect(page.getByText('Plana göre uygun', { exact: true })).toBeVisible()
+})
+
+
+test('audit kredi: plan yazımı hatasından sonra tekrar Kaydet çift kredi yaratıyor', async ({ page }) => {
+  await mockApp(page, 'light', { loans: [] })
+  const writes: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/loans*', route => {
+    if (route.request().method() === 'POST') {
+      const row = { ...base, ...route.request().postDataJSON(), id: `new-loan-${writes.length + 1}` }
+      writes.push(row)
+      return route.fulfill({ json: row })
+    }
+    return route.fulfill({ json: writes })
+  })
+  await page.route('**/rest/v1/loan_installments*', route => route.request().method() === 'POST'
+    ? route.fulfill({ status: 500, json: { code: 'XX000', message: 'plan failed' } })
+    : route.fulfill({ json: [] }))
+  await page.goto('/borclar/krediler')
+  await page.getByRole('button', { name: 'Kredi ekle', exact: true }).first().click()
+  const modal = page.getByRole('dialog')
+  await modal.getByLabel('Banka', { exact: false }).fill('Deneme')
+  await modal.getByLabel('Kredi adı', { exact: false }).fill('Yeni kredi')
+  await modal.getByLabel('Toplam kredi tutarı', { exact: false }).fill('12000')
+  await modal.getByLabel('Aylık ödeme', { exact: false }).fill('1000')
+  await modal.getByLabel('Taksit günü', { exact: false }).selectOption('20')
+  await modal.getByLabel('Başlangıç tarihi', { exact: false }).fill('2026-10-01')
+  await modal.getByLabel('Bitiş tarihi', { exact: false }).fill('2027-09-20')
+  const save = modal.getByRole('button', { name: 'Kaydet', exact: true })
+  await save.click()
+  await expect(save).toBeEnabled()
+  expect(writes).toHaveLength(1)
+  await save.click()
+  await expect(save).toBeEnabled()
+  expect(writes).toHaveLength(2)
+  console.log('AUDIT_DOUBLE_LOAN', { writes: writes.length })
+  await page.screenshot({ path: 'test-results/audit-loan-double-create.png', fullPage: true })
+})
+
+test('audit bütçe: analiz limiti değiştirince bütçe CRUD önbelleği eski kalıyor', async ({ page }) => {
+  const budget = { ...base, id: 'budget-1', category: 'Market', month: '2026-10-01', limit_amount: 1000, limit_anchor: 'manual', limit_anchor_value: null }
+  const expense = { ...base, id: 'expense-1', card_id: 'credit-1', spent_at: '2026-10-25', description: 'Market örneği', category: 'Market', amount: 100, status: 'posted', installment_count: 1 }
+  await mockApp(page, 'light', { budgets: [budget], card_expenses: [expense] })
+  let budgetReads = 0
+  await page.route('**/rest/v1/budgets*', route => {
+    if (route.request().method() === 'GET') { budgetReads++; return route.fulfill({ json: [budget] }) }
+    Object.assign(budget, route.request().postDataJSON())
+    return route.fulfill({ json: budget })
+  })
+  await page.goto('/odemeler/hedefler')
+  await expect(page.getByText('Ay bütçesi', { exact: true })).toBeVisible()
+  await expect.poll(() => budgetReads).toBe(1)
+  await page.locator('aside').getByRole('link', { name: 'Analiz', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Görünüm', exact: true }).selectOption('calendar')
+  await page.locator('summary').filter({ hasText: 'Market' }).click()
+  await page.getByRole('button', { name: 'Limiti düzenle', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await modal.getByRole('textbox', { name: 'Aylık sabit limit (TL)', exact: true }).fill('2000')
+  await modal.getByRole('button', { name: 'Limiti kaydet', exact: true }).click()
+  await expect(modal).toHaveCount(0)
+  await page.locator('aside').getByRole('link', { name: 'Plan', exact: true }).click()
+  await page.getByRole('link', { name: 'Bütçe ve hedefler', exact: true }).click()
+  await expect(page.getByText('Ay bütçesi', { exact: true })).toBeVisible()
+  expect(budget.limit_amount).toBe(2000)
+  expect(budgetReads).toBe(1)
+  await page.screenshot({ path: 'test-results/audit-budget-stale.png', fullPage: true })
+})

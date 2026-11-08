@@ -8,13 +8,15 @@ type SimpleModalProps = {
   open: boolean
   children: React.ReactNode
   onClose: () => void
+  busy?: boolean
 }
 
-export function SimpleModal({ title, open, children, onClose }: SimpleModalProps) {
+export function SimpleModal({ title, open, children, onClose, busy = false }: SimpleModalProps) {
   useBodyScrollLock(open)
   // Focus sözleşmesi (odak içeri, Tab hapsi, Escape, kapanışta geri verme) ortak
   // hook'ta — aynı davranış ConfirmDialog ve import modallarında da kullanılıyor.
-  const sectionRef = useDialogA11y<HTMLElement>(open, onClose)
+  const requestClose = () => { if (!busy) onClose() }
+  const sectionRef = useDialogA11y<HTMLElement>(open, requestClose)
 
   if (!open) return null
 
@@ -25,6 +27,8 @@ export function SimpleModal({ title, open, children, onClose }: SimpleModalProps
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
+        aria-busy={busy || undefined}
+        data-navigation-busy={busy || undefined}
         aria-labelledby="simple-modal-title"
         className="motion-panel max-h-[88dvh] w-full min-w-0 overflow-x-hidden overflow-y-auto rounded-t-2xl border border-line-strong bg-raised text-ink focus:outline-none sm:max-h-[92dvh] sm:max-w-2xl sm:rounded-2xl"
       >
@@ -36,7 +40,8 @@ export function SimpleModal({ title, open, children, onClose }: SimpleModalProps
           <h2 id="simple-modal-title" className="min-w-0 break-words text-base font-semibold text-ink">{title}</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
+            disabled={busy}
             className="interaction-press grid size-11 place-items-center rounded-lg border border-line-strong bg-page text-ink-muted hover:bg-primary/8 hover:text-ink"
             aria-label="Kapat"
           >

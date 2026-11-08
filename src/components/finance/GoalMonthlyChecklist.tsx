@@ -185,7 +185,7 @@ function MonthlyChecklistContent({ goal, component }: { goal: SavingsGoal; compo
         </ul>
         <p className="text-xs text-ink-muted">Ay bitene kadar eksik miktar beklemede kalır. Takip öncesi eksik geçmiş “Kayıt yok” görünür; o ayın toplamını elle tamamlayabilirsin.</p>
       </> : null}
-      <SimpleModal open={planOpen} title="Aylık birikim planı" onClose={() => { if (!busy) setPlanOpen(false) }}>
+      <SimpleModal busy={busy} open={planOpen} title="Aylık birikim planı" onClose={() => { if (!busy) setPlanOpen(false) }}>
         <form onSubmit={event => void savePlan(event)} className="space-y-4">
           <label className="block text-sm font-semibold">Aylık miktar ({unit})<Input className="mt-1 min-h-11" inputMode="decimal" value={monthlyAmount} onChange={event => setMonthlyAmount(event.target.value)} required /></label>
           {!plans.length ? <label className="block text-sm font-semibold">Başlangıç ayı<Input className="mt-1 min-h-11" type="month" value={startsOn} min="1900-01" max={currentMonth.slice(0, 7)} onChange={event => setStartsOn(event.target.value)} required /></label> : <p className="text-sm text-ink-muted">Değişiklik bu aydan itibaren geçerli olur. Önceki ayların hedefleri korunur.</p>}
@@ -198,7 +198,7 @@ function MonthlyChecklistContent({ goal, component }: { goal: SavingsGoal; compo
           <Button type="submit" disabled={busy} className="min-h-11 w-full">{busy ? 'Kaydediliyor…' : 'Planı kaydet'}</Button>
         </form>
       </SimpleModal>
-      <SimpleModal open={editing !== null} title="Aylık gerçekleşen miktar" onClose={() => { if (!busy) setEditing(null) }}>
+      <SimpleModal busy={busy} open={editing !== null} title="Aylık gerçekleşen miktar" onClose={() => { if (!busy) setEditing(null) }}>
         <form onSubmit={event => void saveActual(event)} className="space-y-4">
           <p className="text-sm text-ink-muted">{editing ? new Date(`${editing.month}T00:00:00`).toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }) : ''} için toplam miktarı gir. Hiç biriktiremediysen 0 yaz.</p>
           <label className="block text-sm font-semibold">Gerçekleşen toplam ({editing?.plan.value_type === 'TRY' ? 'TL' : editing?.plan.value_type === 'gram_altin' ? 'gram' : 'çeyrek'})<Input className="mt-1 min-h-11" inputMode="decimal" required value={actual} onChange={event => setActual(event.target.value)} /></label>

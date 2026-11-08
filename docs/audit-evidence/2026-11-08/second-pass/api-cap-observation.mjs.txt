@@ -1,0 +1,24 @@
+import { spawnSync } from 'node:child_process'
+import { createClient } from '@supabase/supabase-js'
+const status = spawnSync('cmd.exe', ['/c', 'npx', 'supabase', 'status', '-o', 'json'], { encoding: 'utf8' })
+const config = JSON.parse(status.stdout)
+if (new URL(config.API_URL).hostname !== '127.0.0.1') throw new Error('Only local Supabase')
+const uid = '11111111-1111-1111-1111-111111111111'
+const marker = 'LOCAL-AUDIT-20261108-CAP-7c9'
+function sql(body) {
+  const result = spawnSync('docker', ['exec', '-i', 'supabase_db_financeproject', 'psql', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-f', '-'], { input: body, encoding: 'utf8' })
+  if (result.status !== 0) throw new Error(result.stderr)
+  return result.stdout
+}
+const client = createClient(config.API_URL, config.ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+try {
+  const auth = await client.auth.signInWithPassword({ email: 't@t.com', password: 'password123' })
+  if (auth.error) throw new Error('Local fixture login failed')
+  sql(`insert into public.assets(user_id,name,category,amount,unit,estimated_value_try,auto_valued,note) select '${uid}','${marker}','Diğer',0,'adet',0,false,'${marker}' from generate_series(1,1001);`)
+  const response = await client.from('assets').select('id', { count: 'exact' }).eq('name', marker).limit(1500)
+  if (response.error) throw response.error
+  console.log(JSON.stringify({ requestedLimit: 1500, exactRows: response.count, returnedRows: response.data.length }))
+} finally {
+  console.log(sql(`delete from public.assets where user_id='${uid}' and name='${marker}' and note='${marker}';`).trim())
+  await client.auth.signOut()
+}

@@ -10,7 +10,7 @@ import {
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
 import { KASA_BUCKETS_QUERY_KEY, useKasaBuckets } from '../../hooks/useSafeToSpend'
 import type { KasaBucket } from '../../types/database'
-import { parseNumber } from '../../utils/formatCurrency'
+import { parseNumberStrict } from '../../utils/formatCurrency'
 import { spendableAfterReserves, totalReservedTL } from '../../utils/kasaMode'
 import { SimpleModal } from '../SimpleModal'
 import { Alert } from '../ui/alert'
@@ -97,9 +97,9 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
       setFormError('Pay adı yazmalısın.')
       return
     }
-    const reservedAmount = parseNumber(reserved)
-    if (reservedAmount < 0) {
-      setFormError('Ayrılan tutar negatif olamaz.')
+    const reservedAmount = parseNumberStrict(reserved)
+    if (!Number.isFinite(reservedAmount) || reservedAmount < 0) {
+      setFormError('Geçerli ve negatif olmayan bir tutar gir.')
       return
     }
 
@@ -224,7 +224,7 @@ export function KasaModuPanel({ liquidCash }: { liquidCash: number }) {
         </div>
       )}
 
-      <SimpleModal title={editing ? 'Ayrılan payı düzenle' : 'Pay ekle'} open={modalOpen} onClose={() => setModalOpen(false)}>
+      <SimpleModal busy={saving} title={editing ? 'Ayrılan payı düzenle' : 'Pay ekle'} open={modalOpen} onClose={() => setModalOpen(false)}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm font-medium">
             Pay adı

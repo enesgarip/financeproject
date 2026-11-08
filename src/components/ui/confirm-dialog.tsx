@@ -39,7 +39,7 @@ function ConfirmDialog({
   // Eskiden geri verme yoktu (odak <body>'ye düşüyordu) ve focusable listesi
   // açılışta bir kez alınıyordu — `loading` butonları disabled edince Tab döngüsü
   // ölü referanslara kuruluyordu (denetim 2026-08-12 §6).
-  const sectionRef = useDialogA11y<HTMLElement>(open, onCancel)
+  const sectionRef = useDialogA11y<HTMLElement>(open, () => { if (!loading) onCancel() })
 
   if (!open) return null
 
@@ -51,6 +51,8 @@ function ConfirmDialog({
         ref={sectionRef}
         tabIndex={-1}
         role="alertdialog"
+        aria-busy={loading}
+        data-navigation-busy={loading || undefined}
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-description"

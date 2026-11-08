@@ -7,8 +7,8 @@ export const DEFAULT_PADDING: Padding = { top: 12, right: 12, left: 60, bottom: 
 /** 12px eksen yazısı için korumalı genişlik; veri noktaları seyreltilmez. */
 export const axisTextWidth = (text: string) => Array.from(text).length * 8
 
-export function chartPadding(ticks: number[]): Padding {
-  return { ...DEFAULT_PADDING, left: Math.max(44, ...ticks.map(tick => axisTextWidth(formatTickValue(tick)) + 16)) }
+export function chartPadding(ticks: number[], formatter: (value: number) => string = formatTickValue): Padding {
+  return { ...DEFAULT_PADDING, left: Math.max(44, ...ticks.map(tick => axisTextWidth(formatter(tick)) + 16)) }
 }
 
 /** Gerçek konumları karşılaştırır; son etiketi eklemek komşusunu ezemez. */

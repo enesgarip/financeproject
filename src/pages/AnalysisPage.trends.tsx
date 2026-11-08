@@ -10,7 +10,7 @@ import { analysisFinanceSummaryInput, type AnalysisData } from '../utils/analysi
 import { parseNumber } from '../utils/formatCurrency'
 import { type MarketRatesSnapshot } from '../utils/marketRates'
 import { diffTL } from '../utils/money'
-import { convertNetWorth, formatRealValue, realValueChangeBadge, type RealUnit, REAL_UNIT_LABELS } from '../utils/realValue'
+import { convertNetWorth, formatRealValue, type RealUnit, REAL_UNIT_LABELS } from '../utils/realValue'
 import { selectNetWorthSeries, type NetWorthRange } from '../utils/netWorthSeries'
 import {
   applyScenario,
@@ -28,7 +28,7 @@ export function NetWorthTrend({
   snapshots: NetWorthSnapshot[]
   ratesSnapshot: MarketRatesSnapshot | null
 }) {
-  const { formatAmount } = useBalancePrivacy()
+  const { formatAmount, hidden } = useBalancePrivacy()
   const [unit, setUnit] = useState<RealUnit>('TRY')
   const [range, setRange] = useState<NetWorthRange>('90d')
   const { series: derived, aggregated } = useMemo(
@@ -77,6 +77,7 @@ export function NetWorthTrend({
   }
 
   function displayValue(tryAmount: number, rates: { goldTry?: number | null; usdTry?: number | null }): string {
+    if (hidden) return '••••'
     if (unit === 'TRY') return formatAmount(tryAmount)
     const converted = convertNetWorth(tryAmount, unit, rates)
     if (converted === null) return '—'
@@ -89,26 +90,21 @@ export function NetWorthTrend({
     return spansDifferentYears ? `${month} '${String(d.getFullYear()).slice(2)}` : `${d.getDate()} ${month}`
   }
 
-  const barData: BarDataPoint[] = view.map((s) => ({
-    label: snapshotLabel(s),
-    value: convertSnapshot(s) ?? 0,
-  }))
+  const converted = view.map(row => ({ row, value: convertSnapshot(row) })).filter((point): point is { row: NetWorthSnapshot; value: number } => point.value !== null)
+  const barData: BarDataPoint[] = converted.map(point => ({ label: snapshotLabel(point.row), value: point.value }))
+  const minPoint = converted.reduce<(typeof converted)[number] | null>((a, b) => !a || b.value < a.value ? b : a, null)
+  const maxPoint = converted.reduce<(typeof converted)[number] | null>((a, b) => !a || b.value > a.value ? b : a, null)
+  const latestConverted = convertSnapshot(latest)
+  const firstConverted = convertSnapshot(first)
+  const change = latestConverted !== null && firstConverted !== null ? latestConverted - firstConverted : null
+  const formatSelected = (value: number) => hidden ? '••••' : unit === 'TRY' ? formatAmount(value) : formatRealValue(value, unit)
+  const changeBadge = change === null ? null : hidden ? '••••' : `${change >= 0 ? '+' : ''}${formatSelected(change)}`
 
-  const latestConverted = convertNetWorth(latest.net_worth, unit, currentRates)
-  const firstConverted = convertNetWorth(first.net_worth, unit, snapshotRates(first))
-  const minSnap = view.reduce((a, b) => (b.net_worth < a.net_worth ? b : a))
-  const maxSnap = view.reduce((a, b) => (b.net_worth > a.net_worth ? b : a))
-
-  const changeTry = diffTL(latest.net_worth, first.net_worth)
-  const changeBadge =
-    unit === 'TRY'
-      ? `${changeTry >= 0 ? '+' : ''}${formatAmount(changeTry)}`
-      : (realValueChangeBadge(changeTry, unit, currentRates) ??
-        (latestConverted !== null && firstConverted !== null
-          ? `${latestConverted - firstConverted >= 0 ? '+' : ''}${formatRealValue(latestConverted - firstConverted, unit)}`
-          : null))
-
-  const hasRates = currentRates.goldTry !== null && currentRates.usdTry !== null
+  const availableUnits = {
+    TRY: true,
+    GRA: view.some(row => convertNetWorth(row.net_worth, 'GRA', snapshotRates(row)) !== null),
+    USD: view.some(row => convertNetWorth(row.net_worth, 'USD', snapshotRates(row)) !== null),
+  }
 
   return (
     <Card className="border-line-strong lg:col-span-12">
@@ -123,7 +119,7 @@ export function NetWorthTrend({
             </p>
           </div>
           {changeBadge ? (
-            <Badge variant={changeTry >= 0 ? 'success' : 'destructive'}>{changeBadge}</Badge>
+            <Badge variant={(change ?? 0) >= 0 ? 'success' : 'destructive'}>{changeBadge}</Badge>
           ) : null}
         </div>
         {/* Range toggle (roadmap Y7) */}
@@ -136,8 +132,9 @@ export function NetWorthTrend({
             <button
               key={r}
               onClick={() => setRange(r)}
+              aria-pressed={range === r}
               className={[
-                'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                'min-h-11 min-w-11 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
                 range === r ? 'bg-primary text-primary-foreground' : 'bg-page text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04]',
               ].join(' ')}
               aria-label={`Net değer trendini ${label} aralığında göster`}
@@ -152,17 +149,18 @@ export function NetWorthTrend({
             <button
               key={u}
               onClick={() => setUnit(u)}
-              disabled={u !== 'TRY' && !hasRates}
+              aria-pressed={unit === u}
+              disabled={!availableUnits[u]}
               className={[
-                'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                'min-h-11 min-w-11 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
                 unit === u
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-page text-ink-muted hover:bg-black/[.03] dark:hover:bg-white/[.04]',
-                u !== 'TRY' && !hasRates ? 'cursor-not-allowed opacity-40' : '',
+                !availableUnits[u] ? 'cursor-not-allowed opacity-40' : '',
               ]
                 .filter(Boolean)
                 .join(' ')}
-              title={u !== 'TRY' && !hasRates ? 'Kur verisi yükleniyor...' : undefined}
+              title={!availableUnits[u] ? 'Kur verisi yükleniyor...' : undefined}
               aria-label={`Net değeri ${REAL_UNIT_LABELS[u]} cinsinden göster`}
             >
               {REAL_UNIT_LABELS[u]}
@@ -174,22 +172,23 @@ export function NetWorthTrend({
         <div className="grid grid-cols-2 gap-2 min-[480px]:grid-cols-3">
           <StatPill
             label="Güncel"
-            value={displayValue(latest.net_worth, currentRates)}
+            value={displayValue(latest.net_worth, snapshotRates(latest))}
             tone={latest.net_worth >= 0 ? 'emerald' : 'rose'}
           />
           <StatPill
             label="En yüksek"
-            value={displayValue(maxSnap.net_worth, snapshotRates(maxSnap))}
+            value={maxPoint ? formatSelected(maxPoint.value) : '—'}
             tone="emerald"
           />
           <StatPill
             label="En düşük"
-            value={displayValue(minSnap.net_worth, snapshotRates(minSnap))}
-            tone={minSnap.net_worth < 0 ? 'rose' : 'stone'}
+            value={minPoint ? formatSelected(minPoint.value) : '—'}
+            tone={(minPoint?.value ?? 0) < 0 ? 'rose' : 'stone'}
           />
         </div>
+        {converted.length < view.length ? <p role="status" className="text-xs text-ink-muted">{view.length - converted.length} noktada seçili birimin kur verisi yok; bu noktalar grafiğe dahil edilmedi.</p> : null}
         <div className="rounded-xl bg-page p-2">
-          <BarChart data={barData} height={200} positiveColor="var(--success)" />
+          <BarChart data={barData} formatValue={formatSelected} formatAxis={formatSelected} height={200} positiveColor="var(--success)" />
         </div>
       </CardContent>
     </Card>
@@ -441,7 +440,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
                       key={preset}
                       onClick={() => setShockChoice((prev) => (prev === preset ? null : preset))}
                       className={[
-                        'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                        'min-h-11 min-w-11 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
                         shockChoice === preset
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-card text-ink-muted ring-1 ring-line-strong hover:bg-black/[.03] dark:hover:bg-white/[.04]',
@@ -455,7 +454,7 @@ export function ForwardForecast({ data }: { data: AnalysisData }) {
                   <button
                     onClick={() => setShockChoice((prev) => (prev === 'custom' ? null : 'custom'))}
                     className={[
-                      'rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
+                      'min-h-11 min-w-11 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors',
                       shockChoice === 'custom'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-card text-ink-muted ring-1 ring-line-strong hover:bg-black/[.03] dark:hover:bg-white/[.04]',

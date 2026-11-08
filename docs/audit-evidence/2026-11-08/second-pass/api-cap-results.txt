@@ -1,0 +1,2 @@
+{"requestedLimit":1500,"exactRows":1001,"returnedRows":1000}
+DELETE 1001

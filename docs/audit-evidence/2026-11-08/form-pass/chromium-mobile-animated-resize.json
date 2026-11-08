@@ -1,0 +1,230 @@
+[
+  {
+    "url": "/varliklar/maas",
+    "scrollY": 38,
+    "innerHeight": 440,
+    "innerWidth": 390,
+    "visual": {
+      "height": 440,
+      "offsetTop": 0,
+      "pageTop": 38,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 315,
+        "width": 390,
+        "height": 125,
+        "top": 315,
+        "right": 390,
+        "bottom": 440,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BUTTON",
+      "text": "Maaş ekle",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  {
+    "url": "/varliklar/maas",
+    "scrollY": 38,
+    "innerHeight": 490,
+    "innerWidth": 390,
+    "visual": {
+      "height": 490,
+      "offsetTop": 0,
+      "pageTop": 38,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 365,
+        "width": 390,
+        "height": 125,
+        "top": 365,
+        "right": 390,
+        "bottom": 490,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BUTTON",
+      "text": "Maaş ekle",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  {
+    "url": "/varliklar/maas",
+    "scrollY": 38,
+    "innerHeight": 590,
+    "innerWidth": 390,
+    "visual": {
+      "height": 590,
+      "offsetTop": 0,
+      "pageTop": 38,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 465,
+        "width": 390,
+        "height": 125,
+        "top": 465,
+        "right": 390,
+        "bottom": 590,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BUTTON",
+      "text": "Maaş ekle",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  {
+    "url": "/varliklar/maas",
+    "scrollY": 29,
+    "innerHeight": 690,
+    "innerWidth": 390,
+    "visual": {
+      "height": 690,
+      "offsetTop": 0,
+      "pageTop": 29,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 565,
+        "width": 390,
+        "height": 125,
+        "top": 565,
+        "right": 390,
+        "bottom": 690,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BUTTON",
+      "text": "Maaş ekle",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  {
+    "url": "/varliklar/maas",
+    "scrollY": 0,
+    "innerHeight": 790,
+    "innerWidth": 390,
+    "visual": {
+      "height": 790,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 665,
+        "width": 390,
+        "height": 125,
+        "top": 665,
+        "right": 390,
+        "bottom": 790,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BUTTON",
+      "text": "Maaş ekle",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  {
+    "url": "/varliklar/maas",
+    "scrollY": 0,
+    "innerHeight": 844,
+    "innerWidth": 390,
+    "visual": {
+      "height": 844,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 719,
+        "width": 390,
+        "height": 125,
+        "top": 719,
+        "right": 390,
+        "bottom": 844,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BUTTON",
+      "text": "Maaş ekle",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  }
+]

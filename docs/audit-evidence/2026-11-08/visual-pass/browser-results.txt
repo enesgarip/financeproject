@@ -1,0 +1,32 @@
+[WebServer] 
+[WebServer] > financeproject@0.0.0 dev
+[WebServer] > vite --host 127.0.0.1 --port 4188 --strictPort
+[WebServer] 
+[WebServer] (node:38136) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer]   VITE v7.3.7  ready in 290 ms
+[WebServer] 
+[WebServer]   ➜  Local:   http://127.0.0.1:4188/
+
+Running 15 tests using 1 worker
+
+(node:37596) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:62:33 › visual budget 320 (1.4s)
+  ok  2 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:62:33 › visual budget 390 (1.1s)
+  ok  3 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:77:82 › visual trend light Gram altın (1.3s)
+  ok  4 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:77:82 › visual trend light USD (1.3s)
+  ok  5 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:77:82 › visual trend dark Gram altın (1.3s)
+  ok  6 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:77:82 › visual trend dark USD (1.3s)
+  ok  7 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:97:33 › visual car 320 (1.3s)
+  ok  8 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:97:33 › visual car 390 (947ms)
+  ok  9 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:118:40 › visual contrast and targets light (1.2s)
+  ok 10 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:118:40 › visual contrast and targets dark (1.2s)
+  ok 11 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:145:1 › visual compact car actions hit area (1.1s)
+  ok 12 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:159:60 › visual state loading (624ms)
+  ok 13 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:159:60 › visual state error (7.8s)
+  ok 14 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:159:60 › visual state empty (1.2s)
+  ok 15 [chromium] › tests\e2e\audit-visual-temporary.spec.ts:159:60 › visual state modal (1.1s)
+
+  15 passed (26.1s)

@@ -339,7 +339,7 @@ export function RecentCardExpensesPanel({ cards, reload, setError, refreshKey = 
         })}
       </CardContent>
       {confirmDialog}
-      <SimpleModal title="Hareketi düzenle" open={draft != null} onClose={() => (savingDraft ? null : setDraft(null))}>
+      <SimpleModal busy={savingDraft} title="Hareketi düzenle" open={draft != null} onClose={() => (savingDraft ? null : setDraft(null))}>
         {draft ? (
           <form onSubmit={handleSaveDraft} className="flex flex-col gap-4">
             <p className="text-xs text-ink-muted">

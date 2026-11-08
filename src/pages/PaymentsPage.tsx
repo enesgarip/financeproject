@@ -23,7 +23,7 @@ import type {
   TransactionHistory,
 } from '../types/database'
 import { addMonths, dateInputValue, daysUntil, formatDate, startOfMonth } from '../utils/date'
-import { formatSeritAmount, parseNumber } from '../utils/formatCurrency'
+import { formatSeritAmount, parseNativeNumber } from '../utils/formatCurrency'
 import { buildCreditCardIdCheck, paymentOccurrenceInMonth, paymentUsesCreditCard, type CreditCardIdCheck } from '../utils/financeSummary'
 import { sumTL } from '../utils/money'
 import { buildPaymentEstimateSuggestion } from '../utils/paymentEstimate'
@@ -119,7 +119,7 @@ const baseFields: FormField[] = [
 
 function validatePaymentForm(formData: FormData) {
   const errors: Record<string, string> = {}
-  const amount = parseNumber(formData.get('amount'))
+  const amount = parseNativeNumber(formData.get('amount') || '0')
   const paymentMethod = formData.get('payment_method')
   const amountStatus = formData.get('amount_status')
   const canWaitForActualAmount = paymentMethod === 'bank_auto' && amountStatus === 'estimated'
@@ -131,7 +131,7 @@ function validatePaymentForm(formData: FormData) {
   if (paymentMethod === 'bank_auto' && !String(formData.get('auto_source_card_id') ?? '').trim()) {
     errors.auto_source_card_id = 'Banka talimatı için bir kredi kartı seç.'
   }
-  if (String(formData.get('match_amount') ?? '').trim() && parseNumber(formData.get('match_amount')) <= 0) {
+  if (String(formData.get('match_amount') ?? '').trim() && parseNativeNumber(formData.get('match_amount') || '0') <= 0) {
     errors.match_amount = 'Ayırt edici tutar 0’dan büyük olmalı.'
   }
   return errors
@@ -445,7 +445,7 @@ export function PaymentsPage() {
             category: (formData.get('category') as PaymentCategory | null) ?? 'Diğer',
             payment_method: paymentMethod,
             amount_status: (formData.get('amount_status') as PaymentAmountStatus | null) ?? 'exact',
-            amount: parseNumber(formData.get('amount')),
+            amount: parseNativeNumber(formData.get('amount') || '0'),
             due_date: String(formData.get('due_date') ?? ''),
             status: recurrence === 'monthly' ? 'bekliyor' : (editing?.status ?? 'bekliyor'),
             recurrence,
@@ -454,7 +454,7 @@ export function PaymentsPage() {
             auto_source_card_id: autoSourceCardId,
             match_merchant: paymentMethod === 'bank_auto' ? String(formData.get('match_merchant') ?? '').trim() || null : null,
             match_reference: paymentMethod === 'bank_auto' ? String(formData.get('match_reference') ?? '').trim() || null : null,
-            match_amount: paymentMethod === 'bank_auto' && String(formData.get('match_amount') ?? '').trim() ? parseNumber(formData.get('match_amount')) : null,
+            match_amount: paymentMethod === 'bank_auto' && String(formData.get('match_amount') ?? '').trim() ? parseNativeNumber(formData.get('match_amount') || '0') : null,
             note: String(formData.get('note') ?? '') || null,
           }
         }}

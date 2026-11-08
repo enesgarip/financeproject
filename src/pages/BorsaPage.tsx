@@ -13,7 +13,7 @@ import { useStockPrices } from '../hooks/useStockPrices'
 import { fetchStockHistory, normalizeTicker, type StockHistory, type StockPrices } from '../lib/stockQuotesClient'
 import type { Asset, StockTrade, StockTradeKind } from '../types/database'
 import { dateInputValue, formatDate } from '../utils/date'
-import { formatCurrency, formatNumber, formatPercent, parseNumber } from '../utils/formatCurrency'
+import { formatCurrency, formatNumber, formatPercent, parseNativeNumber } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
 import {
   annotateRealized,
@@ -87,7 +87,7 @@ function periodStart(key: PeriodKey, custom: string, now: Date): string | null {
 
 function optionalNumber(formData: FormData, name: string): number | null {
   const raw = String(formData.get(name) ?? '').trim()
-  return raw ? parseNumber(raw) : null
+  return raw ? parseNativeNumber(raw) : null
 }
 
 function validateTrade(formData: FormData, rows: StockTrade[], editing: StockTrade | null): Record<string, string> {
@@ -95,7 +95,7 @@ function validateTrade(formData: FormData, rows: StockTrade[], editing: StockTra
   if (String(formData.get('trade_date')) > dateInputValue(new Date())) errors.trade_date = 'Geçmiş işlem tarihi gelecekte olamaz.'
   const symbol = normalizeTicker(String(formData.get('symbol') ?? ''))
   if (!symbol) errors.symbol = 'Sembol 1-10 harf/rakam olmalı (örn. THYAO).'
-  const quantity = parseNumber(formData.get('quantity'))
+  const quantity = parseNativeNumber(formData.get('quantity'))
   if (quantity <= 0) errors.quantity = 'Adet 0’dan büyük olmalı.'
   const kind = formData.get('kind')
   if (kind === 'sell') {
@@ -384,7 +384,7 @@ export function BorsaPage() {
           symbol,
           kind: (formData.get('kind') as StockTradeKind) || 'buy',
           trade_date: String(formData.get('trade_date') ?? ''),
-          quantity: parseNumber(formData.get('quantity')),
+          quantity: parseNativeNumber(formData.get('quantity')),
           unit_price: optionalNumber(formData, 'unit_price'),
           fee: optionalNumber(formData, 'fee') ?? 0,
           source: (editing as StockTrade | null)?.source === 'trade_rpc' ? 'trade_rpc' : 'manual',

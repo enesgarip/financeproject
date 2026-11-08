@@ -17,8 +17,10 @@ import { useStockPrices } from '../hooks/useStockPrices'
 import { normalizeTicker, type StockPrices } from '../lib/stockQuotesClient'
 import { assetTradeRequiresQuantity, submitAssetTrade, type AssetTradeDirection } from '../services/assetTrades'
 import type { Asset, Card as FinanceCard } from '../types/database'
-import { formatCurrency, formatNumber, formatPercent, parseNumber } from '../utils/formatCurrency'
+import { formatCurrency, formatNumber, formatPercent, parseNumber, parseNativeNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
+import { useAuth } from '../auth/useAuth'
+import { useOperationResolution } from '../hooks/useOperationResolution'
 import { GOLD_LEDGER_SOURCE } from '../utils/goldLedger'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
 import { diffTL, greaterThanTL, sumTL, roundTL } from '../utils/money'
@@ -95,9 +97,9 @@ function valuationInputFromForm(values: Record<string, string>): Pick<Asset, 'ca
     category,
     unit: isGold ? ((values.unit as Asset['unit']) || 'gram') : 'TRY',
     currency: category === 'Nakit' ? ((values.currency as Asset['currency']) || 'TRY') : null,
-    amount: parseNumber(values.amount),
+    amount: parseNativeNumber(values.amount),
     symbol: category === 'Hisse' ? (normalizeTicker(values.symbol) ?? null) : null,
-    unit_cost: category === 'Hisse' ? parseNumber(values.unit_cost) : null,
+    unit_cost: category === 'Hisse' ? parseNativeNumber(values.unit_cost) : null,
   }
 }
 
@@ -397,9 +399,10 @@ function AssetsOverview({ rows, snapshot, stockPrices, bankCash }: { rows: Asset
 }
 
 export function AssetsPage() {
+  const { user } = useAuth()
   const [assetParams] = useSearchParams()
   const [showRecords, setShowRecords] = useState(() => assetParams.get('view') === 'records' || assetParams.get('new') === '1')
-  const { formatAmount } = useBalancePrivacy()
+  const { formatAmount, hidden } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
   const [stockPrices, setStockPrices] = useState<StockPrices>({})
   // Sıralama cache anahtarındadır; ortak tablo prefix'i tüm hesap listelerini
@@ -414,6 +417,7 @@ export function AssetsPage() {
   const [tradeNote, setTradeNote] = useState('')
   const [tradeError, setTradeError] = useState('')
   const [tradeSaving, setTradeSaving] = useState(false)
+  useOperationResolution(['trade_asset_with_account'], trade?.asset.id, () => setTrade(null))
   const fieldContext = useMemo<FieldCtx>(() => ({ snapshot, stockPrices }), [snapshot, stockPrices])
   const bankAccounts = useMemo(
     () => accounts.filter((account) => account.card_type === 'banka_karti'),
@@ -450,7 +454,7 @@ export function AssetsPage() {
 
     const selectedAccount = bankAccounts.find((account) => account.id === tradeAccountId)
     const amount = parseNumber(tradeAmount)
-    const quantity = tradeQuantity.trim() ? parseNumber(tradeQuantity) : null
+    const quantity = tradeQuantity.trim() ? parseNativeNumber(tradeQuantity) : null
 
     if (!selectedAccount) {
       setTradeError(trade.direction === 'buy' ? 'Kaynak hesap seçmelisin.' : 'Tahsilat hesabı seçmelisin.')
@@ -483,6 +487,7 @@ export function AssetsPage() {
     setTradeSaving(true)
     setTradeError('')
     const result = await submitAssetTrade({
+      userId: user?.id ?? '',
       assetId: trade.asset.id,
       accountId: selectedAccount.id,
       direction: trade.direction,
@@ -587,13 +592,13 @@ export function AssetsPage() {
           const currency = category === 'Nakit' ? (formData.get('currency') as Asset['currency']) : null
           const foreignCash = category === 'Nakit' && currency !== null && currency !== 'TRY'
           const symbol = isStock ? normalizeTicker(formData.get('symbol') as string) : null
-          const unitCost = isStock ? parseNumber(formData.get('unit_cost')) : null
+          const unitCost = isStock ? parseNativeNumber(formData.get('unit_cost')) : null
           const supportsAuto = isGold || foreignCash || (isStock && Boolean(symbol))
           const autoValued = supportsAuto && formData.get('valuation') === 'auto'
-          const amount = isGold || foreignCash || isStock ? parseNumber(formData.get('amount')) : 1
+          const amount = isGold || foreignCash || isStock ? parseNativeNumber(formData.get('amount')) : 1
           const unit: Asset['unit'] = isGold ? (formData.get('unit') as Asset['unit']) : 'TRY'
 
-          const manualValue = parseNumber(formData.get('estimated_value_try'))
+          const manualValue = parseNativeNumber(formData.get('estimated_value_try'))
           const autoValue = autoValued
             ? isStock
               ? valueStock({ category, symbol, amount }, ctx?.stockPrices)
@@ -689,14 +694,14 @@ export function AssetsPage() {
                       {asset.category === 'Altın' ? 'Miktar' : 'Adet'}
                     </p>
                     <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-ink">
-                      {formatNumber(asset.amount)} {asset.category === 'Altın' ? (asset.unit === 'adet' ? 'çeyrek' : asset.unit) : 'adet'}
+                      {hidden ? '••••' : formatNumber(asset.amount)} {asset.category === 'Altın' ? (asset.unit === 'adet' ? 'çeyrek' : asset.unit) : 'adet'}
                     </p>
                   </div>
                 ) : null}
                 {asset.category === 'Nakit' && asset.currency && asset.currency !== 'TRY' ? (
                   <div className="min-w-0">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">Tutar</p>
-                    <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-ink">{formatNumber(asset.amount)} {asset.currency}</p>
+                    <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-ink">{hidden ? '••••' : formatNumber(asset.amount)} {asset.currency}</p>
                   </div>
                 ) : null}
               </div>

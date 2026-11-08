@@ -1,5 +1,18 @@
 # UI Architecture
 
+9 Kasım sözleşmesi: `docs/AUDIT_REMEDIATION_2026-11-09.md`.
+Bekleyen modal kayıt/işleme X/Escape/navigasyonla kapanmaz. Dirty izleme
+kapsama aittir; ilgisiz diyaloğu kapatmak alttaki formu temizlemez. Odak,
+kalıcı ve bağlı tetikleyiciye preventScroll ile döner. WebKit alan kaldırma
+olayında odak olayı gelmezse DOM gözlemi alt menüyü yeniler. Modal/iç scroll
+jestleri sayfa yenilemesi başlatmaz; touchcancel/orientationchange temizler.
+Bütçe harcama/limit ayrı etiketli satırlarda, bakım eylemleri ayrı sıradadır.
+Grafik etiket/tooltip/aria ve fark/uç değerler seçili TL/gram/USD serisindedir;
+gizlilik bütün birimlerde geçerlidir. Ay kapanış detayı opak ink-muted/12px;
+mobil metin düğmeleri ve HubNav en az 44px; ikon düğmeleri gerçek 44px
+kutudadır (genişleyen komşu hit alanı yok). Bu proje hedefidir, bütün
+44px gerekliliklerini WCAG 2.1 AA diye sınıflandırmaz. U01 açık fiziksel tanı.
+
 8 Kasım ikinci paket: `docs/LINKED_FINANCE_WORKFLOWS.md`.
 Araç/grup kartından ortak harcama hazır seçimle açılır; mevcut hareket ayrı
 bağlantıyla ilişkilendirilir. Bakım gider/sonraki plan formu ve kalıcı geçmişi

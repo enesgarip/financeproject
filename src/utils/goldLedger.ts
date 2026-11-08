@@ -58,7 +58,7 @@ function applyLot(pool: GoldPool, lot: GoldLot) {
     const average = pool.knownQuantity > 0 ? pool.knownCost / pool.knownQuantity : 0
     pool.knownCost = Math.max(0, pool.knownCost - average * removed)
     pool.knownQuantity -= removed
-    pool.totalQuantity = Math.max(0, pool.totalQuantity - qty)
+    pool.totalQuantity = round4(pool.totalQuantity - qty)
   } else {
     pool.totalQuantity += qty
     if (lot.unit_price != null && Number.isFinite(lot.unit_price)) {
@@ -114,4 +114,16 @@ export function buildGoldAccumulation(lots: GoldLot[], goldType?: GoldType): Gol
       cumulativeCost: round2(values.reduce((total, row) => total + row.knownCost, 0)),
     }
   })
+}
+
+/** SQL deferred constraint ile aynı tarih/yön/kimlik sırası. */
+export function validateGoldInventory(lots: GoldLot[]): string | null {
+  const balance = new Map<GoldType, number>()
+  for (const lot of sortedLots(lots)) {
+    if (!Number.isFinite(lot.quantity) || lot.quantity <= 0) return 'Altın miktarı sıfırdan büyük olmalı.'
+    const next = (balance.get(lot.gold_type) ?? 0) + Math.round(lot.quantity * 10000) * (lot.direction === 'sell' ? -1 : 1)
+    if (next < 0) return `${GOLD_TYPE_LABELS[lot.gold_type]}: ${lot.purchase_date ?? 'tarihsiz'} işleminde stok eksiye düşüyor. Sonraki satışları korumak için miktar, tarih ve türü kontrol et.`
+    balance.set(lot.gold_type, next)
+  }
+  return null
 }

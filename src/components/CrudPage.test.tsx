@@ -125,8 +125,11 @@ describe('CrudPage — TanStack veri sözleşmesi', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Kayıt ekle' })[0])
     fireEvent.submit(screen.getByRole('button', { name: 'Kaydet' }).closest('form')!)
 
-    expect(await screen.findByText('Takip işlemi patladı')).toBeTruthy()
-    expect(screen.getByText('Yeni kayıt bilgileri')).toBeTruthy()
+    expect(await screen.findByText(/Takip işlemi patladı/)).toBeTruthy()
+    expect(screen.getByText('Kaydı düzenle')).toBeTruthy()
+    fireEvent.submit(screen.getByRole('button', { name: 'Kaydet' }).closest('form')!)
+    await waitFor(() => expect(mocks.saveCrudRow).toHaveBeenCalledTimes(2))
+    expect(mocks.saveCrudRow.mock.calls[1][2]).toBe('r2')
   })
 
   it('sil: satır anında düşer, deleteCrudRow çağrılır, arka plan refetch gelir', async () => {

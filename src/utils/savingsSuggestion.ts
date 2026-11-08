@@ -16,6 +16,7 @@
 import type { SavingsGoal } from '../types/database'
 import { startOfDay } from './date'
 import { diffTL, exceedsTL, roundTL } from './money'
+import { roundGoalAmount, savingsGoalTargetReached } from './savingsGoal'
 
 const DAYS_PER_MONTH = 30.44
 
@@ -40,9 +41,9 @@ export function buildSavingsSuggestion(
     return { remaining: 0, monthsRemaining: null, monthlyNeeded: null, pace: 'unsupported' }
   }
 
-  const remaining = Math.max(0, roundTL(diffTL(goal.target_amount, goal.current_amount)))
+  const remaining = Math.max(0, goal.value_type === 'TRY' ? diffTL(goal.target_amount, goal.current_amount) : roundGoalAmount(goal.target_amount - goal.current_amount, goal.value_type))
 
-  if (!exceedsTL(goal.target_amount, goal.current_amount)) {
+  if (savingsGoalTargetReached(goal)) {
     return { remaining: 0, monthsRemaining: null, monthlyNeeded: 0, pace: 'reached' }
   }
 
@@ -60,7 +61,7 @@ export function buildSavingsSuggestion(
   }
 
   const monthsRemaining = Math.max(1, Math.ceil(days / DAYS_PER_MONTH))
-  const monthlyNeeded = roundTL(remaining / monthsRemaining)
+  const monthlyNeeded = roundGoalAmount(remaining / monthsRemaining, goal.value_type)
 
   return { remaining, monthsRemaining, monthlyNeeded, pace: 'active' }
 }

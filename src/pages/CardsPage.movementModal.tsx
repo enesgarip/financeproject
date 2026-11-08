@@ -43,7 +43,7 @@ export function MovementModal({
   const transferLabel = transferActionLabel(card, target)
 
   return (
-    <SimpleModal title={isTransfer ? transferLabel : 'Para hareketi'} open={Boolean(card)} onClose={onClose}>
+    <SimpleModal busy={saving} title={isTransfer ? transferLabel : 'Para hareketi'} open={Boolean(card)} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="rounded-xl border border-line-strong bg-page p-3 text-sm text-ink-muted">
           <p className="font-semibold text-ink">{card?.card_name}</p>

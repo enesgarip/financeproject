@@ -14,13 +14,30 @@ import { expect, test } from '@playwright/test'
 
 const LIVE = process.env.E2E_LIVE_SUPABASE === '1'
 const EMAIL = process.env.E2E_EMAIL ?? 't@t.com'
+const fixturePrefix = `AUDIT-E2E-${crypto.randomUUID()}-`
 const PASSWORD = process.env.E2E_PASSWORD ?? 'password123'
 
 test.describe('birikim hedefi takip kaynağı (live backend)', () => {
   test.skip(!LIVE, 'set E2E_LIVE_SUPABASE=1 with a local Supabase + seeded user')
+  test.afterEach(async ({ page }) => {
+    if (!LIVE || !/^https?:\/\/(?:localhost|127\.0\.0\.1)(?::|\/)/.test(page.url())) return
+    await page.evaluate(async prefix => {
+      const repositoryUrl = '/src/data/repositories/crudRepo.ts'
+      const repo = await import(/* @vite-ignore */ repositoryUrl)
+      for (const table of ['savings_goals', 'kasa_buckets']) {
+        const result = await repo.fetchCrudRows(table, 'created_at', false)
+        if (!result.ok) throw new Error(result.error.message)
+        for (const row of result.data) if (typeof row.name === 'string' && row.name.startsWith(prefix)) {
+          const deleted = await repo.deleteCrudRow(table, row.id)
+          if (!deleted.ok) throw new Error(deleted.error.message)
+        }
+      }
+    }, fixturePrefix)
+  })
+
 
   test('hedef varlık kategorisine bağlanınca tutar türetilir', async ({ page }) => {
-    const goalName = `Borsa E2E ${Date.now()}`
+    const goalName = `${fixturePrefix}Borsa`
     await page.goto('/login')
     await page.locator('input[type="email"]').fill(EMAIL)
     await page.locator('input[type="password"]').fill(PASSWORD)
@@ -53,7 +70,7 @@ test.describe('birikim hedefi takip kaynağı (live backend)', () => {
   })
 
   test('kasa kovası bağlanan hedefte tek tıkla ayırma yapılır', async ({ page }) => {
-    const goalName = `Kova E2E ${Date.now()}`
+    const goalName = `${fixturePrefix}Kova`
     await page.goto('/login')
     await page.locator('input[type="email"]').fill(EMAIL)
     await page.locator('input[type="password"]').fill(PASSWORD)
@@ -69,10 +86,10 @@ test.describe('birikim hedefi takip kaynağı (live backend)', () => {
     // Biriken boş bırakılır (= 0): sıfırdan başlayan hedef normal durumdur.
     await modal.getByLabel('Hedef tarih').fill(`${new Date().getFullYear() + 1}-12-31`)
     // Hedef adıyla yeni kova aç: kova harcanabilirden düşen gerçek rezervdir.
-    await modal.getByLabel('Kasa kovası').selectOption('__new__')
+    await modal.getByLabel('Ayrılan para bölümü').selectOption('__new__')
     await modal.getByRole('button', { name: 'Kaydet' }).click()
 
-    const card = page.locator('div').filter({ hasText: goalName }).filter({ hasText: 'Kasada ayrılan' }).last()
+    const card = page.locator('[data-slot=card]').filter({ has: page.getByText(goalName, { exact: true }) }).last()
     await expect(card).toBeVisible({ timeout: 10_000 })
 
     await card.getByRole('button', { name: 'Ayır', exact: true }).click()

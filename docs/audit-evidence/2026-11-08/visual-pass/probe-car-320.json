@@ -1,0 +1,90 @@
+[
+  {
+    "text": "Periyodik bakım ve yağ filtresi değişimi — ön takım kontrolü",
+    "width": 404,
+    "scrollWidth": 404,
+    "row": {
+      "x": 41,
+      "y": 312.328125,
+      "width": 599.0625,
+      "height": 55.703125,
+      "top": 312.328125,
+      "right": 640.0625,
+      "bottom": 368.03125,
+      "left": 41
+    },
+    "title": "",
+    "buttons": [
+      {
+        "label": "Tamamlandı",
+        "rect": {
+          "x": 551.0625,
+          "y": 322.171875,
+          "width": 36,
+          "height": 36,
+          "top": 322.171875,
+          "right": 587.0625,
+          "bottom": 358.171875,
+          "left": 551.0625
+        }
+      },
+      {
+        "label": "Hatırlatıcıyı sil",
+        "rect": {
+          "x": 591.0625,
+          "y": 322.171875,
+          "width": 36,
+          "height": 36,
+          "top": 322.171875,
+          "right": 627.0625,
+          "bottom": 358.171875,
+          "left": 591.0625
+        }
+      }
+    ]
+  },
+  {
+    "text": "Periyodik bakım ve yağ filtresi değişimi — arka takım kontrolü",
+    "width": 417,
+    "scrollWidth": 417,
+    "row": {
+      "x": 41,
+      "y": 376.03125,
+      "width": 599.0625,
+      "height": 55.703125,
+      "top": 376.03125,
+      "right": 640.0625,
+      "bottom": 431.734375,
+      "left": 41
+    },
+    "title": "",
+    "buttons": [
+      {
+        "label": "Tamamlandı",
+        "rect": {
+          "x": 551.0625,
+          "y": 385.875,
+          "width": 36,
+          "height": 36,
+          "top": 385.875,
+          "right": 587.0625,
+          "bottom": 421.875,
+          "left": 551.0625
+        }
+      },
+      {
+        "label": "Hatırlatıcıyı sil",
+        "rect": {
+          "x": 591.0625,
+          "y": 385.875,
+          "width": 36,
+          "height": 36,
+          "top": 385.875,
+          "right": 627.0625,
+          "bottom": 421.875,
+          "left": 591.0625
+        }
+      }
+    ]
+  }
+]

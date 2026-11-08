@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { executeFinanceOperation } from './financeOperations'
 import type { Asset } from '../types/database'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage, type SupabaseLikeError } from '../utils/supabaseErrors'
 
@@ -14,12 +14,14 @@ export type AssetValueUpdateResult = {
 }
 
 export async function updateAssetValue({
+  userId,
   assetId,
   value,
   contribution,
   occurredAt,
   note,
 }: {
+  userId: string
   assetId: string
   value: number
   contribution?: number | null
@@ -28,7 +30,8 @@ export async function updateAssetValue({
 }): Promise<AssetValueUpdateResult> {
   if (!Number.isFinite(value) || value < 0) return { asset: null, error: { message: 'Değer 0 veya daha büyük olmalı.' } }
 
-  const { data, error } = await supabase.rpc('update_asset_value', {
+  if (!Number.isFinite(contribution ?? 0)) return { asset: null, error: { code: 'LOCAL_VALIDATION', message: 'Geçerli katkı tutarı gir.' } }
+  const { error } = await executeFinanceOperation(userId, 'update_asset_value', assetId, {
     p_asset_id: assetId,
     p_value: value,
     p_contribution: contribution ?? 0,
@@ -43,5 +46,5 @@ export async function updateAssetValue({
     }
   }
 
-  return { asset: data as Asset | null, error }
+  return { asset: null, error }
 }

@@ -446,6 +446,7 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
+        data-navigation-busy={importing || parsing || undefined}
         aria-labelledby="statement-import-title"
         className="max-h-[88svh] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-t-2xl bg-raised pb-[env(safe-area-inset-bottom)] focus:outline-none sm:max-h-[92svh] sm:rounded-2xl sm:pb-0"
       >
@@ -462,7 +463,8 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => { if (!(importing || parsing)) onClose() }}
+            disabled={importing || parsing}
             aria-label="Kapat"
             className="tap-target grid size-7 place-items-center rounded-lg hover:bg-black/[.03] dark:hover:bg-white/[.04]"
           >

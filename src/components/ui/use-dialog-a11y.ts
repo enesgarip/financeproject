@@ -20,6 +20,7 @@ import { useEffect, useRef } from 'react'
  */
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+const dialogStack: HTMLElement[] = []
 
 export function useDialogA11y<T extends HTMLElement>(open: boolean, onClose: () => void) {
   const containerRef = useRef<T>(null)
@@ -35,6 +36,7 @@ export function useDialogA11y<T extends HTMLElement>(open: boolean, onClose: () 
     if (!container) return
 
     const previouslyFocused = document.activeElement as HTMLElement | null
+    dialogStack.push(container)
     const focusablesIn = () => Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(element => {
       if (element.closest('[hidden], [inert]')) return false
       for (let parent = element.parentElement; parent && parent !== container; parent = parent.parentElement) {
@@ -49,6 +51,7 @@ export function useDialogA11y<T extends HTMLElement>(open: boolean, onClose: () 
     else focusablesIn()[0]?.focus()
 
     function handleKeyDown(event: KeyboardEvent) {
+      if (dialogStack.at(-1) !== container) return
       if (event.key === 'Escape') {
         event.stopPropagation()
         onCloseRef.current()
@@ -79,7 +82,9 @@ export function useDialogA11y<T extends HTMLElement>(open: boolean, onClose: () 
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      previouslyFocused?.focus?.()
+      const index = dialogStack.indexOf(container)
+      if (index >= 0) dialogStack.splice(index, 1)
+      if (previouslyFocused?.isConnected) previouslyFocused.focus?.({ preventScroll: true })
     }
   }, [open])
 

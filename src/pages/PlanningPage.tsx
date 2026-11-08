@@ -2,7 +2,7 @@ import { FeatureDetails, FeatureSection } from '../components/FeatureSection'
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
-import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage, type FormField } from '../components/CrudPage'
 import { saveCrudRow } from '../data/repositories/crudRepo'
 import { fetchAccountEventsSince } from '../data/repositories/financePanelsRepo'
@@ -14,7 +14,7 @@ import { SkeletonCard, SkeletonHero } from '../components/ui/skeleton'
 import type { Budget } from '../types/database'
 import { expenseCategoryOptions } from '../utils/categories'
 import { dateInputValue, endOfMonth, formatDate, startOfMonth } from '../utils/date'
-import { parseNumber } from '../utils/formatCurrency'
+import { parseNativeNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { formatMonth } from '../utils/analysisView'
 import { averageCategorySpend, budgetAnchorLabel, resolveBudgetRows } from '../utils/budgetAnchor'
@@ -50,6 +50,7 @@ function monthStartValue(value: FormDataEntryValue | null) {
 export function PlanningPage() {
   const { formatAmount } = useBalancePrivacy()
   const snapshotQuery = useFinanceSnapshot()
+  const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const seritAmount = useSeritAmount()
   const loading = snapshotQuery.isPending
 
@@ -163,7 +164,7 @@ export function PlanningPage() {
   async function applyBudgetBridge(bucketId: string, amount: number) {
     setBridgeBusy(true)
     setBridgeError('')
-    const result = await contributeToGoalBucket(bucketId, amount)
+    const result = await contributeToGoalBucket(bucketId, amount, user?.id ?? '')
     setBridgeBusy(false)
     if (!result.ok) {
       setBridgeError(result.error.message ?? 'Kovaya ayırma tamamlanamadı.')
@@ -230,7 +231,7 @@ export function PlanningPage() {
         visibleWhen: isAnchored,
         formatComputed: (value: number | null) => (value === null ? '—' : formatAmount(value)),
         compute: (values) => {
-          const factor = parseNumber(values.limit_anchor_value)
+          const factor = parseNativeNumber(values.limit_anchor_value)
           if (!factor || factor <= 0) return null
           if (values.limit_anchor === 'salary_pct') {
             return salaryAmount ? roundTL((salaryAmount * factor) / 100) : null
@@ -322,17 +323,12 @@ export function PlanningPage() {
           <p className="uppercase text-ink-faint" style={{ fontSize: 12, letterSpacing: '0.1em', lineHeight: '16px' }}>
             Ay bütçesi
           </p>
-          <p
-            className="serit-num mt-2 text-[46px] font-semibold text-ink lg:text-[62px]"
-            style={{ lineHeight: 0.95, letterSpacing: '-0.045em' }}
-          >
-            {seritAmount(budgetTotals.spent).amount}
-            <span className="text-ink-faint">
-              {' / '}
-              {seritAmount(budgetTotals.limit).amount}
-            </span>
-            <span className="text-[19px] text-ink-faint lg:text-[23px]"> ₺</span>
-          </p>
+          <div className="mt-2 grid min-w-0 gap-3 sm:grid-cols-2" aria-label="Ay bütçesi harcama ve limit">
+            {[['Harcanan', budgetTotals.spent], ['Limit', budgetTotals.limit]].map(([label, amount]) => <div className="min-w-0" key={label}>
+              <p className="text-xs text-ink-muted">{label}</p>
+              <p className="serit-num whitespace-nowrap text-[clamp(1.1rem,5.5vw,2.5rem)] font-semibold leading-tight tracking-tight text-ink">{seritAmount(Number(amount)).amount}<span className="ml-1 text-base text-ink-muted">₺</span></p>
+            </div>)}
+          </div>
           <div className="mt-4 h-1 overflow-hidden rounded-full bg-track">
             <div
               className="h-full rounded-full transition-[width] duration-200 ease-out"
@@ -349,6 +345,8 @@ export function PlanningPage() {
       {canManageBudgets ? (
         <CrudPage
           table="budgets"
+          afterSave={invalidateSnapshot}
+          afterDelete={invalidateSnapshot}
           pageTitle="Bütçeler"
           pageLabel="Plan ve hedef"
           pageDescription="Kategori limitlerini ve birikim hedeflerini aylık ilerlemeyle birlikte yönet."
@@ -459,8 +457,8 @@ export function PlanningPage() {
               category: String(formData.get('category') ?? 'Diğer'),
               limit_anchor: anchored ? anchor : 'manual',
               // Çıpalı satırda türetilebilen saklanmaz: limit 0'a çekilir (#157 deseni).
-              limit_amount: anchored ? 0 : parseNumber(formData.get('limit_amount')),
-              limit_anchor_value: anchored ? parseNumber(formData.get('limit_anchor_value')) : null,
+              limit_amount: anchored ? 0 : parseNativeNumber(formData.get('limit_amount')),
+              limit_anchor_value: anchored ? parseNativeNumber(formData.get('limit_anchor_value')) : null,
               note: String(formData.get('note') ?? '') || null,
             }
           }}

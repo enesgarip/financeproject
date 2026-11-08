@@ -1,0 +1,73 @@
+{
+  "complete": {
+    "x": 260,
+    "y": 432.171875,
+    "width": 36,
+    "height": 36,
+    "top": 432.171875,
+    "right": 296,
+    "bottom": 468.171875,
+    "left": 260
+  },
+  "remove": {
+    "x": 300,
+    "y": 432.171875,
+    "width": 36,
+    "height": 36,
+    "top": 432.171875,
+    "right": 336,
+    "bottom": 468.171875,
+    "left": 300
+  },
+  "pseudo": {
+    "width": "44px",
+    "height": "44px"
+  },
+  "samples": [
+    {
+      "x": 292,
+      "y": 450.171875,
+      "hit": "Tamamlandı"
+    },
+    {
+      "x": 293,
+      "y": 450.171875,
+      "hit": "Tamamlandı"
+    },
+    {
+      "x": 294,
+      "y": 450.171875,
+      "hit": "Tamamlandı"
+    },
+    {
+      "x": 295,
+      "y": 450.171875,
+      "hit": "Tamamlandı"
+    },
+    {
+      "x": 296,
+      "y": 450.171875,
+      "hit": "Hatırlatıcıyı sil"
+    },
+    {
+      "x": 297,
+      "y": 450.171875,
+      "hit": "Hatırlatıcıyı sil"
+    },
+    {
+      "x": 298,
+      "y": 450.171875,
+      "hit": "Hatırlatıcıyı sil"
+    },
+    {
+      "x": 299,
+      "y": 450.171875,
+      "hit": "Hatırlatıcıyı sil"
+    },
+    {
+      "x": 300,
+      "y": 450.171875,
+      "hit": "Hatırlatıcıyı sil"
+    }
+  ]
+}

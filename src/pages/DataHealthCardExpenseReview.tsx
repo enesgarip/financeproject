@@ -174,7 +174,7 @@ function ReviewContent(props: DataHealthCardExpenseReviewProps) {
   }
 
   return (
-    <SimpleModal
+    <SimpleModal busy={busy}
       title={isDuplicate ? 'Tekrarlanan harcamaları karşılaştır' : 'Eksik harcama bilgisini tamamla'}
       open
       onClose={onClose}

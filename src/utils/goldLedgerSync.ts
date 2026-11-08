@@ -102,7 +102,7 @@ function differs(next: InsertFor<'assets'>, current: Asset): boolean {
     next.auto_valued !== current.auto_valued ||
     next.source !== current.source ||
     next.note !== current.note ||
-    Math.abs(next.amount - current.amount) > 0.0001 ||
+    Math.round(next.amount * 10000) !== Math.round(current.amount * 10000) ||
     moneyDiffers(next.unit_cost ?? 0, current.unit_cost ?? 0) ||
     moneyDiffers(next.estimated_value_try, current.estimated_value_try)
   )

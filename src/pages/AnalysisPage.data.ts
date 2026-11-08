@@ -8,7 +8,7 @@ import {
   buildSearchItems,
   type AnalysisData,
 } from '../utils/analysisView'
-import { resolveSavingsGoalRows } from '../utils/goalSources'
+import { useResolvedSnapshotGoals } from '../app/useResolvedSnapshotGoals'
 
 const emptyAnalysisData: AnalysisData = {
   assets: [],
@@ -26,11 +26,6 @@ const emptyAnalysisData: AnalysisData = {
   savingsGoals: [],
 }
 
-const optionalTableLabels: Record<string, string> = {
-  card_installments: 'kart taksitleri',
-  card_statement_archives: 'ekstre arşivi',
-}
-
 const STATEMENT_ARCHIVE_LIMIT = 48
 
 // Bu sayfa artık yalnız OKUR. Günlük snapshot kaydı app/useDailyNetWorthSnapshot
@@ -41,6 +36,7 @@ export function useAnalysisPageData() {
 
   const snapshotQuery = useFinanceSnapshot()
   const userId = user?.id
+  const goals = useResolvedSnapshotGoals(snapshotQuery.data)
 
   const data: AnalysisData = useMemo(() => {
     const snapshot = snapshotQuery.data
@@ -61,16 +57,11 @@ export function useAnalysisPageData() {
       budgets: snapshot.budgets,
       // Kaynağa bağlı hedefin biriken tutarı DB'de değil burada oluşur; döküm
       // ve arama sonuçları ham 0'ı değil türetilmiş tutarı göstersin.
-      savingsGoals: resolveSavingsGoalRows(
-        snapshot.savingsGoals,
-        snapshot.savingsGoalComponents,
-        snapshot.savingsGoalSources,
-        { assets: snapshot.assets, cards: snapshot.cards, snapshot: ratesSnapshot },
-      ).goals,
+      savingsGoals: goals.goals,
     }
-  }, [snapshotQuery.data, ratesSnapshot])
+  }, [snapshotQuery.data, goals.goals])
   const missingTables = useMemo(
-    () => (snapshotQuery.data?.missingTables ?? []).filter((table) => table in optionalTableLabels),
+    () => (snapshotQuery.data?.missingTables ?? []),
     [snapshotQuery.data],
   )
 
@@ -95,6 +86,7 @@ export function useAnalysisPageData() {
 
   return {
     data,
+    goalsIncomplete: goals.incomplete,
     error: snapshotQuery.error instanceof Error ? snapshotQuery.error.message : '',
     loading: snapshotQuery.isPending,
     missingTables,

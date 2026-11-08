@@ -1,0 +1,65 @@
+[WebServer] 
+[WebServer] > financeproject@0.0.0 dev
+[WebServer] > vite --host 127.0.0.1 --port 4191 --strictPort
+[WebServer] 
+[WebServer] (node:43080) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer]   VITE v7.3.7  ready in 283 ms
+[WebServer] 
+[WebServer]   ➜  Local:   http://127.0.0.1:4191/
+
+Running 46 tests using 1 worker
+
+(node:42816) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape account (1.6s)
+  ok  2 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape credit (1.3s)
+  ok  3 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape loan (777ms)
+  ok  4 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape debt (790ms)
+  ok  5 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape payment (829ms)
+  ok  6 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape asset (1.3s)
+  ok  7 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape salary (758ms)
+  ok  8 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape gold (1.3s)
+  ok  9 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape budget (1.3s)
+  ok 10 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:100:1 › form cancel X and rejected cancel then reopen (1.2s)
+  ok 11 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:118:1 › form scrolled cancel with viewport resize restores dock (1.6s)
+  ok 12 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:130:1 › form edit via row menu restores focus on escape (1.0s)
+  ok 13 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:141:1 › quick action popover clean and repeat close (1.7s)
+  ok 14 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:152:1 › header menu coexistence with feature form (959ms)
+  ok 15 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:165:1 › closing unrelated explorer discards underlying dirty guard (1.8s)
+  ok 16 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:178:1 › closing form while save pending then late response closes next draft (1.3s)
+  ok 17 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:197:1 › back cancellation preserves modal and unlocks after discard (1.0s)
+  ok 18 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:210:1 › cancel row edit on long scrolled list restores dock and scroll (1.4s)
+  ok 19 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:221:1 › recent movement edit X and cancel apply different dirty protection (1.6s)
+  ok 20 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:233:1 › normal animation viewport resize cancel dock frame measurements (1.2s)
+  ok 21 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:253:1 › modal touch gesture unexpectedly refreshes background queries (1.4s)
+  ok 22 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:264:1 › cancelled modal touch leaves background pull spacer (1.4s)
+  ok 23 [chromium-mobile] › tests\e2e\audit-form-temporary.spec.ts:275:1 › PDF processing escape protected while X closes it (1.6s)
+(node:20020) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 24 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape account (1.9s)
+  ok 25 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape credit (1.9s)
+  ok 26 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape loan (1.4s)
+  ok 27 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape debt (1.4s)
+  ok 28 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape payment (1.4s)
+  ok 29 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape asset (1.4s)
+  ok 30 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape salary (1.4s)
+  ok 31 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape gold (1.4s)
+  ok 32 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:82:31 › form cancel escape budget (1.9s)
+  ok 33 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:100:1 › form cancel X and rejected cancel then reopen (2.1s)
+  ok 34 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:118:1 › form scrolled cancel with viewport resize restores dock (2.6s)
+  ok 35 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:130:1 › form edit via row menu restores focus on escape (1.9s)
+  ok 36 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:141:1 › quick action popover clean and repeat close (2.4s)
+  ok 37 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:152:1 › header menu coexistence with feature form (1.5s)
+  ok 38 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:165:1 › closing unrelated explorer discards underlying dirty guard (2.4s)
+  ok 39 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:178:1 › closing form while save pending then late response closes next draft (2.2s)
+  ok 40 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:197:1 › back cancellation preserves modal and unlocks after discard (1.4s)
+  ok 41 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:210:1 › cancel row edit on long scrolled list restores dock and scroll (2.2s)
+  ok 42 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:221:1 › recent movement edit X and cancel apply different dirty protection (2.7s)
+  ok 43 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:233:1 › normal animation viewport resize cancel dock frame measurements (1.8s)
+  ok 44 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:253:1 › modal touch gesture unexpectedly refreshes background queries (1.9s)
+  ok 45 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:264:1 › cancelled modal touch leaves background pull spacer (2.0s)
+  ok 46 [webkit-mobile] › tests\e2e\audit-form-temporary.spec.ts:275:1 › PDF processing escape protected while X closes it (3.2s)
+
+  46 passed (1.3m)

@@ -92,14 +92,14 @@ describe('formatSavingsGoalProgress', () => {
 
 describe('savings goal completion guards', () => {
   it('treats a one-kurus gap as reached to preserve the legacy grace', () => {
-    const row = goal({ target_amount: 100, current_amount: 99.99 })
+    const row = goal({ value_type: 'TRY', target_amount: 100, current_amount: 99.99 })
 
     expect(savingsGoalTargetReached(row)).toBe(true)
     expect(savingsGoalBelowTarget(row)).toBe(false)
   })
 
   it('treats gaps larger than one kurus as incomplete', () => {
-    const row = goal({ target_amount: 100, current_amount: 99.98 })
+    const row = goal({ value_type: 'TRY', target_amount: 100, current_amount: 99.98 })
 
     expect(savingsGoalTargetReached(row)).toBe(false)
     expect(savingsGoalBelowTarget(row)).toBe(true)

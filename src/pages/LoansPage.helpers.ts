@@ -7,7 +7,7 @@ import {
 } from '../data/repositories/loansRepo'
 import type { Card, InsertFor, Loan, LoanInstallment } from '../types/database'
 import { dateInMonth, dateInputValue, formatDate, startOfToday } from '../utils/date'
-import { parseNumber } from '../utils/formatCurrency'
+import { parseNativeNumber } from '../utils/formatCurrency'
 
 export function getNextPaymentDate(installmentDay: number | null, remainingInstallments: number): string | null {
   if (!installmentDay || remainingInstallments <= 0) return null
@@ -70,7 +70,7 @@ function parseLocalDate(value: string | null | undefined) {
   return new Date(year, month - 1, day)
 }
 
-function buildLoanSchedule(loan: Loan): InsertFor<'loan_installments'>[] {
+export function buildLoanSchedule(loan: Loan): InsertFor<'loan_installments'>[] {
   const start = parseLocalDate(loan.start_date)
   const end = parseLocalDate(loan.end_date)
   if (!start || !end || !loan.installment_day || loan.monthly_payment <= 0 || end < start) return []
@@ -85,7 +85,8 @@ function buildLoanSchedule(loan: Loan): InsertFor<'loan_installments'>[] {
     dueDate = dateInMonth(cursorYear, cursorMonth, loan.installment_day)
   }
 
-  while (dueDate <= end && schedule.length < 240) {
+  while (dueDate <= end) {
+    if (schedule.length >= 600) throw new Error('Kredi planı en fazla 600 taksit olabilir.')
     schedule.push({
       id: crypto.randomUUID(),
       user_id: loan.user_id,
@@ -175,15 +176,21 @@ export function loanProgress(loan: Loan, installments: LoanInstallment[]) {
 
 export function validateLoanForm(formData: FormData) {
   const errors: Record<string, string> = {}
-  const totalAmount = parseNumber(formData.get('total_amount'))
-  const monthlyPayment = parseNumber(formData.get('monthly_payment'))
+  const totalAmount = parseNativeNumber(formData.get('total_amount'))
+  const monthlyPayment = parseNativeNumber(formData.get('monthly_payment'))
   const startDate = String(formData.get('start_date') ?? '')
   const endDate = String(formData.get('end_date') ?? '')
 
-  if (totalAmount <= 0) errors.total_amount = 'Toplam kredi tutarı 0’dan büyük olmalı.'
-  if (monthlyPayment <= 0) errors.monthly_payment = 'Aylık ödeme 0’dan büyük olmalı.'
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0) errors.total_amount = 'Toplam kredi tutarı 0’dan büyük olmalı.'
+  if (!Number.isFinite(monthlyPayment) || monthlyPayment <= 0) errors.monthly_payment = 'Aylık ödeme 0’dan büyük olmalı.'
   if (startDate && endDate && endDate < startDate) {
     errors.end_date = 'Bitiş tarihi başlangıç tarihinden önce olamaz.'
+  }
+  if (startDate && endDate) {
+    const start = parseLocalDate(startDate), end = parseLocalDate(endDate)
+    if (start && end && (end.getFullYear() - start.getFullYear()) * 12 + end.getMonth() - start.getMonth() + 1 > 600) {
+      errors.end_date = 'Kredi planı en fazla 600 ayı kapsayabilir.'
+    }
   }
 
   return errors

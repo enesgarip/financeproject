@@ -79,7 +79,7 @@ describe('financeSnapshotRepo.runFinanceMaintenance', () => {
 
 describe('snapshot legacy archive scope', () => {
   it('RPC yokken açık ekstreleri koruyan ortak repository yolunu kullanır', async () => {
-    const query = { select: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), gte: vi.fn().mockReturnThis(), then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(resolve) }
+    const query = { limit: vi.fn().mockReturnThis(), lt: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), gte: vi.fn().mockReturnThis(), then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: [], error: null }).then(resolve) }
     mocks.from.mockReturnValue(query)
     mocks.rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202', message: 'Missing RPC' } })
     const rows = [{ id: 'old-open', statement_date: '2025-01-25', due_date: '2025-02-05', status: 'open' }]

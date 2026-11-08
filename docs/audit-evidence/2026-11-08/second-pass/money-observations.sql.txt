@@ -1,0 +1,22 @@
+begin;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+insert into public.cards(id,user_id,bank_name,card_name,card_type,current_balance) values
+('baad0000-0000-4000-8000-000000000011','11111111-1111-1111-1111-111111111111','LOCAL-AUDIT','LOCAL-AUDIT-2-A','banka_karti',10000),
+('baad0000-0000-4000-8000-000000000012','11111111-1111-1111-1111-111111111111','LOCAL-AUDIT','LOCAL-AUDIT-2-B','banka_karti',1000);
+select (public.record_manual_account_movement('baad0000-0000-4000-8000-000000000011',200,'in')).current_balance as first_income;
+select (public.record_manual_account_movement('baad0000-0000-4000-8000-000000000011',200,'in')).current_balance as repeated_income;
+select public.transfer_between_accounts('baad0000-0000-4000-8000-000000000011','baad0000-0000-4000-8000-000000000012',500) as first_transfer;
+select public.transfer_between_accounts('baad0000-0000-4000-8000-000000000011','baad0000-0000-4000-8000-000000000012',500) as repeated_transfer;
+insert into public.assets(id,user_id,name,category,amount,unit,estimated_value_try,auto_valued) values
+('baad0000-0000-4000-8000-000000000013','11111111-1111-1111-1111-111111111111','LOCAL-AUDIT-2-Fon','Fon',10,'adet',1000,false),
+('baad0000-0000-4000-8000-000000000014','11111111-1111-1111-1111-111111111111','LOCAL-AUDIT-2-BES','BES',1,'adet',1000,false);
+select (public.trade_asset_with_account('baad0000-0000-4000-8000-000000000013','baad0000-0000-4000-8000-000000000011','buy',100,1)).amount as first_trade;
+select (public.trade_asset_with_account('baad0000-0000-4000-8000-000000000013','baad0000-0000-4000-8000-000000000011','buy',100,1)).amount as repeated_trade;
+select (public.update_asset_value('baad0000-0000-4000-8000-000000000014',1500,500,'2026-11-08T12:00:00Z')).estimated_value_try as first_valuation;
+select (public.update_asset_value('baad0000-0000-4000-8000-000000000014',1500,500,'2026-11-08T12:00:00Z')).estimated_value_try as repeated_valuation;
+select count(*) as events,sum(contribution_kurus)/100.0 as contribution,sum(value_after_kurus-value_before_kurus-contribution_kurus)/100.0 as apparent_growth from public.asset_value_events where asset_id='baad0000-0000-4000-8000-000000000014';
+insert into public.assets(id,user_id,name,category,amount,unit,estimated_value_try,auto_valued,source) values
+('baad0000-0000-4000-8000-000000000015','11111111-1111-1111-1111-111111111111','LOCAL-AUDIT-2-Altin','Altın',1.2345,'gram',6172.50,true,'gold_ledger');
+select amount,estimated_value_try,amount*5000 as live_value_from_stored_quantity from public.assets where id='baad0000-0000-4000-8000-000000000015';
+rollback;

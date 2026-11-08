@@ -1,0 +1,78 @@
+{
+  "before": {
+    "url": "/varliklar/maas",
+    "scrollY": 1545,
+    "innerHeight": 839,
+    "innerWidth": 412,
+    "visual": {
+      "height": 839,
+      "offsetTop": 0,
+      "pageTop": 1545,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 714,
+        "width": 412,
+        "height": 125,
+        "top": 714,
+        "right": 412,
+        "bottom": 839,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BODY",
+      "text": "\n    DengeKişisel finansÖzetHesaplarVarlıklarBorçlarPlanAnal",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  "after": {
+    "url": "/varliklar/maas",
+    "scrollY": 1545,
+    "innerHeight": 839,
+    "innerWidth": 412,
+    "visual": {
+      "height": 839,
+      "offsetTop": 0,
+      "pageTop": 1545,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 714,
+        "width": 412,
+        "height": 125,
+        "top": 714,
+        "right": 412,
+        "bottom": 839,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BODY",
+      "text": "\n    DengeKişisel finansÖzetHesaplarVarlıklarBorçlarPlanAnal",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  }
+}

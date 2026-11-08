@@ -1,3 +1,4 @@
+import { readAllRows, sortRowsBy } from './readAllRows'
 import { supabase } from '../../lib/supabase'
 import type { CardExpense, NetWorthSnapshot, SavingsGoalSnapshot, TransactionHistory } from '../../types/database'
 import { addMonths, dateInputValue, startOfMonth } from '../../utils/date'
@@ -91,11 +92,9 @@ export async function recordSavingsGoalSnapshots(
 }
 
 export async function fetchNetWorthSnapshots(): Promise<Result<NetWorthSnapshot[] | null>> {
-  const { data, error } = await supabase
-    .from('net_worth_snapshots')
-    .select('*')
-    .order('snapshot_date', { ascending: false })
-    .limit(NET_WORTH_SNAPSHOT_LIMIT)
+  const response = await readAllRows('net_worth_snapshots')
+  const error = response.error
+  const data = sortRowsBy(response.data ?? [], 'snapshot_date').slice(0, NET_WORTH_SNAPSHOT_LIMIT)
 
   if (isMissingSupabaseCapabilityError(error)) return ok(null)
   return resultFromSupabase([...(data ?? [])].reverse() as NetWorthSnapshot[], error, 'Net değer serisi yüklenemedi.')
@@ -105,11 +104,9 @@ export async function fetchNetWorthSnapshots(): Promise<Result<NetWorthSnapshot[
 const SAVINGS_GOAL_SNAPSHOT_LIMIT = 2000
 
 export async function fetchSavingsGoalSnapshots(): Promise<Result<SavingsGoalSnapshot[] | null>> {
-  const { data, error } = await supabase
-    .from('savings_goal_snapshots')
-    .select('*')
-    .order('snapshot_date', { ascending: false })
-    .limit(SAVINGS_GOAL_SNAPSHOT_LIMIT)
+  const response = await readAllRows('savings_goal_snapshots')
+  const error = response.error
+  const data = sortRowsBy(response.data ?? [], 'snapshot_date').slice(0, SAVINGS_GOAL_SNAPSHOT_LIMIT)
 
   if (isMissingSupabaseCapabilityError(error)) return ok(null)
   return resultFromSupabase(
@@ -127,18 +124,8 @@ export type PriceRadarRows = {
 export async function fetchPriceRadarRows(): Promise<Result<PriceRadarRows>> {
   const radarStart = dateInputValue(addMonths(startOfMonth(), 1 - PRICE_RADAR_MONTHS))
   const [history, expenses] = await Promise.all([
-    supabase
-      .from('transaction_history')
-      .select('*')
-      .eq('type', 'payment')
-      .gte('occurred_at', radarStart)
-      .order('occurred_at', { ascending: false }),
-    supabase
-      .from('card_expenses')
-      .select('*')
-      .eq('status', 'posted')
-      .gte('spent_at', radarStart)
-      .order('spent_at', { ascending: false }),
+    readAllRows('transaction_history', [{ column: 'type', op: 'eq', value: 'payment' }, { column: 'occurred_at', op: 'gte', value: radarStart }]),
+    readAllRows('card_expenses', [{ column: 'status', op: 'eq', value: 'posted' }, { column: 'spent_at', op: 'gte', value: radarStart }]),
   ])
 
   const error = history.error ?? expenses.error

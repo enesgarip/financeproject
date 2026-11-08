@@ -223,7 +223,7 @@ export function FixAllModal({
   onConfirm: () => void
 }) {
   return (
-    <SimpleModal title="Toplu düzeltmeyi onayla" open={open} onClose={onClose}>
+    <SimpleModal busy={Boolean(fixingId) || undoing} title="Toplu düzeltmeyi onayla" open={open} onClose={onClose}>
       <div className="space-y-4">
         <div className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm text-warning">
           <div className="flex items-start gap-3">
@@ -292,7 +292,7 @@ export function ResetDataModal({
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
 }) {
   return (
-    <SimpleModal title="Tüm veriyi sil" open={open} onClose={onClose}>
+    <SimpleModal busy={resetting} title="Tüm veriyi sil" open={open} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm text-destructive">
           <div className="flex items-start gap-3">
@@ -348,7 +348,7 @@ export function RestoreBackupModal({
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
 }) {
   return (
-    <SimpleModal title="Yedekten geri yükle" open={restoreParsed !== null} onClose={onClose}>
+    <SimpleModal busy={restoring} title="Yedekten geri yükle" open={restoreParsed !== null} onClose={onClose}>
       {restoreParsed ? (
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm text-warning">

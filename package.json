@@ -19,6 +19,7 @@
     "test:coverage": "npm run test:guards && vitest run --coverage",
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "test:e2e": "playwright test",
+    "test:e2e:audit": "playwright test --config=playwright.audit.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "docker:build": "docker build -t financeproject .",
     "docker:preview": "docker compose -f docker-compose.ci.yml up --build app",

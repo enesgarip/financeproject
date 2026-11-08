@@ -147,7 +147,7 @@ export function AssistantPage() {
         : '',
     [snapshotQuery.data, ratesSnapshot, bucketsQuery.data, safeToSpendBuffer, carsQuery.data, extrasQuery.data],
   )
-  const canSend = Boolean(snapshotQuery.data) && !send.isPending
+  const canSend = Boolean(snapshotQuery.data) && !send.isPending && !clear.isPending
 
   useEffect(() => {
     const reduced = typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
@@ -201,7 +201,7 @@ export function AssistantPage() {
         eyebrow="Asistan"
         context={
           messages.length > 0 ? (
-            <Button variant="ghost" size="xs" onClick={() => setConfirmClear(true)} disabled={clear.isPending}>
+            <Button variant="ghost" size="xs" onClick={() => setConfirmClear(true)} disabled={clear.isPending || send.isPending}>
               <Trash2 aria-hidden="true" />
               Geçmişi temizle
             </Button>
@@ -305,7 +305,7 @@ export function AssistantPage() {
             rows={textareaRows}
             maxLength={2000}
             placeholder={snapshotQuery.data ? 'Finansal durumun hakkında soru sor…' : 'Finansal özet yükleniyor…'}
-            disabled={send.isPending || !snapshotQuery.data}
+            disabled={send.isPending || clear.isPending || !snapshotQuery.data}
             aria-label="Asistana mesaj"
             className="min-h-11 w-full resize-none rounded-lg border border-line-strong bg-raised px-3 py-2.5 text-sm leading-6 text-ink placeholder:text-ink-faint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
           />
@@ -325,9 +325,9 @@ export function AssistantPage() {
         description="Tüm konuşma kalıcı olarak silinir; finansal verilerine dokunulmaz."
         confirmLabel="Geçmişi sil"
         variant="destructive"
-        loading={clear.isPending}
+        loading={clear.isPending || send.isPending}
         onConfirm={() =>
-          clear.mutate(undefined, {
+          !send.isPending && clear.mutate(undefined, {
             onSettled: () => setConfirmClear(false),
           })
         }

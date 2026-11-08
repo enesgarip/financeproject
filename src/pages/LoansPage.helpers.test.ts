@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { InsertFor, LoanInstallment } from '../types/database'
+import type { InsertFor, LoanInstallment, Loan } from '../types/database'
 import {
   PAID_BEFORE_APP_NOTE,
+  buildLoanSchedule,
   markPaidWithoutCashPayload,
   mergeLoanInstallmentSchedule,
   pastDuePendingInstallments,
@@ -93,4 +94,12 @@ describe('markPaidWithoutCashPayload / pastDuePendingInstallments (BM-5c)', () =
     const [payload] = markPaidWithoutCashPayload([row])
     expect(payload.note).toBe('elden ödendi')
   })
+})
+
+it('360 ay krediyi kesmeden üretir; 600 üstünü açıkça reddeder', () => {
+  const loan = { id: 'long', user_id: 'u', start_date: '2026-01-01', end_date: '2055-12-31', installment_day: 10, monthly_payment: 100 } as Loan
+  const schedule = buildLoanSchedule(loan)
+  expect(schedule).toHaveLength(360)
+  expect(schedule.at(-1)?.due_date).toBe('2055-12-10')
+  expect(() => buildLoanSchedule({ ...loan, end_date: '2076-12-31' })).toThrow('600')
 })

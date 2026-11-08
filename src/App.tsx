@@ -115,7 +115,8 @@ function routeElement(page: ReactNode, key: string) {
 
 function ThemeBoot() {
   useEffect(() => {
-    const storedTheme = localStorage.getItem('theme')
+    let storedTheme: string | null = null
+    try { storedTheme = localStorage.getItem('theme') } catch { /* Sistem teması oturumda çalışır. */ }
     const isDark = storedTheme
       ? storedTheme === 'dark'
       : window.matchMedia('(prefers-color-scheme: dark)').matches

@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { syncPushSubscription } from '../lib/pushClient'
 
 /**
  * Açılışta push aboneliğini sessizce tazeler.
@@ -17,12 +16,14 @@ export function usePushSubscriptionSync(userId: string | undefined): void {
     if (!userId) return
     let cancelled = false
     void (async () => {
+      const { syncPushSubscription } = await import('../lib/pushClient')
+      if (cancelled) return
       const outcome = await syncPushSubscription(userId)
       if (cancelled) return
       if (outcome === 'resubscribed' || outcome === 'server-row-restored') {
         console.info(`[push] abonelik onarıldı: ${outcome}`)
       }
-    })()
+    })().catch(() => { console.warn('[push] abonelik kontrolü şu an tamamlanamadı') })
     return () => {
       cancelled = true
     }

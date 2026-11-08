@@ -1,0 +1,28 @@
+[WebServer] 
+[WebServer] > financeproject@0.0.0 dev
+[WebServer] > vite --host 127.0.0.1 --port 4173 --strictPort
+[WebServer] 
+[WebServer] (node:44704) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer]   VITE v7.3.7  ready in 275 ms
+[WebServer] 
+[WebServer]   ➜  Local:   http://127.0.0.1:4173/
+
+Running 9 tests using 1 worker
+
+(node:39040) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 1 [chromium] › tests\e2e\audit-temporary.spec.ts:57:1 › audit karar: eksik rezerv ve eksik taksit tablosunda olumlu karar (1.6s)
+AUDIT_DOUBLE_RESERVE { calls: 2, reserved: 13000, intended: 11000 }
+  ok 2 [chromium] › tests\e2e\audit-temporary.spec.ts:66:1 › audit karar: kasa hedefi eksik çözülüyor ve kayıp yanıtta iki kez ayrılıyor (1.3s)
+  ok 3 [chromium] › tests\e2e\audit-temporary.spec.ts:94:1 › audit gizlilik: karar gerekçesi tutarı açık gösteriyor (1.5s)
+  ok 4 [chromium] › tests\e2e\audit-temporary.spec.ts:103:1 › audit ay kapanışı: eksik kısmi ödeme tablosunda erişim yeşil (1.2s)
+  ok 5 [chromium] › tests\e2e\audit-temporary.spec.ts:110:1 › audit kredi: taksit sorgusu hatası plan yok diye sunuluyor (601ms)
+  ok 6 [chromium] › tests\e2e\audit-temporary.spec.ts:120:47 › audit eksik veri ayrık: reserve (1.1s)
+  ok 7 [chromium] › tests\e2e\audit-temporary.spec.ts:120:47 › audit eksik veri ayrık: schema (1.1s)
+AUDIT_DOUBLE_LOAN { writes: 2 }
+  ok 8 [chromium] › tests\e2e\audit-temporary.spec.ts:128:1 › audit kredi: plan yazımı hatasından sonra tekrar Kaydet çift kredi yaratıyor (1.4s)
+  ok 9 [chromium] › tests\e2e\audit-temporary.spec.ts:163:1 › audit bütçe: analiz limiti değiştirince bütçe CRUD önbelleği eski kalıyor (3.5s)
+
+  9 passed (14.8s)

@@ -1,19 +1,16 @@
+import { readAllRows, sortRowsBy } from './readAllRows'
 import { supabase } from '../../lib/supabase'
 import type { InsertFor, LoanInstallment, UpdateFor } from '../../types/database'
 import { ok, resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
 export async function fetchLoanInstallments(): Promise<Result<LoanInstallment[]>> {
-  const { data, error } = await supabase
-    .from('loan_installments')
-    .select('*')
-    .order('due_date', { ascending: true })
-    .order('installment_no', { ascending: true })
+  const { data, error } = await readAllRows('loan_installments')
 
-  return resultFromSupabase((data ?? []) as LoanInstallment[], error, 'Kredi taksitleri yüklenemedi.')
+  return resultFromSupabase(sortRowsBy(data ?? [], 'due_date', true), error, 'Kredi taksitleri yüklenemedi.')
 }
 
 export async function fetchLoanInstallmentsByLoan(loanId: string): Promise<Result<LoanInstallment[]>> {
-  const { data, error } = await supabase.from('loan_installments').select('*').eq('loan_id', loanId)
+  const { data, error } = await readAllRows('loan_installments', [{ column: 'loan_id', op: 'eq', value: loanId }])
   return resultFromSupabase((data ?? []) as LoanInstallment[], error, 'Kredi taksitleri yüklenemedi.')
 }
 

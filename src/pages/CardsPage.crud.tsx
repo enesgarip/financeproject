@@ -2,7 +2,7 @@ import { ReceiptText } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import type { AccountKind, Card, InsertFor, UpdateFor } from '../types/database'
 import { cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
-import { formatCurrency, parseNumber } from '../utils/formatCurrency'
+import { formatCurrency, parseNativeNumber } from '../utils/formatCurrency'
 import { equalsTL } from '../utils/money'
 import {
   bankHueStyle,
@@ -51,10 +51,10 @@ export function mapCardForm(formData: FormData, userId: string, editing: Card | 
   const isCreditCard = cardType === 'kredi_karti'
   const accountKind: AccountKind = entryType === 'cash' ? 'cash' : 'bank'
   const isCash = !isCreditCard && accountKind === 'cash'
-  const statementDebt = isCreditCard ? parseNumber(formData.get('statement_debt_amount')) : 0
-  const currentPeriod = isCreditCard ? parseNumber(formData.get('current_period_spending')) : 0
-  const provisionAmount = isCreditCard ? parseNumber(formData.get('provision_amount')) : 0
-  const currentBalance = isCreditCard ? 0 : parseNumber(formData.get('current_balance'))
+  const statementDebt = isCreditCard ? parseNativeNumber(formData.get('statement_debt_amount') || '0') : 0
+  const currentPeriod = isCreditCard ? parseNativeNumber(formData.get('current_period_spending') || '0') : 0
+  const provisionAmount = isCreditCard ? parseNativeNumber(formData.get('provision_amount') || '0') : 0
+  const currentBalance = isCreditCard ? 0 : parseNativeNumber(formData.get('current_balance') || '0')
   const cardTypeChanged = Boolean(editing && editing.card_type !== cardType)
   const debtSplitChanged = !editing ||
     !equalsTL(statementDebt, editing.statement_debt_amount) ||
@@ -71,7 +71,7 @@ export function mapCardForm(formData: FormData, userId: string, editing: Card | 
     account_number: !isCreditCard && !isCash ? String(formData.get('account_number') ?? '').trim() || null : null,
     iban: !isCreditCard && !isCash ? String(formData.get('iban') ?? '').replace(/\s+/g, '').toUpperCase() || null : null,
     limit_group_name: isCreditCard ? String(formData.get('limit_group_name') ?? '').trim() || null : null,
-    credit_limit: isCreditCard ? parseNumber(formData.get('credit_limit')) : 0,
+    credit_limit: isCreditCard ? parseNativeNumber(formData.get('credit_limit') || '0') : 0,
     statement_day: isCreditCard ? optionalDay(formData.get('statement_day')) : null,
     due_day: isCreditCard ? optionalDay(formData.get('due_day')) : null,
     note: String(formData.get('note') ?? '') || null,

@@ -6,7 +6,7 @@ const MASKED_AMOUNT = '••••'
 
 function readInitialValue() {
   if (typeof window === 'undefined') return false
-  return window.localStorage.getItem(STORAGE_KEY) === 'hidden'
+  try { return window.localStorage.getItem(STORAGE_KEY) === 'hidden' } catch { return true }
 }
 
 /**
@@ -50,7 +50,7 @@ export function BalancePrivacyProvider({ children }: { children: ReactNode }) {
   const [hidden, setHidden] = useState(readInitialValue)
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, hidden ? 'hidden' : 'visible')
+    try { window.localStorage.setItem(STORAGE_KEY, hidden ? 'hidden' : 'visible') } catch { /* Oturum içi tercih korunur. */ }
   }, [hidden])
 
   const toggleHidden = useCallback(() => {

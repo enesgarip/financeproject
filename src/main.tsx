@@ -12,7 +12,8 @@ if (import.meta.env.PROD) {
   void import('./lib/errorReport').then((mod) => mod.installClientErrorReporting()).catch(() => undefined)
 }
 
-const storedTheme = localStorage.getItem('theme')
+let storedTheme: string | null = null
+try { storedTheme = localStorage.getItem('theme') } catch { /* Tercih okunamıyorsa sistem teması. */ }
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
 document.documentElement.classList.toggle('dark', storedTheme ? storedTheme === 'dark' : prefersDark)
 

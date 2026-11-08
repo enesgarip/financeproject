@@ -1,0 +1,4 @@
+captured 24 screens: 390 light
+captured 24 screens: 390 dark
+captured 24 screens: 1280 light
+Read-only blocks: {"post_due_card_installments":27,"cut_due_card_statements":27,"reconcile_card_payment_expenses":27,"assets":84}

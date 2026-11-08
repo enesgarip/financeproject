@@ -9,7 +9,12 @@
  */
 import type { SavingsGoal, SavingsGoalComponent, SavingsGoalValueType } from '../types/database'
 import { formatNumber, formatSeritAmount } from './formatCurrency'
-import { exceedsTL } from './money'
+import { exceedsTL, roundTL } from './money'
+
+/** TL kuruş; altın hedefi para değil miktardır, defterle aynı dört hane. */
+export function roundGoalAmount(value: number, valueType: SavingsGoalValueType = 'TRY') {
+  return valueType === 'TRY' ? roundTL(value) : Math.round(value * 10000) / 10000
+}
 
 export function savingsGoalValueTypeLabel(valueType: SavingsGoalValueType) {
   if (valueType === 'gram_altin') return 'gram'
@@ -25,13 +30,13 @@ export function formatSavingsGoalAmount(
   if (goal.value_type === 'TRY') return formatSeritAmount(amount, { decimals: 2 })
   if (goal.value_type === 'composite') return `${formatNumber(amount)} bileşen`
   const unit = goal.value_type === 'gram_altin' ? 'gram' : 'çeyrek'
-  return `${formatNumber(amount)} ${unit}`
+  return `${amount.toLocaleString('tr-TR', { maximumFractionDigits: 4 })} ${unit}`
 }
 
 export function formatComponentAmount(component: Pick<SavingsGoalComponent, 'value_type'>, amount: number) {
   if (component.value_type === 'TRY') return formatSeritAmount(amount, { decimals: 2 })
   const unit = component.value_type === 'gram_altin' ? 'gram' : 'çeyrek'
-  return `${formatNumber(amount)} ${unit}`
+  return `${amount.toLocaleString('tr-TR', { maximumFractionDigits: 4 })} ${unit}`
 }
 
 export function savingsGoalProgressRate(
@@ -49,15 +54,18 @@ export function savingsGoalProgressRate(
 }
 
 export function savingsGoalTargetReached(
-  row: Pick<SavingsGoal | SavingsGoalComponent, 'target_amount' | 'current_amount'>,
+  row: Pick<SavingsGoal | SavingsGoalComponent, 'target_amount' | 'current_amount'> & Partial<Pick<SavingsGoal, 'value_type'>>,
 ) {
-  return row.target_amount > 0 && !exceedsTL(row.target_amount, row.current_amount)
+  return row.target_amount > 0 && !savingsGoalBelowTarget(row)
 }
 
 export function savingsGoalBelowTarget(
-  row: Pick<SavingsGoal | SavingsGoalComponent, 'target_amount' | 'current_amount'>,
+  row: Pick<SavingsGoal | SavingsGoalComponent, 'target_amount' | 'current_amount'> & Partial<Pick<SavingsGoal, 'value_type'>>,
 ) {
-  return row.target_amount > 0 && exceedsTL(row.target_amount, row.current_amount)
+  if (!(row.target_amount > 0)) return false
+  return row.value_type && row.value_type !== 'TRY'
+    ? Math.round(row.target_amount * 10000) > Math.round(row.current_amount * 10000)
+    : exceedsTL(row.target_amount, row.current_amount)
 }
 
 export function formatSavingsGoalProgress(goal: SavingsGoal, components: SavingsGoalComponent[] = []) {

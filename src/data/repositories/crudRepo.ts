@@ -1,18 +1,15 @@
+import { readAllRows, sortRowsBy } from './readAllRows'
 import { supabase } from '../../lib/supabase'
-import type { InsertFor, RowFor, TableName, UpdateFor } from '../../types/database'
+import type { InsertFor, RowFor, CrudTableName, TableName, UpdateFor } from '../../types/database'
 import { resultFromSupabase, voidResultFromSupabase, type Result } from '../result'
 
-export async function fetchCrudRows<T extends TableName>(
+export async function fetchCrudRows<T extends CrudTableName>(
   table: T,
   orderBy: keyof RowFor<T> & string,
   ascending: boolean,
 ): Promise<Result<RowFor<T>[]>> {
-  const { data, error } = await supabase
-    .from(table as never)
-    .select('*')
-    .order(orderBy, { ascending })
-
-  return resultFromSupabase((data ?? []) as unknown as RowFor<T>[], error, 'Kayıtlar yüklenemedi.')
+  const { data, error } = await readAllRows(table)
+  return resultFromSupabase(sortRowsBy(data ?? [], orderBy, ascending), error, 'Kayıtlar yüklenemedi.')
 }
 
 export async function deleteCrudRow<T extends TableName>(table: T, id: string): Promise<Result<void>> {
