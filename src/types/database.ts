@@ -1278,6 +1278,10 @@ export type Database = {
         Args: { p_request_id: string; p_method: string; p_args: Json }
         Returns: void
       }
+      submit_finance_operation: {
+        Args: { p_request_id: string; p_method: string; p_args: Json }
+        Returns: void
+      }
       fetch_automation_health: {
         Args: Record<string, never>
         Returns: Json

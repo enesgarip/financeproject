@@ -76,7 +76,7 @@ export function CarServiceModal({ reminder, car, onClose, onCompleted }: { remin
     finally { inFlight.current = false; setBusy(false) }
   }
 
-  return <SimpleModal open title="Bakımı veya yenilemeyi tamamla" onClose={() => { if (!busy) onClose() }}>
+  return <SimpleModal busy={busy} open title="Bakımı veya yenilemeyi tamamla" onClose={() => { if (!busy) onClose() }}>
     <form onSubmit={event => void submit(event)} className="space-y-4">
       <p className="break-words font-semibold">{maskText(car.name)} · {maskText(reminder.title)}</p>
       {attempt ? <p role="status" className="text-sm text-warning">Önceki işlemin sonucu aynı bilgilerle doğrulanacak.</p> : null}

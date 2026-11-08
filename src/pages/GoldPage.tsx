@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/useAuth'
 import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import { CrudPage, type FormField } from '../components/CrudPage'
@@ -11,18 +11,19 @@ import { Card, CardContent } from '../components/ui/card'
 import { QueryError } from '../components/ui/query-error'
 import { useMarketRates } from '../hooks/useMarketRates'
 import type { Asset, GoldDirection, GoldLot, GoldType } from '../types/database'
-import { formatNumber, parseNumber } from '../utils/formatCurrency'
+import { parseNativeNumber } from '../utils/formatCurrency'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import {
   GOLD_TYPE_LABELS,
   GOLD_TYPE_UNIT,
   buildGoldAccumulation,
-  summarizeGoldType,
+  validateGoldInventory,
 } from '../utils/goldLedger'
 import { syncGoldLedgerAssets } from '../utils/goldLedgerSync'
 import { buildGoldHoldings } from '../utils/goldHoldings'
 import type { MarketRatesSnapshot } from '../utils/marketRates'
 import { roundTL as round2, sumTL } from '../utils/money'
+import { roundGoalAmount } from '../utils/savingsGoal'
 import { valueAsset } from '../utils/valuation'
 
 const goldFields: FormField[] = [
@@ -89,16 +90,16 @@ function formatDate(value: string | null): string {
 }
 
 function formatQuantity(value: number, type: GoldType): string {
-  return `${formatNumber(value)} ${type === 'gram' ? 'gr' : 'adet'}`
+  return `${value.toLocaleString('tr-TR', { maximumFractionDigits: 4 })} ${type === 'gram' ? 'gr' : 'adet'}`
 }
 
 function optionalNumber(formData: FormData, name: string): number | null {
   const raw = String(formData.get(name) ?? '').trim()
-  return raw ? parseNumber(raw) : null
+  return raw ? parseNativeNumber(raw) : null
 }
 
 function goldValue(type: GoldType, quantity: number, snapshot: MarketRatesSnapshot | null): number | null {
-  if (quantity <= 0) return 0
+  if (!Number.isFinite(quantity) || quantity <= 0) return 0
   return valueAsset(
     {
       category: 'Altın',
@@ -136,8 +137,8 @@ function buildChartData(lots: GoldLot[], snapshot: MarketRatesSnapshot | null): 
     return {
       date: String(lot.purchase_date),
       label: formatDate(lot.purchase_date),
-      gram: round2(gram),
-      ceyrek: round2(ceyrek),
+      gram: roundGoalAmount(gram, 'gram_altin'),
+      ceyrek: roundGoalAmount(ceyrek, 'ceyrek_altin'),
       cost: accumulation[index]?.cumulativeCost ?? 0,
       market: gramValue === null || ceyrekValue === null ? null : sumTL([gramValue, ceyrekValue]),
     }
@@ -159,10 +160,14 @@ function GoldLedgerAssetSync({
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const lastSyncKey = useRef('')
   const hasSeenLots = useRef(false)
+  const queue = useRef(Promise.resolve())
+  const generation = useRef(0)
+  const [syncError, setSyncError] = useState('')
+  const [retry, setRetry] = useState(0)
   const rowsKey = useMemo(
     () =>
       rows
-        .map((row) => [row.id, row.purchase_date, row.gold_type, row.ayar, row.quantity, row.unit_price, row.note].join(':'))
+        .map((row) => [row.id, row.direction, row.purchase_date, row.gold_type, row.ayar, row.quantity, row.unit_price, row.note].join(':'))
         .join('|'),
     [rows],
   )
@@ -175,22 +180,26 @@ function GoldLedgerAssetSync({
 
     const syncKey = `${rowsKey}::${ratesKey}`
     if (lastSyncKey.current === syncKey) return
-    lastSyncKey.current = syncKey
-
-    void syncGoldLedgerAssets(rows, user.id, snapshot)
-      .then(async (result) => {
-        if (rows.length === 0) hasSeenLots.current = false
+    const currentGeneration = ++generation.current
+    const invalid = validateGoldInventory(rows)
+    if (invalid) { setError(invalid); return }
+    let active = true
+    queue.current = queue.current.catch(() => {}).then(async () => {
+      if (!active || currentGeneration !== generation.current) return
+      try {
+        const result = await syncGoldLedgerAssets(rows, user.id, snapshot)
+        lastSyncKey.current = syncKey
+        if (active) { setSyncError(''); if (!rows.length) hasSeenLots.current = false }
         if (result.inserted + result.updated + result.deleted > 0) await invalidateSnapshot()
-      })
-      .catch((error: unknown) => {
-        const message = typeof error === 'object' && error !== null && 'message' in error
-          ? String((error as { message?: unknown }).message)
-          : 'Altın defteri varlık senkronu tamamlanamadı.'
-        setError(message)
-      })
-  }, [loading, ratesKey, rows, rowsKey, setError, snapshot, user, invalidateSnapshot])
+      } catch (error) {
+        if (active) setSyncError(error instanceof Error ? error.message : 'Altın varlıkları güncellenemedi.')
+      }
+    })
+    return () => { active = false }
+  }, [loading, ratesKey, rows, rowsKey, setError, snapshot, user, invalidateSnapshot, retry])
 
-  return null
+  return syncError ? <p role="alert" className="text-sm text-destructive">{syncError} <button className="min-h-11 underline" onClick={() => setRetry(value => value + 1)}>Tekrar dene</button></p> : null
+
 }
 
 function GoldOverview({ rows, assets, snapshot }: { rows: GoldLot[]; assets: Asset[]; snapshot: MarketRatesSnapshot | null }) {
@@ -317,21 +326,19 @@ function GoldAccumulationChart({ rows, snapshot }: { rows: GoldLot[]; snapshot: 
  */
 function validateGoldLot(formData: FormData, rows: GoldLot[], editing: GoldLot | null): Record<string, string> {
   const errors: Record<string, string> = {}
-  const quantity = parseNumber(formData.get('quantity'))
-  if (quantity <= 0) {
+  const quantity = parseNativeNumber(formData.get('quantity'))
+  if (!Number.isFinite(quantity) || quantity <= 0) {
     errors.quantity = 'Miktar 0’dan büyük olmalı.'
     return errors
   }
 
-  if (formData.get('direction') !== 'sell') return errors
-
-  const goldType = formData.get('gold_type') as GoldType
-  const others = editing ? rows.filter((row) => row.id !== editing.id) : rows
-  const held = summarizeGoldType(others, goldType).totalQuantity
-
-  if (quantity > held) {
-    errors.quantity = `${GOLD_TYPE_LABELS[goldType]} olarak elinde ${formatQuantity(held, goldType)} var; bundan fazlasını satamazsın.`
-  }
+  const proposed = {
+    ...editing, id: editing?.id ?? crypto.randomUUID(), created_at: editing?.created_at ?? new Date().toISOString(),
+    quantity, gold_type: formData.get('gold_type') as GoldType, direction: formData.get('direction') as GoldDirection,
+    purchase_date: String(formData.get('purchase_date') ?? '') || null,
+  } as GoldLot
+  const invalid = validateGoldInventory([...rows.filter(row => row.id !== editing?.id), proposed])
+  if (invalid) errors.quantity = invalid
 
   return errors
 }
@@ -358,6 +365,7 @@ export function GoldPage() {
       emptyTitle="Henüz altın işlemi yok"
       emptyDescription={`Alım ve satım geçmişini ekleyince miktar ve maliyeti bu kayıtlardan takip edebilirsin.${goldAssetNote}`}
       validateForm={(formData, _values, editing, rows) => validateGoldLot(formData, rows as GoldLot[], editing as GoldLot | null)}
+      validateDelete={(row, rows) => validateGoldInventory(rows.filter(item => item.id !== row.id) as GoldLot[])}
       getInitialValues={(row?: GoldLot) => ({
         direction: row?.direction ?? 'buy',
         purchase_date: row?.purchase_date ?? '',
@@ -373,7 +381,7 @@ export function GoldPage() {
         purchase_date: String(formData.get('purchase_date') ?? '') || null,
         gold_type: formData.get('gold_type') as GoldType,
         ayar: optionalNumber(formData, 'ayar'),
-        quantity: parseNumber(formData.get('quantity')),
+        quantity: parseNativeNumber(formData.get('quantity')),
         unit_price: optionalNumber(formData, 'unit_price'),
         note: String(formData.get('note') ?? '') || null,
       })}

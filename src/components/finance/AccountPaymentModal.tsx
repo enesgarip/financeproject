@@ -157,7 +157,7 @@ export function AccountPaymentModal({
   }
 
   return (
-    <SimpleModal title={title} open={open} onClose={handleClose}>
+    <SimpleModal busy={saving} title={title} open={open} onClose={handleClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {children ? (
           <div className="rounded-lg border border-line-strong bg-page p-3 text-sm text-ink-muted">

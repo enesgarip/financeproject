@@ -1,0 +1,37 @@
+[WebServer] 
+[WebServer] > financeproject@0.0.0 dev
+[WebServer] > vite --host 127.0.0.1 --port 4173 --strictPort
+[WebServer] 
+[WebServer] (node:38460) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer]   VITE v7.3.7  ready in 293 ms
+[WebServer] 
+[WebServer]   ➜  Local:   http://127.0.0.1:4173/
+
+Running 13 tests using 1 worker
+
+(node:40500) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+AUDIT_GOLD_PARSE { entered: '1.234', written: 1234 }
+  ok  1 [chromium] › tests\e2e\audit-second-temporary.spec.ts:61:1 › ikinci tarama: number alanındaki 1.234 gram 1234 olarak yazılıyor (1.5s)
+AUDIT_GOLD_DIRECTION { ledgerQuantity: 6, assetQuantity: 14, syncWrites: 1 }
+  ok  2 [chromium] › tests\e2e\audit-second-temporary.spec.ts:79:1 › ikinci tarama: altın alımı satıma dönünce varlık özeti yenilenmiyor (1.6s)
+AUDIT_GOLD_OVERSOLD { bought: 1, sold: 4 }
+  ok  3 [chromium] › tests\e2e\audit-second-temporary.spec.ts:110:1 › ikinci tarama: altın alış miktarı satılanın altına indirilebiliyor (1.5s)
+AUDIT_MOVEMENT_RETRY { intended: 20500, balance: 21000 }
+  ok  4 [chromium] › tests\e2e\audit-second-temporary.spec.ts:132:1 › ikinci tarama: gelen para kayıp yanıttan sonra ikinci kez yazılıyor (1.5s)
+  ok  5 [chromium] › tests\e2e\audit-second-temporary.spec.ts:155:1 › ikinci tarama: varlık alımı kayıp yanıttan sonra ikinci kez yazılıyor (1.5s)
+  ok  6 [chromium] › tests\e2e\audit-second-temporary.spec.ts:174:1 › ikinci tarama: değer güncelleme taslağı gezinirken sorulmadan kayboluyor (1.1s)
+AUDIT_CHAT_CLEAR { afterClearMessages: 1, orphanRole: 'assistant' }
+  ok  7 [chromium] › tests\e2e\audit-second-temporary.spec.ts:186:1 › ikinci tarama: sohbet temizlenirken devam eden yanıt geçmişi geri getiriyor (1.3s)
+AUDIT_INVALID_VALUE { entered: 'abc', storedValue: 0 }
+  ok  8 [chromium] › tests\e2e\audit-second-temporary.spec.ts:215:1 › ikinci tarama: geçersiz varlık değeri sessizce sıfıra dönüşüyor (1.4s)
+  ok  9 [chromium] › tests\e2e\audit-second-temporary.spec.ts:231:1 › ikinci tarama: geçersiz tampon girdisi güvenlik tamponunu sıfırlıyor (1.1s)
+  ok 10 [chromium] › tests\e2e\audit-second-temporary.spec.ts:241:1 › ikinci tarama: tema depolaması engellenince uygulama boş açılıyor (220ms)
+AUDIT_SALARY_CACHE { snapshotReads: 1, salary: 60000 }
+  ok 11 [chromium] › tests\e2e\audit-second-temporary.spec.ts:258:1 › ikinci tarama: maaş kaydı sonrası ortak snapshot eski maaşla kalıyor (1.6s)
+  ok 12 [chromium] › tests\e2e\audit-second-temporary.spec.ts:287:1 › ikinci tarama: gizlilik açıkken döviz varlığının miktarı açık kalıyor (1.1s)
+  ok 13 [chromium] › tests\e2e\audit-second-temporary.spec.ts:295:1 › ikinci tarama: katkılı değer güncellemesi kayıp yanıtta aynı katkıyı tekrar gönderiyor (1.5s)
+
+  13 passed (18.8s)

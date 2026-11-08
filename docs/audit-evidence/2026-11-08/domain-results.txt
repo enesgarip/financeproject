@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 C:/Users/Enes/.codex/worktrees/6a24/financeproject
+
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  21:10:37
+   Duration  228ms (transform 92ms, setup 0ms, import 124ms, tests 3ms, environment 0ms)
+

@@ -1,0 +1,9 @@
+import { expect, it, vi } from 'vitest'
+const mocks = vi.hoisted(() => ({ rpc: vi.fn() }))
+vi.mock('./lib/supabase', () => ({ supabase: { rpc: mocks.rpc } }))
+import { restoreViaTransactionalRpc } from './data/repositories/backupRepo'
+
+it('ikinci tarama: restore bağlantı hatasında hiçbir veri değişmedi garantisi veriyor', async () => {
+  mocks.rpc.mockResolvedValue({ data: null, error: { code: '', message: 'TypeError: Failed to fetch' } })
+  await expect(restoreViaTransactionalRpc({ assets: [] })).rejects.toThrow('hiçbir veri değişmedi')
+})

@@ -1,0 +1,28 @@
+import { test, expect } from 'vitest'
+import { resolveGoalSources, resolveSavingsGoalRows } from './utils/goalSources'
+import { savingsGoalTargetReached } from './utils/savingsGoal'
+import { buildSavingsSuggestion } from './utils/savingsSuggestion'
+import { buildPurchaseImpact } from './utils/purchaseImpact'
+import { buildCashFlowForecast } from './utils/cashFlowForecast'
+import { buildSafeToSpend } from './utils/safeToSpend'
+
+test('audit: altın hedefinde 0.01 gram açık tamamlandı sayılıyor', () => {
+  const refs: any = { assets: [{ id: 'a', category: 'Altın', unit: 'gram', amount: 1.23, estimated_value_try: 6000 }] }
+  const result = resolveGoalSources([{ kind: 'asset', asset_id: 'a' } as any], 'gram_altin', refs)
+  const reached = savingsGoalTargetReached({ target_amount: 1.23, current_amount: 1.22 })
+  const suggestion = buildSavingsSuggestion({ value_type: 'gram_altin', target_amount: 1.23, current_amount: 1.22, target_date: null })
+  console.log('AUDIT_GOLD', JSON.stringify({ sourceAmount: result.amount, actual: 1.23, reached, suggestion }))
+  expect(result.amount).toBe(1.23)
+  expect(reached).toBe(true)
+})
+
+test('audit: karar gelecek aylarda rezerv tabanını korumuyor', () => {
+  const data: any = { assets: [], cards: [{ id: 'bank', card_type: 'banka_karti', current_balance: 10000 }], debts: [], loans: [], loanInstallments: [], payments: [], salaryHistory: [], cardInstallments: [] }
+  const forecast = buildCashFlowForecast(data, { from: new Date(2026, 9, 26) })
+  const safe = buildSafeToSpend({ liquidCash: 10000, expectedIncome: 0, remainingOutflow: 0, buffer: 1000, reserved: 8000 })
+  const result = buildPurchaseImpact({ amount: 2000, installments: 4, method: 'card', forecast, safeToSpend: safe.amount, buffer: 1000 })
+  console.log('AUDIT_RESERVE', JSON.stringify({ safe: safe.amount, protectedFloor: 9000, verdict: result.verdict, months: result.months.map(m => m.after) }))
+  expect(result.verdict).toBe('rahat')
+  expect(result.lowestAfter).toBe(8000)
+})
+

@@ -46,7 +46,7 @@ function AnalysisSkeleton() {
 }
 
 export function AnalysisPage() {
-  const { data, error, loading, missingTables, ratesSnapshot, snapshots, auxiliaryError, retryAuxiliary, auxiliaryLoading } = useAnalysisPageData()
+  const { data, goalsIncomplete, error, loading, missingTables, ratesSnapshot, snapshots, auxiliaryError, retryAuxiliary, auxiliaryLoading } = useAnalysisPageData()
   // Aynı TanStack sorgusu (paylaşılan cache) — yalnız "Tekrar dene" için gerekiyor.
   const snapshotQuery = useFinanceSnapshot()
 
@@ -65,6 +65,7 @@ export function AnalysisPage() {
 
   return (
     <section className="space-y-6">
+      {goalsIncomplete ? <p role="alert" className="text-sm text-ink-muted">Bazı hedef kaynakları veya güncel fiyatları doğrulanamadı; hedef tutarlarını eksik veriyle değerlendirmeyin.</p> : null}
       {auxiliaryError ? <QueryError title="Geçmiş veriler yüklenemedi" message="Trend ve fiyat karşılaştırmaları şu an doğrulanamıyor." onRetry={() => void retryAuxiliary()} /> : null}
       <div className="grid items-start gap-5 lg:grid-cols-12">
         <FeatureSection id="aylik-rapor" className="lg:col-span-12"><MonthlyReport data={data} /></FeatureSection>

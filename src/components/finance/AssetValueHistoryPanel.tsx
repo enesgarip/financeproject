@@ -5,10 +5,11 @@ import { updateAssetValue } from '../../services/assetValueHistory'
 import type { Asset, AssetValueEvent } from '../../types/database'
 import { buildAssetValueRows, summarizeAssetValueEvents, type AssetValueRow } from '../../utils/assetValueEvents'
 import { dateInputValue, formatDate } from '../../utils/date'
-import { formatCurrency, formatPercent, parseNumber } from '../../utils/formatCurrency'
+import { formatCurrency, formatPercent, parseNumberStrict } from '../../utils/formatCurrency'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
+import { useOperationResolution } from '../../hooks/useOperationResolution'
 
 const VISIBLE_ROWS = 8
 
@@ -56,6 +57,7 @@ export function AssetValueHistoryPanel({
   const [open, setOpen] = useState(false)
   const [range, setRange] = useState<RangeKey>('all')
   const [formOpen, setFormOpen] = useState(false)
+  useOperationResolution(['update_asset_value'], asset.id, () => setFormOpen(false))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [value, setValue] = useState('')
@@ -93,16 +95,18 @@ export function AssetValueHistoryPanel({
   }, [load, revision])
 
   async function handleSubmit() {
-    const nextValue = parseNumber(value)
-    const nextContribution = contribution.trim() ? parseNumber(contribution) : 0
-    if (!Number.isFinite(nextValue) || nextValue < 0) {
-      setError('Geçerli bir değer gir.')
+    if (busy) return
+    const nextValue = parseNumberStrict(value)
+    const nextContribution = contribution.trim() ? parseNumberStrict(contribution) : 0
+    if (!Number.isFinite(nextValue) || nextValue < 0 || !Number.isFinite(nextContribution)) {
+      setError('Geçerli bir değer ve katkı tutarı gir.')
       return
     }
     setBusy(true)
     setError('')
     const occurredAt = date ? new Date(`${date}T12:00:00`).toISOString() : null
     const result = await updateAssetValue({
+      userId: asset.user_id,
       assetId: asset.id,
       value: nextValue,
       contribution: nextContribution,
@@ -192,14 +196,16 @@ export function AssetValueHistoryPanel({
         </div>
       ) : null}
 
-      <div className="mt-3 border-t border-line-strong pt-3">
+      <div data-navigation-scope className="mt-3 border-t border-line-strong pt-3">
         <button
           type="button"
           onClick={() => {
             setFormOpen((prev) => !prev)
             setError('')
-            if (!formOpen && !value) setValue(String(asset.estimated_value_try))
+            if (!formOpen && !value) setValue(String(asset.estimated_value_try).replace('.', ','))
           }}
+          disabled={busy}
+          data-navigation-discard={formOpen || undefined}
           aria-expanded={formOpen}
           className="text-xs font-black text-info underline-offset-2 hover:underline"
         >
@@ -207,7 +213,7 @@ export function AssetValueHistoryPanel({
         </button>
 
         {formOpen ? (
-          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <form data-navigation-busy={busy || undefined} onSubmit={event => { event.preventDefault(); void handleSubmit() }} className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="text-xs font-semibold text-ink-muted">
               Yeni değer (₺)
               <Input
@@ -254,16 +260,15 @@ export function AssetValueHistoryPanel({
               />
             </label>
             <Button
-              type="button"
+              type="submit"
               variant="outline"
               size="sm"
               className="self-start"
               disabled={busy || !value.trim()}
-              onClick={() => void handleSubmit()}
             >
               {busy ? 'Kaydediliyor…' : 'Kaydet'}
             </Button>
-          </div>
+          </form>
         ) : null}
 
         {error ? <p className="mt-2 text-xs font-semibold text-destructive">{error}</p> : null}

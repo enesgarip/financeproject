@@ -20,7 +20,7 @@ let financeMaintenancePromise: Promise<number> | null = null
 
 // RPC'ler birden çok tabloyu değiştirir. Snapshot ve sayfa listeleri aynı
 // yazmadan sonra tazelenmeli; kapalı listeler bir sonraki açılışta okunur.
-const FINANCE_CRUD_TABLES = ['cards', 'payments', 'loans', 'debts', 'assets', 'stock_trades'] as const
+const FINANCE_CRUD_TABLES = ['cards', 'payments', 'loans', 'debts', 'assets', 'stock_trades', 'budgets', 'salary_history'] as const
 
 async function invalidateFinanceViews(queryClient: QueryClient, userId: string | undefined) {
   await Promise.all([

@@ -42,7 +42,7 @@ export function CategoryBudgetControl({ category, month, budget, usage }: { cate
     {usage ? <><p>Bütçe kullanımı: {formatAmount(usage.spent)} / {formatAmount(usage.limit)}</p><p>Kalan: {formatAmount(usage.remaining)}</p></> : <p>Bu kategori için bu ay bütçe yok.</p>}
     <p>Bütçe kullanımı tüm kartları ve provizyonları da kapsar.</p>
     <button type="button" className="min-h-11 font-semibold text-primary" onClick={() => { setAmount(usage ? String(usage.limit).replace('.', ',') : ''); setError(''); setOpen(true) }}>{budget ? 'Limiti düzenle' : 'Bütçe belirle'}</button>
-    <SimpleModal open={open} title={`${category} bütçesi`} onClose={() => { if (!busy) setOpen(false) }}>
+    <SimpleModal busy={busy} open={open} title={`${category} bütçesi`} onClose={() => { if (!busy) setOpen(false) }}>
       <form onSubmit={event => void save(event)} className="space-y-4">
         <label className="block text-sm font-semibold">Aylık sabit limit (TL)<Input inputMode="decimal" className="mt-1" value={amount} onChange={event => setAmount(event.target.value)} required /></label>
         {budget?.limit_anchor && budget.limit_anchor !== 'manual' ? <p className="text-sm text-ink-muted">Kaydedince mevcut yüzde veya ortalama kuralı yerine bu sabit limit kullanılır.</p> : null}

@@ -1,5 +1,85 @@
 # Priority Backlog
 
+## 2026-11-09 — Birleşik denetim düzeltmeleri
+
+35 ürün maddesi (M01–M23/V01–V07/F01–F05) ve T01 uygulandı.
+Güncel davranış, kabul kanıtı ve yayın kapıları:
+`docs/AUDIT_REMEDIATION_2026-11-09.md`. U01 fiziksel telefondaki orta navbar
+belirtisi için açık; WebKit'te farklı bir gizli menü/DOM odak sorunu düzeltildi.
+Aşağıdaki 8 Kasım bölümleri tarama anının tarihsel kaydıdır.
+
+
+## 2026-11-08 — Form / iptal / mobil gezinme taraması
+
+Kaynak: `docs/FORM_NAV_AUDIT_2026-11-08.md`.
+F01–F05: 1 P1, 4 P2; birleşik **35 ürün maddesi (15 P1, 20 P2) + T01**.
+Kod/migration değişmedi. **U01**, telefonda iptal sonrası navbarın ortada
+kalması, açık tanı kaydıdır; tam belirti otomasyonda yeniden üretilemedi.
+
+- [x] F02: pending kayıt/işleme kapanışı, eski yanıtın yeni taslağı kapatması;
+  PDF X/Escape busy sözleşmesi de ortaklaştırılmalı.
+- [x] F03: alttaki farklı formun dirty izleme kapsamını yanlış temizleme.
+- [x] F01: silinen menü öğesi yerine kalıcı/görünür tetikleyiciye focus restore.
+- [x] F04/F05: modal içi jest izolasyonu ve touchcancel temizliği.
+- [ ] U01: gerçek telefonda klavye/PWA/yön koşulunu nav/visualViewport
+  ölçümleriyle doğrula; yalnız CSS bottom değiştirip kapatılmış sayma.
+- [x] 23 senaryo × Chromium/WebKit = 46/46 gözlem; viewport PNG/JSON ve
+  çözüm/kabul planı arşivlendi. Üretim veya gerçek finans verisine yazılmadı.
+- [x] 9 Kasım kapanışı: geçici problar kaldırıldı; `npm run verify` geçti
+  (1930 test, lint/guard/coverage, audit 0 açık, build/bundle ve 6 edge kontrolü).
+
+## 2026-11-08 — Son görsel tarama (9 Kasım uygulandı)
+
+Kaynak: `docs/VISUAL_UI_AUDIT_2026-11-08.md`.
+7 yeni madde V01–V07: 2 P1, 5 P2. Birleşik kapsam **30 ürün maddesi
+(14 P1, 16 P2) + T01**. Kod, finans kuralı ve migration değişmedi.
+
+- [x] V02/V03: gram/USD trendinin birim, değişim rozeti ve uç değerleri;
+  M06 gizlilik kapsamıyla aynı kabul paketinde doğrula.
+- [x] V01/V04: büyük bütçe rakamı ve uzun bakım/araç metninde responsive düzen.
+- [x] V05: ay kapanışı açıklamaları ve uyarı özetinin gerçek zemin kontrastı.
+- [x] V06/V07: metinli kontrollerde 44px proje hedefi, komşu ikonlarda ayrık
+  hit alanı; büyütme yeni çakışma üretmemeli.
+- [x] 24 rota / 72 görünüm, 15/15 sentetik tarayıcı gözlemi; görüntü,
+  geometri, kontrast ve hit testi kanıtları arşivlendi. Üretim kullanılmadı.
+- [x] Geçici gözlem dosyaları kaldırıldı; `npm run verify` geçti: 1930 test,
+  lint/guard/coverage, audit 0 açık, build/bundle ve 6 edge kontrolü.
+
+## 2026-11-08 — İkinci mantık taraması ve birleşik düzeltme kapsamı
+
+Kaynak: `docs/LOGIC_UI_AUDIT_SECOND_PASS_2026-11-08.md`.
+12 yeni ürün maddesi eklendi; toplam **23 ürün maddesi (12 P1, 11 P2) + T01**.
+Kullanıcı ikinci taramadan sonra hepsinin çözülmesini istedi. Henüz uygulama
+kodu/migration değiştirilmedi. M11 birim toleransı açık ürün kararıyla ele alınır.
+
+- [x] Yazma güvenliği: M01/M02/M07/M12/M17/M19/M22/M23.
+- [x] Altın bütünlüğü: M11/M13/M14/M15/M16.
+- [x] Karar, kapsam ve cache: M03/M04/M05/M08/M09/M10.
+- [x] Gizlilik, taslak, sohbet, depolama ve test bakımı: M06/M18/M20/M21/T01.
+- [x] İkinci tur 13 tarayıcı + 3 saf/repo gözlemi; iki gerçek SQL probu
+  BEGIN/ROLLBACK ile geçti. 1001 satır/1000 dönüş gerçek yerel API'de
+  doğrulandı ve bütün fixture'lar temizlendi. Yeşil gözlem = düzeltme değildir.
+- [x] M06 döviz miktarına, M08 maaş cache'ine genişletildi; M10 kaynak
+  incelemesine gerçek API kanıtı eklendi. Kanıt ve kabul testleri rapordadır.
+- [x] Geçici problar kaldırıldıktan sonra `npm run verify` yeniden geçti:
+  1930 test, lint/coverage/audit/build/bundle ve 6 edge tip kontrolü.
+
+## 2026-11-08 — Uygulama/UI mantık denetimi (9 Kasım uygulandı)
+
+Araştırma ve çözüm paketleri: `docs/LOGIC_UI_AUDIT_2026-11-08.md`.
+11 ürün bulgusu (5 P1, 6 P2) + 1 test bakım bulgusu doğrulandı;
+uygulama kodu/finans kuralları henüz değiştirilmedi.
+
+- [x] Paket 1: M01 kredi sonrası hatada çift INSERT, M02 rezerv ayırma
+  idempotency, M03 eksik veride alım kararı, M07 taksit hatasını boş plan sayma.
+- [x] Paket 2: M04 gelecek ay rezerv tabanı, M05 hedef referansları,
+  M08 bütçe CRUD cache'i, M09 ay kapanışı kapsamı, M11 altın birim toleransı.
+- [x] Paket 3: M06 gizlilik metinleri, M10 tam-geçmiş sayfalama, T01 canlı test
+  seçicisi ve fixture temizliği. Küçük gizlilik/test işleri erkene alınabilir.
+- [x] Başlangıç `npm run verify` (1930 test), 59/59 SQL, 55 E2E geçti/4 atlandı.
+  Ek canlı backend UI: 2 geçti/1 eski seçicide başarısız. 9 özel tarayıcı ve
+  2 saf hesap gözlemi hatalı mevcut davranışı yeniden üretti; düzeltme değildir.
+
 ## 2026-11-08 — Bağlı akışlar, ikinci paket (1/2/3/5)
 
 - [x] Araç/gider grubundan ortak harcama ve mevcut harekete çift kayıtsız bağlama.

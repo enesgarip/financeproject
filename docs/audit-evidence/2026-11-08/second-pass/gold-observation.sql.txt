@@ -1,0 +1,9 @@
+begin;
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
+insert into public.gold_lots(id,user_id,gold_type,direction,quantity,purchase_date) values
+('baad0000-0000-4000-8000-000000000021','11111111-1111-1111-1111-111111111111','gram','buy',10,'2026-10-01'),
+('baad0000-0000-4000-8000-000000000022','11111111-1111-1111-1111-111111111111','gram','sell',4,'2026-10-05');
+update public.gold_lots set quantity=1 where id='baad0000-0000-4000-8000-000000000021';
+select sum(case when direction='sell' then -quantity else quantity end) as net_quantity from public.gold_lots where id in ('baad0000-0000-4000-8000-000000000021','baad0000-0000-4000-8000-000000000022');
+rollback;

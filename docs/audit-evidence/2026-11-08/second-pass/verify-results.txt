@@ -1,0 +1,239 @@
+
+> financeproject@0.0.0 verify
+> npm run lint && npm run test:coverage && npm audit --omit=dev --audit-level=high && npm run build && npm run check:bundle && node scripts/verify-edge.mjs
+
+
+> financeproject@0.0.0 lint
+> eslint . --cache --cache-strategy content --cache-location node_modules/.cache/eslint/.eslintcache
+
+
+> financeproject@0.0.0 test:coverage
+> npm run test:guards && vitest run --coverage
+
+
+> financeproject@0.0.0 test:guards
+> node scripts/run-guards.mjs
+
+✔ scheduler kurulumu env sırrını shell argümanı yerine doğrulanmış API gövdesine taşır (13.3717ms)
+✔ scheduler hata yanıtındaki sır SQL/log hata metnine sızmaz (0.8086ms)
+✔ geçersiz proje veya eksik sır ağ çağrısından önce reddedilir (0.3286ms)
+▶ AI-context docs guard
+  ✔ never scans an empty doc/file set (0.3355ms)
+  ✔ keeps every file pointer in the curated docs pointing at a real file (1.611ms)
+  ✔ names every repository and route-level page in AI_CONTEXT_INDEX.md (0.7316ms)
+✔ AI-context docs guard (3.1738ms)
+▶ source encoding guard
+  ✔ keeps Turkish text free of UTF-8 mojibake (212.3772ms)
+✔ source encoding guard (212.7996ms)
+✔ haritaları public dist dışına taşır, bundle checksum ve release ile arşivler (89.8867ms)
+✔ public Vercel çıktısında unutulmuş map varsa deploy kapısını kırar (118.2345ms)
+✔ sıkıştırılmış konumu özgün kaynak dosyasına çevirir (39.1133ms)
+ℹ tests 10
+ℹ suites 2
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 328.2299
+
+ RUN  v4.1.11 C:/Users/Enes/.codex/worktrees/6a24/financeproject
+      Coverage enabled with v8
+
+
+ Test Files  189 passed (189)
+      Tests  1930 passed (1930)
+   Start at  21:47:08
+   Duration  7.98s (transform 8.53s, setup 0ms, import 38.29s, tests 12.80s, environment 28.17s)
+
+ % Coverage report from v8
+
+=============================== Coverage summary ===============================
+Statements   : 93.35% ( 4663/4995 )
+Branches     : 86.16% ( 3643/4228 )
+Functions    : 94.77% ( 1125/1187 )
+Lines        : 95.33% ( 3886/4076 )
+================================================================================
+found 0 vulnerabilities
+
+> financeproject@0.0.0 build
+> tsc -b && vite build && node scripts/archive-source-maps.mjs
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 2438 modules transformed.
+Initially, there are
+116 chunks, of which
+65 are below minChunkSize.
+After merging chunks, there are
+64 chunks, of which
+0 are below minChunkSize.
+rendering chunks...
+computing gzip size...
+dist/index.html                                                      1.43 kB │ gzip:   0.55 kB
+dist/assets/manrope-latin-ext-wght-normal-Ch3YOpNY.woff2            15.12 kB
+dist/assets/jetbrains-mono-latin-ext-wght-normal-DBQx-q_a.woff2     15.20 kB
+dist/assets/dm-sans-latin-ext-wght-normal-BOFOeGcA.woff2            18.23 kB
+dist/assets/dm-sans-latin-ext-wght-italic-DUE6_iCb.woff2            20.81 kB
+dist/assets/manrope-latin-wght-normal-DHIcAJRg.woff2                24.84 kB
+dist/assets/dm-sans-latin-wght-normal-Xz1IZZA0.woff2                36.93 kB
+dist/assets/dm-sans-latin-wght-italic-Cz4n9dED.woff2                39.71 kB
+dist/assets/jetbrains-mono-latin-wght-normal-B9CIFXIH.woff2         40.40 kB
+dist/assets/pdf.worker.min-Dswkl-cV.mjs                          1,265.41 kB
+dist/assets/index-Cj1hjCLx.css                                     118.64 kB │ gzip:  18.96 kB
+dist/assets/cardLedger-Nx2zHtsC.js                                   2.85 kB │ gzip:   1.20 kB │ map:    17.37 kB
+dist/assets/reconciliation-Hvhh2eEs.js                               3.06 kB │ gzip:   1.40 kB │ map:    19.42 kB
+dist/assets/useSafeToSpend-BTaj-FZr.js                               3.37 kB │ gzip:   1.68 kB │ map:    18.46 kB
+dist/assets/valuationSync-WUR8V8yr.js                                3.66 kB │ gzip:   1.31 kB │ map:    16.89 kB
+dist/assets/cardInstallmentCalendar-D444hbdg.js                      3.67 kB │ gzip:   1.62 kB │ map:    16.50 kB
+dist/assets/BankLogo-GcpveRKp.js                                     3.90 kB │ gzip:   1.79 kB │ map:    12.91 kB
+dist/assets/help-tooltip-DaBSAThw.js                                 4.13 kB │ gzip:   1.94 kB │ map:    14.98 kB
+dist/assets/categories-D0mDZatb.js                                   4.18 kB │ gzip:   1.94 kB │ map:    19.93 kB
+dist/assets/financeSnapshotRepo-Cxe_qfS5.js                          4.19 kB │ gzip:   1.61 kB │ map:    15.52 kB
+dist/assets/use-confirm-dialog-CVGjvdym.js                           4.32 kB │ gzip:   1.86 kB │ map:    15.32 kB
+dist/assets/useExpenseContexts-C7OhW363.js                           4.32 kB │ gzip:   1.76 kB │ map:    15.32 kB
+dist/assets/subscriptions-_xe_d1yB.js                                4.46 kB │ gzip:   2.03 kB │ map:    26.41 kB
+dist/assets/valuation-BDQ_B98q.js                                    4.64 kB │ gzip:   1.77 kB │ map:    24.07 kB
+dist/assets/paymentAttempt-DPFv2a5U.js                               4.66 kB │ gzip:   2.05 kB │ map:    20.06 kB
+dist/assets/errorDiagnostics-b7DgAOPt.js                             4.86 kB │ gzip:   2.18 kB │ map:    12.22 kB
+dist/assets/subscriptionDiscovery-BpyQyuBB.js                        4.93 kB │ gzip:   2.16 kB │ map:    17.29 kB
+dist/assets/AccountIncomePanel-CijNfNuG.js                           5.29 kB │ gzip:   2.40 kB │ map:    11.83 kB
+dist/assets/useForeignCardSms-qXa-8v4X.js                            5.66 kB │ gzip:   2.28 kB │ map:    20.97 kB
+dist/assets/wishlistPlan-CdT8850d.js                                 5.78 kB │ gzip:   2.79 kB │ map:    29.14 kB
+dist/assets/financePanelsRepo-Bu3TWcfF.js                            5.82 kB │ gzip:   2.40 kB │ map:    23.95 kB
+dist/assets/goalEta-BV5a2dJP.js                                      5.98 kB │ gzip:   2.51 kB │ map:    22.40 kB
+dist/assets/accountFavorites-BvsxcgcL.js                             5.99 kB │ gzip:   2.57 kB │ map:    24.46 kB
+dist/assets/wishlistRepo-VUznGnOF.js                                 6.08 kB │ gzip:   1.91 kB │ map:    21.35 kB
+dist/assets/errorReport-C6ceohTI.js                                  6.24 kB │ gzip:   2.74 kB │ map:    20.17 kB
+dist/assets/AnalysisPage.atoms-CnrnevIk.js                           6.40 kB │ gzip:   2.72 kB │ map:    22.04 kB
+dist/assets/goalBucket-BzIxDWjq.js                                   6.58 kB │ gzip:   2.90 kB │ map:    28.60 kB
+dist/assets/LoginPage-DJnJPAli.js                                    6.67 kB │ gzip:   2.41 kB │ map:    15.25 kB
+dist/assets/SubscriptionDiscoveryPanel-Gqlfm4w3.js                   6.98 kB │ gzip:   2.73 kB │ map:    16.91 kB
+dist/assets/financeSummary-C-C2auWF.js                               7.01 kB │ gzip:   2.74 kB │ map:    33.62 kB
+dist/assets/FeatureSection-_H0Y2cne.js                               7.14 kB │ gzip:   2.84 kB │ map:    30.42 kB
+dist/assets/CarServiceModal-C4cCUMhp.js                              9.36 kB │ gzip:   3.42 kB │ map:    23.42 kB
+dist/assets/pdfText-CQEzaDtg.js                                      9.50 kB │ gzip:   4.02 kB │ map:    51.24 kB
+dist/assets/useCars-OV3eUnlR.js                                     10.14 kB │ gzip:   3.96 kB │ map:    40.21 kB
+dist/assets/obligations-CTmK03cq.js                                 10.22 kB │ gzip:   3.41 kB │ map:    45.09 kB
+dist/assets/dailyGoalSnapshots-HBTJYdEB.js                          11.60 kB │ gzip:   4.21 kB │ map:    57.52 kB
+dist/assets/linkedWorkflowsRepo-DNpScB0x.js                         12.53 kB │ gzip:   3.50 kB │ map:    47.00 kB
+dist/assets/DebtsPage-DgaP737A.js                                   13.53 kB │ gzip:   5.25 kB │ map:    37.40 kB
+dist/assets/AnalysisDetailPage-DsGtpPQQ.js                          14.83 kB │ gzip:   5.70 kB │ map:    40.49 kB
+dist/assets/ExpenseContextsPage-B4YQUuAp.js                         15.36 kB │ gzip:   5.07 kB │ map:    40.97 kB
+dist/assets/PurchaseDecisionPage-hmBmlxt9.js                        15.45 kB │ gzip:   5.57 kB │ map:    46.97 kB
+dist/assets/FeatureExplorer-qOCKlaQ9.js                             15.70 kB │ gzip:   5.23 kB │ map:    27.07 kB
+dist/assets/WishlistPage-OT4NFT20.js                                15.96 kB │ gzip:   6.00 kB │ map:    39.48 kB
+dist/assets/CrudPage-7NhtZnYl.js                                    16.47 kB │ gzip:   6.03 kB │ map:    68.61 kB
+dist/assets/BorsaPage-CnfLSTs2.js                                   18.55 kB │ gzip:   6.99 kB │ map:    55.65 kB
+dist/assets/AnalysisPage.panels-VceKKy-h.js                         18.84 kB │ gzip:   6.61 kB │ map:    52.56 kB
+dist/assets/GoldPage-BS3TRKSv.js                                    18.94 kB │ gzip:   7.20 kB │ map:    61.83 kB
+dist/assets/useFinancePaymentDrawer-C4_yxId7.js                     19.94 kB │ gzip:   6.76 kB │ map:    67.82 kB
+dist/assets/LoansPage-C88eSaLg.js                                   21.01 kB │ gzip:   6.70 kB │ map:    63.12 kB
+dist/assets/AnalysisPage-DwUj2RYy.js                                21.25 kB │ gzip:   7.31 kB │ map:    70.91 kB
+dist/assets/AssistantPage-BTTvyx-k.js                               23.75 kB │ gzip:   9.51 kB │ map:    87.08 kB
+dist/assets/CurrentMovementImportModal-CHv8a2j0.js                  27.06 kB │ gzip:   7.80 kB │ map:    82.56 kB
+dist/assets/AssetsPage-DE_k_zqQ.js                                  27.72 kB │ gzip:   9.57 kB │ map:    92.61 kB
+dist/assets/StatementImportModal-CtFwb9AO.js                        28.05 kB │ gzip:   9.44 kB │ map:    99.97 kB
+dist/assets/CarsPage-DHBEXi8a.js                                    28.57 kB │ gzip:   8.45 kB │ map:    70.25 kB
+dist/assets/vendor-icons-Cwim50T8.js                                30.49 kB │ gzip:  10.25 kB │ map:   123.86 kB
+dist/assets/PaymentsPage-BnzBsTPa.js                                30.68 kB │ gzip:  10.29 kB │ map:    89.80 kB
+dist/assets/DataHealthOperationsPage-Sdi267V2.js                    31.04 kB │ gzip:   9.92 kB │ map:    89.55 kB
+dist/assets/vendor-ui-BZ5iWhPY.js                                   35.26 kB │ gzip:  11.73 kB │ map:   184.36 kB
+dist/assets/vendor-query-QTGUlsOI.js                                35.48 kB │ gzip:  10.42 kB │ map:   143.45 kB
+dist/assets/AnalysisPage.data-OuVwEKWC.js                           50.72 kB │ gzip:  17.24 kB │ map:   152.97 kB
+dist/assets/DashboardPage-CoxXG_TY.js                               54.16 kB │ gzip:  16.33 kB │ map:   159.52 kB
+dist/assets/DataHealthPage.components-D2zcHz7p.js                   54.35 kB │ gzip:  15.98 kB │ map:   142.15 kB
+dist/assets/index-D1x0M51b.js                                       61.62 kB │ gzip:  20.31 kB │ map:   186.79 kB
+dist/assets/PlanningPage-D8mzhSjB.js                                62.75 kB │ gzip:  18.79 kB │ map:   209.01 kB
+dist/assets/DataHealthPage-CbQfBRlP.js                              82.03 kB │ gzip:  23.65 kB │ map:   245.32 kB
+dist/assets/CardsPage-CW42RAWw.js                                  178.28 kB │ gzip:  47.94 kB │ map:   537.31 kB
+dist/assets/vendor-supabase-gOveflsS.js                            219.30 kB │ gzip:  57.81 kB │ map: 1,200.48 kB
+dist/assets/vendor-react-Brypt7E1.js                               230.53 kB │ gzip:  73.91 kB │ map: 1,344.48 kB
+dist/assets/pdf-YYBQA8p7.js                                        437.74 kB │ gzip: 131.10 kB │ map: 1,498.36 kB
+✓ built in 4.24s
+69 source map özel teşhis arşivine taşındı (local).
+
+> financeproject@0.0.0 check:bundle
+> node scripts/check-bundle-size.mjs
+
+Bundle gzip boyutları (chunk → kB / bütçe):
+     367.3 kB  pdf.worker.min.mjs  ✓ ≤ 400 kB
+     128.0 kB  pdf.js  ✓ ≤ 143 kB
+      72.2 kB  vendor-react.js  ✓ ≤ 82 kB
+      56.5 kB  vendor-supabase.js  ✓ ≤ 63 kB
+      46.8 kB  CardsPage.js
+      23.1 kB  DataHealthPage.js
+      19.8 kB  index.js  ✓ ≤ 22 kB
+      18.3 kB  PlanningPage.js
+      16.8 kB  AnalysisPage.data.js
+      16.0 kB  DashboardPage.js
+      15.6 kB  DataHealthPage.components.js
+      11.5 kB  vendor-ui.js
+      10.2 kB  vendor-query.js
+      10.1 kB  PaymentsPage.js
+      10.0 kB  vendor-icons.js
+       9.7 kB  DataHealthOperationsPage.js
+       9.3 kB  AssetsPage.js
+       9.3 kB  AssistantPage.js
+       9.2 kB  StatementImportModal.js
+       8.3 kB  CarsPage.js
+       7.6 kB  CurrentMovementImportModal.js
+       7.1 kB  AnalysisPage.js
+       7.0 kB  GoldPage.js
+       6.8 kB  BorsaPage.js
+       6.6 kB  useFinancePaymentDrawer.js
+       6.5 kB  LoansPage.js
+       6.5 kB  AnalysisPage.panels.js
+       5.9 kB  CrudPage.js
+       5.9 kB  WishlistPage.js
+       5.6 kB  AnalysisDetailPage.js
+       5.4 kB  PurchaseDecisionPage.js
+       5.1 kB  DebtsPage.js
+       5.1 kB  FeatureExplorer.js
+       5.0 kB  ExpenseContextsPage.js
+       4.1 kB  dailyGoalSnapshots.js
+       3.9 kB  pdfText.js
+       3.9 kB  useCars.js
+       3.4 kB  linkedWorkflowsRepo.js
+       3.3 kB  CarServiceModal.js
+       3.3 kB  obligations.js
+       2.8 kB  goalBucket.js
+       2.8 kB  FeatureSection.js
+       2.7 kB  wishlistPlan.js
+       2.7 kB  financeSummary.js
+       2.7 kB  errorReport.js
+       2.7 kB  SubscriptionDiscoveryPanel.js
+       2.7 kB  AnalysisPage.atoms.js
+       2.5 kB  accountFavorites.js
+       2.4 kB  goalEta.js
+       2.4 kB  LoginPage.js
+       2.3 kB  financePanelsRepo.js
+       2.3 kB  AccountIncomePanel.js
+       2.2 kB  useForeignCardSms.js
+       2.1 kB  errorDiagnostics.js
+       2.1 kB  subscriptionDiscovery.js
+       2.0 kB  paymentAttempt.js
+       2.0 kB  subscriptions.js
+       1.9 kB  categories.js
+       1.9 kB  help-tooltip.js
+       1.9 kB  wishlistRepo.js
+       1.8 kB  use-confirm-dialog.js
+       1.8 kB  BankLogo.js
+       1.7 kB  valuation.js
+       1.7 kB  useExpenseContexts.js
+       1.6 kB  useSafeToSpend.js
+       1.6 kB  cardInstallmentCalendar.js
+       1.6 kB  financeSnapshotRepo.js
+       1.4 kB  reconciliation.js
+       1.3 kB  valuationSync.js
+       1.2 kB  cardLedger.js
+  ————————
+    1038.7 kB  TOPLAM JS gzip  ✓ ≤ 1060 kB
+
+✓ Bundle bütçesi içinde.
+Check supabase/functions/ai-chat/index.ts
+Check supabase/functions/bist-quote/index.ts
+Check supabase/functions/parse-receipt/index.ts
+Check supabase/functions/parse-sms/index.ts
+Check supabase/functions/parse-statement/index.ts
+Check supabase/functions/push-notify/index.ts

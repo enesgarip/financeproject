@@ -1,5 +1,14 @@
 # Finance Rules
 
+9 Kasım: `docs/AUDIT_REMEDIATION_2026-11-09.md`. Manuel hareket, transfer,
+varlık al/sat, katkılı değer, rezerv ayırma ve JSON restore kalıcı UUID/hash
+makbuzuyla doğrulanır. Makbuz/domain aynı transaction, reset/restore sonrası
+replay no-op. Rezerv/veri eksikse satın alma kararı verilmez; gelecek ay
+tabanı tampon+rezervdir. Bağlı hedefte tam kaynak/çıpa çözümü gereklidir.
+TL 1 kuruş toleransı korunur; gram/çeyrek 4 haneli miktardır. Altın her türde
+kronolojik stok kontrolünden geçer; eski ledger otomatik düzeltilmez.
+
+
 8 Kasım ikinci paket: `docs/LINKED_FINANCE_WORKFLOWS.md`.
 Kaydedilmiş girişi alacağa bağlamak yalnız açık TL alacağını azaltır;
 classify_account_income hareketi tek kez tüketir, hesabı tekrar artırmaz.

@@ -37,7 +37,7 @@ export function HubNav({ tabs }: { tabs: HubTab[] }) {
           end={tab.end}
           className={({ isActive }) =>
             cn(
-              'flex-none snap-start whitespace-nowrap border-b-2 pb-2.5 text-[13.5px] transition-colors duration-[120ms]',
+              'inline-flex min-h-11 items-center flex-none snap-start whitespace-nowrap border-b-2 pb-2.5 text-[13.5px] transition-colors duration-[120ms]',
               isActive
                 ? 'border-primary font-semibold text-ink'
                 : 'border-transparent text-ink-faint hover:text-ink-muted',

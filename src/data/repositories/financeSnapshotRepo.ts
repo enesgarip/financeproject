@@ -1,3 +1,4 @@
+import { readAllRows, sortRowsBy } from './readAllRows'
 import { ensureRatesLoaded } from '../../lib/marketRatesClient'
 import { supabase } from '../../lib/supabase'
 import type {
@@ -165,23 +166,23 @@ async function fetchFinanceSnapshotViaTableQueries(): Promise<FinanceSnapshot> {
     savingsGoalSources,
     accountReconciliations,
   ] = await Promise.all([
-    supabase.from('assets').select('*'),
-    supabase.from('cards').select('*'),
-    supabase.from('loans').select('*'),
-    supabase.from('loan_installments').select('*'),
-    supabase.from('debts').select('*'),
-    supabase.from('payments').select('*'),
-    supabase.from('salary_history').select('*').order('effective_date', { ascending: false }),
-    supabase.from('transaction_history').select('*').gte('occurred_at', windowStart.toISOString()).order('occurred_at', { ascending: false }),
-    supabase.from('budgets').select('*').gte('month', windowStartValue).order('month', { ascending: false }),
-    supabase.from('card_expenses').select('*').gte('spent_at', windowStartValue).order('spent_at', { ascending: false }),
+    readAllRows('assets'),
+    readAllRows('cards'),
+    readAllRows('loans'),
+    readAllRows('loan_installments'),
+    readAllRows('debts'),
+    readAllRows('payments'),
+    readAllRows('salary_history').then(result => ({ ...result, data: result.data && sortRowsBy(result.data, 'effective_date', false) })),
+    readAllRows('transaction_history', [{ column: 'occurred_at', op: 'gte', value: windowStart.toISOString() }]).then(result => ({ ...result, data: result.data && sortRowsBy(result.data, 'occurred_at') })),
+    readAllRows('budgets', [{ column: 'month', op: 'gte', value: windowStartValue }]).then(result => ({ ...result, data: result.data && sortRowsBy(result.data, 'month') })),
+    readAllRows('card_expenses', [{ column: 'spent_at', op: 'gte', value: windowStartValue }]).then(result => ({ ...result, data: result.data && sortRowsBy(result.data, 'spent_at') })),
     fetchCardInstallments().then(rowsFromResult),
     fetchStatementArchives(STATEMENT_ARCHIVE_LIMIT).then(rowsFromResult),
     fetchStatementPayments().then(rowsFromResult),
-    supabase.from('savings_goals').select('*').order('created_at', { ascending: false }),
-    supabase.from('savings_goal_components').select('*'),
-    supabase.from('savings_goal_sources').select('*').order('sort_order', { ascending: true }),
-    supabase.from('account_reconciliations').select('*').order('reconciled_at', { ascending: false }),
+    readAllRows('savings_goals').then(result => ({ ...result, data: result.data && sortRowsBy(result.data, 'created_at', false) })),
+    readAllRows('savings_goal_components'),
+    readAllRows('savings_goal_sources').then(result => ({ ...result, data: result.data && sortRowsBy(result.data, 'sort_order', true) })),
+    readAllRows('account_reconciliations').then(result => ({ ...result, data: result.data && sortRowsBy(result.data, 'reconciled_at', false) })),
   ])
 
   const missingTables: string[] = []

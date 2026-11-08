@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { GoldLot } from '../types/database'
-import { buildGoldAccumulation, summarizeGold, summarizeGoldType } from './goldLedger'
+import { buildGoldAccumulation, summarizeGold, summarizeGoldType, validateGoldInventory } from './goldLedger'
 
 const base = {
   id: 'id',
@@ -159,5 +159,19 @@ describe('gold accumulation chart data', () => {
       { date: '2026-06-01', cumulativeQuantity: 4, cumulativeCost: 8000 },
       { date: '2026-06-10', cumulativeQuantity: 3, cumulativeCost: 6000 },
     ])
+  })
+})
+
+describe('kronolojik stok koruması', () => {
+  const buy = lot({ id: 'buy', purchase_date: '2026-01-01', quantity: 1.2345 })
+  const sale = lot({ id: 'sale', purchase_date: '2026-01-02', quantity: 1.2, direction: 'sell' })
+  it('miktarı ve sıralamayı korur; sonraki alım önceki eksi stoğu gizlemez', () => {
+    expect(validateGoldInventory([sale, buy])).toBeNull()
+    expect(summarizeGoldType([buy, sale], 'gram').totalQuantity).toBe(0.0345)
+    expect(validateGoldInventory([{ ...buy, purchase_date: '2026-02-01' }, sale])).toContain('stok eksiye')
+    expect(validateGoldInventory([sale])).toContain('stok eksiye')
+    expect(summarizeGoldType([sale], 'gram').totalQuantity).toBe(-1.2)
+    expect(validateGoldInventory([{ ...buy, gold_type: 'ceyrek' }, sale])).toContain('stok eksiye')
+    expect(validateGoldInventory([{ ...buy, quantity: 0.5 }, sale])).toContain('stok eksiye')
   })
 })

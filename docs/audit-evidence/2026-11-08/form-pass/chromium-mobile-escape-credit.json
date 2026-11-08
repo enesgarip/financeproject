@@ -1,0 +1,117 @@
+{
+  "opened": {
+    "url": "/kartlar?section=kartlar",
+    "scrollY": 0,
+    "innerHeight": 839,
+    "innerWidth": 412,
+    "visual": {
+      "height": 839,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "fixed",
+      "top": "0px",
+      "overflow": "hidden"
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 714,
+        "width": 412,
+        "height": 125,
+        "top": 714,
+        "right": 412,
+        "bottom": 839,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 1,
+    "active": {
+      "tag": "SECTION",
+      "text": "Kredi kartı ekleYeni kayıt bilgileriZorunlu alanları doldur;",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  "typing": {
+    "url": "/kartlar?section=kartlar",
+    "scrollY": 0,
+    "innerHeight": 839,
+    "innerWidth": 412,
+    "visual": {
+      "height": 839,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "fixed",
+      "top": "0px",
+      "overflow": "hidden"
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 0
+      },
+      "display": "none"
+    },
+    "dialogs": 1,
+    "active": {
+      "tag": "INPUT",
+      "text": "",
+      "aria": null,
+      "form": true,
+      "connected": true
+    }
+  },
+  "closed": {
+    "url": "/kartlar?section=kartlar",
+    "scrollY": 0,
+    "innerHeight": 839,
+    "innerWidth": 412,
+    "visual": {
+      "height": 839,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 714,
+        "width": 412,
+        "height": 125,
+        "top": 714,
+        "right": 412,
+        "bottom": 839,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BODY",
+      "text": "\n    DengeKişisel finansÖzetHesaplarVarlıklarBorçlarPlanAnal",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  "prompts": 1
+}

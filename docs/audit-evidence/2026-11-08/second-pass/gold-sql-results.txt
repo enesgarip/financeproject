@@ -1,0 +1,11 @@
+BEGIN
+SET
+SET
+INSERT 0 2
+UPDATE 1
+ net_quantity 
+--------------
+      -3.0000
+(1 row)
+
+ROLLBACK

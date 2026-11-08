@@ -1,0 +1,288 @@
+import { expect, test, type Page } from '@playwright/test'
+import { writeFileSync, mkdirSync } from 'node:fs'
+const out = 'C:/Users/Enes/.codex/visualizations/2026/11/08/01a1bc52-769a-78e0-b684-cc50be3c452a/form-probes'
+mkdirSync(out, { recursive: true })
+async function evidence(page: Page, name: string, data: unknown) {
+  writeFileSync(`${out}/${name}.json`, JSON.stringify(data, null, 2))
+  await page.screenshot({ path: `${out}/${name}.png`, fullPage: false, animations: 'disabled' })
+}
+
+// Tüm dış istekler sentetik yanıtlanır: bu test gerçek Supabase'e bağlanamaz.
+const userId = '11111111-1111-4111-8111-111111111111'
+const now = '2026-10-26T09:00:00.000Z'
+const base = { user_id: userId, created_at: now, updated_at: now, note: null }
+const bank = { ...base, id: 'bank-1', bank_name: 'İş Bankası', card_name: 'Örnek hesap', card_type: 'banka_karti', account_kind: 'bank', current_balance: 20000, credit_limit: 0, debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0, provision_amount: 0, statement_day: null, due_day: null, holder_name: null, account_number: null, limit_group_name: null }
+const tables: Record<string, Record<string, unknown>[]> = {
+  cards: [bank, { ...bank, id: 'bank-2', card_name: 'Diğer hesap', bank_name: 'Garanti', current_balance: 5000 }, { ...bank, id: 'credit-1', card_name: 'Örnek kart', card_type: 'kredi_karti', current_balance: 0, credit_limit: 10000, debt_amount: 1000, current_period_spending: 1000, statement_day: 4, due_day: 14 }],
+  assets: [{ ...base, id: 'asset-1', name: 'Örnek yatırım', category: 'Diğer', amount: 1, unit: 'adet', unit_cost: 5000, estimated_value_try: 5000, auto_valued: false, currency: 'TRY', ticker: null, source: null }],
+  payments: [{ ...base, id: 'payment-1', title: 'Örnek aidat', category: 'Kira / aidat', amount: 100, amount_status: 'exact', due_date: '2026-10-28', status: 'bekliyor', payment_method: 'manual', recurrence: 'monthly', recurrence_day: 28, recurrence_end_date: null, auto_source_card_id: null }],
+  salary_history: [{ ...base, id: 'salary-1', title: 'Örnek maaş', amount: 50000, effective_date: '2026-10-01' }],
+  kasa_buckets: [{ ...base, id: 'reserve-1', name: 'Bağımsız pay', reserved_amount: 100, goal_id: null, last_contribution_month: null, sort_order: 0 }, { ...base, id: 'reserve-2', name: 'Hedefe bağlı pay', reserved_amount: 200, goal_id: 'goal-1', last_contribution_month: '2026-10-01', sort_order: 1 }],
+  savings_goals: [{ ...base, id: 'goal-1', name: 'Örnek hedef', value_type: 'TRY', target_amount: 10000, current_amount: 1000, estimated_value_try: 1000, auto_valued: false, valued_at: null, valuation_rate: null, target_date: '2027-10-01', status: 'active', target_anchor: 'manual', target_anchor_units: null, target_anchor_months: null }],
+  wishlist_items: [{ ...base, id: 'wish-1', name: 'Bekleyen ürün', estimated_price: 500, is_purchased: false, purchased_at: null, sort_order: 0 }, { ...base, id: 'wish-2', name: 'Alınmış ürün', estimated_price: 100, is_purchased: true, purchased_at: now, sort_order: 1 }],
+  cars: [{ ...base, id: 'car-1', name: 'Örnek araç', plate: 'TEST', current_odometer_km: 50000, sort_order: 0 }],
+  expense_contexts: [{ ...base, id: 'context-1', name: 'Örnek grup', kind: 'pet', budget_amount: 1000, starts_on: '2026-10-01', ends_on: null, completed_at: null, sort_order: 0 }],
+}
+const snapshotKeys = ['assets', 'cards', 'loans', 'loan_installments', 'debts', 'payments', 'salary_history', 'transaction_history', 'budgets', 'card_expenses', 'card_installments', 'card_statement_archives', 'card_statement_payments', 'savings_goals', 'savings_goal_components', 'savings_goal_sources', 'account_reconciliations', 'missing_tables']
+
+async function mockApp(page: Page, theme: string, overrides: typeof tables = {}) {
+  const rows = { ...tables, ...overrides }
+  const snapshot = Object.fromEntries(snapshotKeys.map(key => [key, rows[key] ?? []]))
+  await page.clock.install({ time: new Date(now) })
+  const user = { id: userId, email: 'synthetic@example.test', aud: 'authenticated', role: 'authenticated', created_at: now, app_metadata: {}, user_metadata: {} }
+  const token = `${Buffer.from('{"alg":"HS256","typ":"JWT"}').toString('base64url')}.${Buffer.from(JSON.stringify({ sub: userId, role: 'authenticated', aud: 'authenticated', exp: 2100000000 })).toString('base64url')}.synthetic`
+  await page.addInitScript(({ user, token, theme, now }) => {
+    localStorage.setItem('sb-example-auth-token', JSON.stringify({ access_token: token, refresh_token: 'synthetic', expires_at: 2100000000, expires_in: 3600, token_type: 'bearer', user }))
+    localStorage.setItem('theme', theme)
+    localStorage.setItem('denge:theme-preference', theme)
+    localStorage.setItem('denge:net-worth-snapshot-day', `${user.id}:2026-10-26`)
+    localStorage.setItem('fp.marketRates.v1', JSON.stringify({ rates: { USD: { buying: 40, selling: 41 }, GRA: { buying: 5000, selling: 5100 }, CEYREKALTIN: { buying: 8000, selling: 8100 } }, asOf: now, fetchedAt: now }))
+  }, { user, token, theme, now })
+  await page.route('**/*', route => {
+    const url = new URL(route.request().url())
+    if (['127.0.0.1', 'localhost'].includes(url.hostname)) {
+      if (url.pathname.startsWith('/_vercel/')) return route.fulfill({ body: '', contentType: 'application/javascript' })
+      return route.continue()
+    }
+    if (url.hostname === 'example.supabase.co') {
+      const name = url.pathname.split('/').at(-1)!
+      let data: unknown = name === 'fetch_finance_snapshot' ? snapshot : name === 'bist-quote' ? { prices: {}, asOf: now } : url.pathname.includes('/rpc/') ? 0 : name === 'user' ? user : rows[name] ?? []
+      if (['card_ledger', 'account_ledger', 'card_expenses', 'card_installments', 'card_statement_archives'].includes(name)) {
+        const before = url.searchParams.get('id')?.replace(/^lt\./, '')
+        const cardId = url.searchParams.get('card_id')?.replace(/^eq\./, '')
+        data = (rows[name] ?? []).filter(row => (!before || String(row.id) < before) && (!cardId || row.card_id === cardId))
+          .toSorted((a, b) => String(b.id).localeCompare(String(a.id))).slice(0, Number(url.searchParams.get('limit') ?? 1000))
+      }
+      return route.fulfill({ json: data })
+    }
+    return route.abort()
+  })
+}
+
+async function state(page: Page) {
+  return page.evaluate(() => {
+    const nav=document.querySelector<HTMLElement>('nav[aria-label="Ana gezinme"]'), bar=nav?.parentElement, active=document.activeElement as HTMLElement|null
+    const v=window.visualViewport
+    return {url:location.pathname+location.search,scrollY,innerHeight,innerWidth,visual:v?{height:v.height,offsetTop:v.offsetTop,pageTop:v.pageTop,scale:v.scale}:null,
+      body:{position:document.body.style.position,top:document.body.style.top,overflow:document.body.style.overflow},
+      bar:bar?{rect:bar.getBoundingClientRect().toJSON(),display:getComputedStyle(bar).display}:null,
+      dialogs:document.querySelectorAll('[role="dialog"],[role="alertdialog"]').length,
+      active:active?{tag:active.tagName,text:active.textContent?.slice(0,60),aria:active.getAttribute('aria-label'),form:!!active.closest('form'),connected:active.isConnected}:null,
+    }
+  })
+}
+
+const forms = [
+  ['account','/kartlar?section=hesaplar&new=1'],['credit','/kartlar?section=kartlar&new=1'],
+  ['loan','/borclar/krediler?new=1'],['debt','/borclar/kisiler?new=1'],
+  ['payment','/odemeler?new=1'],['asset','/varliklar?new=1'],
+  ['salary','/varliklar/maas?new=1'],['gold','/varliklar/altin?new=1'],['budget','/odemeler/hedefler?new=1'],
+] as const
+
+for(const [id,path] of forms) test(`form cancel escape ${id}`,async({page},info)=>{
+  await mockApp(page,'light')
+  await page.goto(path)
+  await page.clock.resume()
+  const dialog=page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  const opened=await state(page)
+  const input=dialog.locator('input[type="text"],input:not([type]),textarea').first()
+  await input.fill('İptal edilen deneme')
+  const typing=await state(page)
+  let prompts=0;page.on('dialog',async d=>{prompts++;await d.accept()})
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await page.waitForTimeout(80)
+  const closed=await state(page)
+  await evidence(page,`${info.project.name}-escape-${id}`,{opened,typing,closed,prompts})
+})
+
+test('form cancel X and rejected cancel then reopen',async({page},info)=>{
+  await mockApp(page,'light');await page.goto('/varliklar/maas');await page.clock.resume()
+  const add=page.getByRole('button',{name:'Maaş ekle',exact:true})
+  await add.click()
+  const d=page.getByRole('dialog');await d.locator('input[name="title"]').fill('Taslak maaş')
+  const stages=[await state(page)]
+  page.once('dialog',dialog=>dialog.dismiss())
+  await d.getByRole('button',{name:'Kapat',exact:true}).click()
+  await expect(d).toBeVisible();stages.push(await state(page))
+  await d.locator('input[name="title"]').focus()
+  page.once('dialog',dialog=>dialog.accept())
+  await d.getByRole('button',{name:'Kapat',exact:true}).click()
+  await expect(d).toHaveCount(0);stages.push(await state(page))
+  await add.click();await expect(d).toBeVisible();stages.push(await state(page))
+  await page.keyboard.press('Escape');await expect(d).toHaveCount(0);stages.push(await state(page))
+  await evidence(page,`${info.project.name}-cancel-x`,stages)
+})
+
+test('form scrolled cancel with viewport resize restores dock',async({page},info)=>{
+  await mockApp(page,'dark');await page.goto('/odemeler/hedefler');await page.clock.resume()
+  const add=page.locator('[data-slot="card"]').filter({has:page.getByRole('heading',{name:'Birikim hedefleri',exact:true})}).getByRole('button',{name:'Ekle',exact:true});await add.scrollIntoViewIfNeeded()
+  const stages=[await state(page)];await add.click()
+  const d=page.getByRole('dialog');await d.getByRole('textbox',{name:'Hedef adı',exact:true}).fill('Deneme hedef')
+  await page.setViewportSize({width:390,height:450});stages.push(await state(page))
+  page.once('dialog',dialog=>dialog.accept())
+  await d.getByRole('button',{name:'Kapat',exact:true}).click();await expect(d).toHaveCount(0)
+  stages.push(await state(page));await page.setViewportSize({width:390,height:844});await page.waitForTimeout(80);stages.push(await state(page))
+  await evidence(page,`${info.project.name}-resize-cancel`,stages)
+})
+
+test('form edit via row menu restores focus on escape',async({page},info)=>{
+  await mockApp(page,'light');await page.goto('/varliklar/maas');await page.clock.resume()
+  await page.getByRole('button',{name:/işlemleri/}).first().click()
+  await page.getByRole('menu').getByRole('menuitem',{name:'Düzenle',exact:true}).click()
+  const d=page.getByRole('dialog');await expect(d).toBeVisible()
+  await d.locator('input[name="title"]').fill('Yeni taslak')
+  page.once('dialog',dialog=>dialog.accept());await page.keyboard.press('Escape')
+  await expect(d).toHaveCount(0);await page.waitForTimeout(80)
+  await evidence(page,`${info.project.name}-row-menu-cancel`,await state(page))
+})
+
+test('quick action popover clean and repeat close',async({page},info)=>{
+  await mockApp(page,'light');await page.goto('/odemeler/hedefler');await page.clock.resume()
+  const trigger=page.getByRole('button',{name:'Hızlı işlem menüsünü aç',exact:true})
+  const stages=[await state(page)]
+  for(let i=0;i<3;i++){
+    await trigger.click();await expect(page.getByRole('dialog',{name:'Hızlı işlem menüsü'})).toBeVisible();stages.push(await state(page))
+    await page.getByRole('button',{name:'İşlem menüsünü kapat',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);stages.push(await state(page))
+  }
+  await evidence(page,`${info.project.name}-quick-actions`,stages)
+})
+
+test('header menu coexistence with feature form',async({page},info)=>{
+  await mockApp(page,'light');await page.goto('/varliklar/maas');await page.clock.resume()
+  await page.getByRole('button',{name:'Menü',exact:true}).click()
+  await expect(page.getByRole('menu',{name:'Ek sayfalar'})).toBeVisible()
+  await page.keyboard.press('Escape');await expect(page.getByRole('menu',{name:'Ek sayfalar'})).toHaveCount(0)
+  await page.getByRole('button',{name:'Maaş ekle',exact:true}).click()
+  await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByRole('button',{name:'Menü',exact:true}).click()
+  await page.getByRole('menuitem',{name:'Analiz',exact:true}).click()
+  await expect(page).toHaveURL(/\/analiz$/)
+  await evidence(page,`${info.project.name}-header-menu`,await state(page))
+})
+
+test('closing unrelated explorer discards underlying dirty guard',async({page},info)=>{
+  await mockApp(page,'light');await page.goto('/odemeler/liste');await page.clock.resume()
+  const name=page.getByPlaceholder('Ne almak istiyorsun?');await name.fill('Kaybolmaması gereken taslak')
+  await page.getByRole('button',{name:/^Ara ve keşfet/}).click();const d=page.getByRole('dialog',{name:'Ara ve keşfet'})
+  await expect(d).toBeVisible();let confirmations=0
+  page.on('dialog',async dialog=>{confirmations++;await dialog.accept()})
+  await d.getByRole('button',{name:'Kapat',exact:true}).click();await expect(d).toHaveCount(0)
+  const afterClose=confirmations,retained=await name.inputValue()
+  await page.getByRole('navigation',{name:'Ana gezinme'}).getByRole('link',{name:'Özet',exact:true}).click()
+  await expect(page).toHaveURL(/\/$/)
+  await evidence(page,`${info.project.name}-unrelated-close-dirty`,{afterClose,afterNavigation:confirmations,retained,state:await state(page)})
+})
+
+test('closing form while save pending then late response closes next draft',async({page},info)=>{
+  await mockApp(page,'light');await page.goto('/varliklar/maas');await page.clock.resume()
+  let release!:()=>void;const pending=new Promise<void>(r=>release=r);let posts=0
+  await page.route('**/rest/v1/salary_history*',async route=>{
+    if(route.request().method()!=='POST')return route.fallback()
+    posts++;const payload=route.request().postDataJSON();await pending
+    await route.fulfill({json:{...base,...payload,id:'saved-salary'}})
+  })
+  const add=page.getByRole('button',{name:'Maaş ekle',exact:true});await add.click();const d=page.getByRole('dialog')
+  await d.locator('input[name="title"]').fill('İlk maaş')
+  await d.locator('input[name="amount"]').fill('60000')
+  await d.getByRole('button',{name:'Kaydet',exact:true}).click();await expect.poll(()=>posts).toBe(1)
+  page.on('dialog',dialog=>dialog.accept())
+  await d.getByRole('button',{name:'Kapat',exact:true}).click();await expect(d).toHaveCount(0)
+  await add.click();await d.locator('input[name="title"]').fill('İkinci kaydedilmemiş taslak')
+  const beforeRelease=await state(page);release();await expect(d).toHaveCount(0)
+  await evidence(page,`${info.project.name}-pending-save-cancel`,{posts,beforeRelease,afterRelease:await state(page)})
+})
+
+test('back cancellation preserves modal and unlocks after discard',async({page},info)=>{
+  await mockApp(page,'light');await page.goto('/');await page.clock.resume()
+  await page.getByRole('navigation',{name:'Ana gezinme'}).getByRole('link',{name:'Varlıklar',exact:true}).click()
+  await page.getByRole('link',{name:'Maaş',exact:true}).click()
+  await page.getByRole('button',{name:'Maaş ekle',exact:true}).click()
+  const d=page.getByRole('dialog');await d.locator('input[name="title"]').fill('Geri gitme taslağı')
+  let prompts=0;page.on('dialog',async dialog=>{prompts++;if(prompts===1)await dialog.dismiss();else await dialog.accept()})
+  await page.goBack();await expect(page).toHaveURL(/\/varliklar\/maas$/);await expect(d).toBeVisible()
+  const rejected=await state(page)
+  await page.goBack();await expect(page).toHaveURL(/\/varliklar$/);await expect(d).toHaveCount(0)
+  await evidence(page,`${info.project.name}-back-cancel`,{prompts,rejected,discarded:await state(page)})
+})
+
+test('cancel row edit on long scrolled list restores dock and scroll',async({page},info)=>{
+  await mockApp(page,'light',{salary_history:Array.from({length:22},(_,i)=>({...base,id:`salary-${i}`,title:`Geçmiş maaş ${i}`,amount:50000+i,effective_date:`${2026-Math.floor(i/12)}-${String(12-i%12).padStart(2,'0')}-01`}))})
+  await page.goto('/varliklar/maas');await page.clock.resume()
+  const menu=page.getByRole('button',{name:'Geçmiş maaş 21 işlemleri',exact:true});await menu.scrollIntoViewIfNeeded()
+  const before=await state(page);await menu.click();await page.getByRole('menuitem',{name:'Düzenle',exact:true}).click()
+  const d=page.getByRole('dialog');await d.locator('input[name="title"]').fill('Kaydırılmış taslak')
+  page.once('dialog',dialog=>dialog.accept());await d.getByRole('button',{name:'Kapat',exact:true}).click()
+  await expect(d).toHaveCount(0);await page.waitForTimeout(80)
+  await evidence(page,`${info.project.name}-scrolled-row-cancel`,{before,after:await state(page)})
+})
+
+test('recent movement edit X and cancel apply different dirty protection',async({page},info)=>{
+  await mockApp(page,'light',{card_expenses:[{...base,id:'expense-1',card_id:'credit-1',description:'Deneme market',amount:100,category:'Market',spent_at:'2026-10-25',status:'posted',installment_count:1,statement_archive_id:null,current_settlement_id:null,source:'manual'}]})
+  await page.goto('/kartlar?section=kartlar&panel=donem');await page.clock.resume()
+  async function edit(){await page.getByRole('button',{name:'Deneme market işlemleri',exact:true}).click();await page.getByRole('menuitem',{name:'Düzenle',exact:true}).click()}
+  await edit();const d=page.getByRole('dialog',{name:'Hareketi düzenle'})
+  await d.getByRole('textbox',{name:'Açıklama',exact:true}).fill('Değişmiş açıklama')
+  let prompts=0;page.on('dialog',async dialog=>{prompts++;await dialog.dismiss()})
+  await d.getByRole('button',{name:'Kapat',exact:true}).click();await expect(d).toBeVisible()
+  const xPrompts=prompts;await d.getByRole('button',{name:'Vazgeç',exact:true}).click();await expect(d).toHaveCount(0)
+  await evidence(page,`${info.project.name}-explicit-cancel`,{xPrompts,cancelPrompts:prompts-xPrompts,state:await state(page)})
+})
+
+test('normal animation viewport resize cancel dock frame measurements',async({page},info)=>{
+  await page.emulateMedia({reducedMotion:'no-preference'})
+  await mockApp(page,'light');await page.goto('/varliklar/maas');await page.clock.resume()
+  await page.getByRole('button',{name:'Maaş ekle',exact:true}).click()
+  const d=page.getByRole('dialog');await d.locator('input[name="title"]').fill('Klavye benzetimi')
+  const samples=[];await page.setViewportSize({width:390,height:440})
+  page.once('dialog',dialog=>dialog.accept());await d.getByRole('button',{name:'Kapat',exact:true}).click()
+  for(const height of [440,490,590,690,790,844]){await page.setViewportSize({width:390,height});samples.push(await state(page))}
+  await evidence(page,`${info.project.name}-animated-resize`,samples)
+})
+
+async function touchEvent(page:Page,type:string,y:number){
+  await page.getByRole('dialog').evaluate((target,{type,y})=>{
+    const event=new Event(type,{bubbles:true,cancelable:true})
+    Object.defineProperty(event,'touches',{value:type==='touchend'||type==='touchcancel'?[]:[{clientY:y,clientX:100}]})
+    target.dispatchEvent(event)
+  },{type,y})
+  await page.waitForTimeout(40)
+}
+
+test('modal touch gesture unexpectedly refreshes background queries',async({page},info)=>{
+  await mockApp(page,'light');let reads=0
+  await page.route('**/rest/v1/salary_history*',route=>{if(route.request().method()==='GET')reads++;return route.fallback()})
+  await page.goto('/varliklar/maas');await page.clock.resume()
+  await expect.poll(()=>reads).toBeGreaterThan(0);await page.waitForLoadState('networkidle')
+  await page.getByRole('button',{name:'Maaş ekle',exact:true}).click();const before=reads
+  await touchEvent(page,'touchstart',100);await touchEvent(page,'touchmove',280);await touchEvent(page,'touchend',280)
+  await expect.poll(()=>reads).toBeGreaterThan(before)
+  await evidence(page,`${info.project.name}-modal-background-refresh`,{before,after:reads,state:await state(page)})
+})
+
+test('cancelled modal touch leaves background pull spacer',async({page},info)=>{
+  await mockApp(page,'light');await page.goto('/varliklar/maas');await page.clock.resume()
+  await page.getByRole('button',{name:'Maaş ekle',exact:true}).click()
+  await touchEvent(page,'touchstart',100);await touchEvent(page,'touchmove',260);await touchEvent(page,'touchcancel',260)
+  const indicator=page.locator('main > div[aria-hidden]').first()
+  const beforeClose=await indicator.evaluate(e=>({height:e.getBoundingClientRect().height,style:(e as HTMLElement).style.height}))
+  await page.getByRole('dialog').getByRole('button',{name:'Kapat',exact:true}).click();await page.waitForTimeout(250)
+  const afterClose=await indicator.evaluate(e=>({height:e.getBoundingClientRect().height,style:(e as HTMLElement).style.height}))
+  await evidence(page,`${info.project.name}-touchcancel-spacer`,{beforeClose,afterClose,state:await state(page)})
+})
+
+test('PDF processing escape protected while X closes it',async({page},info)=>{
+  await mockApp(page,'light')
+  await page.route('**/src/lib/pdfText.ts',route=>route.fulfill({contentType:'application/javascript',body:'export async function extractPdfText(){ return new Promise(()=>{}); }'}))
+  await page.goto('/kartlar?section=kartlar&card=credit-1');await page.clock.resume()
+  await page.getByRole('button',{name:'Örnek kart işlemleri',exact:true}).click()
+  await page.getByRole('menu').getByRole('button',{name:'Ekstre içe aktar',exact:true}).click()
+  const d=page.getByRole('dialog',{name:'Ekstre İçe Aktar'});await expect(d).toBeVisible()
+  await d.locator('input[type="file"]').setInputFiles({name:'sentetik.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4\n% Synthetic audit fixture\n')})
+  await expect(d.getByText('PDF okunuyor…',{exact:true})).toBeVisible()
+  page.on('dialog',dialog=>dialog.accept())
+  await page.keyboard.press('Escape');await expect(d).toBeVisible();const escaped=await state(page)
+  await d.getByRole('button',{name:'Kapat',exact:true}).click();await expect(d).toHaveCount(0)
+  await evidence(page,`${info.project.name}-pdf-busy-close`,{escaped,clickedX:await state(page)})
+})

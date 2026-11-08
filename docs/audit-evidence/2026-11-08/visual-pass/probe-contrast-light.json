@@ -1,0 +1,152 @@
+{
+  "contrast": [
+    {
+      "text": "· 2 kontrol dikkat istiyor",
+      "ratio": 4.40554738642073,
+      "fg": "rgb(154, 106, 18)",
+      "bg": [
+        245,
+        247,
+        251,
+        1
+      ],
+      "opacity": 1,
+      "font": "14px",
+      "class": "text-warning"
+    },
+    {
+      "text": "1 kart bekliyor",
+      "ratio": 2.950179886697295,
+      "fg": "rgb(89, 102, 122)",
+      "bg": [
+        245,
+        247,
+        251,
+        1
+      ],
+      "opacity": 0.7,
+      "font": "11px",
+      "class": "mt-0.5 text-[11px] opacity-70"
+    },
+    {
+      "text": "Bu aya kadar işlenmemiş taksit yok",
+      "ratio": 2.9502601992519515,
+      "fg": "rgb(9, 115, 82)",
+      "bg": [
+        230.01960784313727,
+        241.0313725490196,
+        236.95294117647057,
+        1
+      ],
+      "opacity": 0.7,
+      "font": "11px",
+      "class": "mt-0.5 text-[11px] opacity-70"
+    },
+    {
+      "text": "50.000,00 ₺",
+      "ratio": 2.9502601992519515,
+      "fg": "rgb(9, 115, 82)",
+      "bg": [
+        230.01960784313727,
+        241.0313725490196,
+        236.95294117647057,
+        1
+      ],
+      "opacity": 0.7,
+      "font": "11px",
+      "class": "mt-0.5 text-[11px] opacity-70"
+    },
+    {
+      "text": "1 açık ödeme",
+      "ratio": 2.950179886697295,
+      "fg": "rgb(89, 102, 122)",
+      "bg": [
+        245,
+        247,
+        251,
+        1
+      ],
+      "opacity": 0.7,
+      "font": "11px",
+      "class": "mt-0.5 text-[11px] opacity-70"
+    },
+    {
+      "text": "Bu ay için bütçe limiti yok",
+      "ratio": 2.9502601992519515,
+      "fg": "rgb(9, 115, 82)",
+      "bg": [
+        230.01960784313727,
+        241.0313725490196,
+        236.95294117647057,
+        1
+      ],
+      "opacity": 0.7,
+      "font": "11px",
+      "class": "mt-0.5 text-[11px] opacity-70"
+    },
+    {
+      "text": "Veri tablolarına erişilebiliyor",
+      "ratio": 2.9502601992519515,
+      "fg": "rgb(9, 115, 82)",
+      "bg": [
+        230.01960784313727,
+        241.0313725490196,
+        236.95294117647057,
+        1
+      ],
+      "opacity": 0.7,
+      "font": "11px",
+      "class": "mt-0.5 text-[11px] opacity-70"
+    }
+  ],
+  "targets": [
+    {
+      "text": "Analiz",
+      "aria": null,
+      "width": 38.640625,
+      "height": 33.328125,
+      "before": "none",
+      "after": "none"
+    },
+    {
+      "text": "Ayrıntılar",
+      "aria": null,
+      "width": 55.078125,
+      "height": 33.328125,
+      "before": "none",
+      "after": "none"
+    },
+    {
+      "text": "Asistan",
+      "aria": null,
+      "width": 45.625,
+      "height": 33.328125,
+      "before": "none",
+      "after": "none"
+    },
+    {
+      "text": "AI özeti",
+      "aria": null,
+      "width": 93.34375,
+      "height": 36,
+      "before": "none",
+      "after": "none"
+    },
+    {
+      "text": "Görsel indir",
+      "aria": null,
+      "width": 120.171875,
+      "height": 36,
+      "before": "none",
+      "after": "none"
+    },
+    {
+      "text": "Sayfayı yazdır",
+      "aria": null,
+      "width": 134.296875,
+      "height": 36,
+      "before": "none",
+      "after": "none"
+    }
+  ]
+}

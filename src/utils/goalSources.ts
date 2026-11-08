@@ -29,9 +29,9 @@ import type {
   SavingsGoalValueType,
 } from '../types/database'
 import type { MarketRatesSnapshot } from './marketRates'
-import { roundTL, sumTL } from './money'
+import { sumTL } from './money'
 import { goalTargetIsAnchored, resolveGoalTarget, type ResolvedGoalTarget } from './goalTargetAnchor'
-import { savingsGoalTargetReached } from './savingsGoal'
+import { roundGoalAmount, savingsGoalTargetReached } from './savingsGoal'
 import { effectiveAssetValue, type StockPrices } from './valuation'
 
 /** Kaynakların çözüleceği veri kümesi. Canlı fiyat/kur yoksa saklı değere düşülür. */
@@ -62,6 +62,10 @@ export type GoalSourceResolution<T extends GoalSourceLike = SavingsGoalSource> =
   unusable: T[]
   /** Referansı silinmiş/bulunamamış kaynaklar. */
   missing: T[]
+}
+
+function sumGoalAmounts(values: number[], unit: ResolvableUnit) {
+  return unit === 'TRY' ? sumTL(values) : roundGoalAmount(values.reduce((sum, value) => sum + value, 0), unit)
 }
 
 type ResolvableUnit = Exclude<SavingsGoalValueType, 'composite'>
@@ -119,11 +123,11 @@ function resolveSingleSource(
       const rows = refs.assets.filter(
         (row) => row.category === source.asset_category && assetCountsForUnit(row, valueType),
       )
-      return { status: 'ok', amount: sumTL(rows.map((row) => assetAmountForUnit(row, valueType, refs))) }
+      return { status: 'ok', amount: sumGoalAmounts(rows.map((row) => assetAmountForUnit(row, valueType, refs)), valueType) }
     }
     case 'all_assets': {
       const rows = refs.assets.filter((row) => assetCountsForUnit(row, valueType))
-      return { status: 'ok', amount: sumTL(rows.map((row) => assetAmountForUnit(row, valueType, refs))) }
+      return { status: 'ok', amount: sumGoalAmounts(rows.map((row) => assetAmountForUnit(row, valueType, refs)), valueType) }
     }
     case 'bank_account': {
       const card = (refs.cards ?? []).find((row) => row.id === source.card_id)
@@ -174,17 +178,17 @@ export function resolveGoalSources<T extends GoalSourceLike>(
           (source.kind === 'asset_category' && asset.category === source.asset_category) ||
           (source.kind === 'asset' && asset.id === source.asset_id)
         ))
-        amounts.push(sumTL(rows.filter((asset) => !countedAssets.has(asset.id)).map((asset) => {
+        amounts.push(sumGoalAmounts(rows.filter((asset) => !countedAssets.has(asset.id)).map((asset) => {
           countedAssets.add(asset.id)
           return assetAmountForUnit(asset, valueType, refs)
-        })))
+        }), valueType))
       }
     }
     else if (outcome.status === 'unusable') unusable.push(source)
     else missing.push(source)
   }
 
-  return { amount: roundTL(sumTL(amounts)), matched: amounts.length, unusable, missing }
+  return { amount: sumGoalAmounts(amounts, valueType), matched: amounts.length, unusable, missing }
 }
 
 export type ResolvedSavingsGoals = {

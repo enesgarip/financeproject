@@ -361,7 +361,7 @@ export function CardInstallmentExpensesPanel({ cards, reload, setError, cardId }
         </CardContent>
       </SurfaceCard>
 
-      <SimpleModal title="Taksitli harcamayı düzenle" open={Boolean(editing)} onClose={closeEdit}>
+      <SimpleModal busy={saving} title="Taksitli harcamayı düzenle" open={Boolean(editing)} onClose={closeEdit}>
         <form onSubmit={handleSave} className="space-y-4">
           <MoneyInput label="Toplam tutar" value={amount} onValueChange={setAmount} required />
           <label className="block text-sm font-semibold text-ink">

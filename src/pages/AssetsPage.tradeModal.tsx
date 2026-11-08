@@ -7,7 +7,7 @@ import { Input, Select, Textarea } from '../components/ui/input'
 import { MoneyInput } from '../components/finance/MoneyInput'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import type { Asset, Card } from '../types/database'
-import { formatNumber, parseNumber } from '../utils/formatCurrency'
+import { formatNumber, parseNumber, parseNativeNumber } from '../utils/formatCurrency'
 import { diffTL, greaterThanTL, roundTL, sumTL } from '../utils/money'
 import { assetTradeRequiresQuantity, type AssetTradeDirection } from '../services/assetTrades'
 import { favoritesFirst } from '../utils/accountFavorites'
@@ -71,7 +71,7 @@ export function AssetTradeModal({
   const isBuy = direction === 'buy'
   const selectedAccount = accounts.find((account) => account.id === accountId) ?? null
   const amountValue = parseNumber(amount)
-  const quantityValue = parseNumber(quantity)
+  const quantityValue = parseNativeNumber(quantity)
   // Satış önizlemesi RPC ile aynı model (BM-7): miktarlı satışta değer
   // SATILAN MİKTARLA oransal düşer (tam satış 0), miktarsızda tutar kadar.
   const nextAssetValue = asset
@@ -94,7 +94,7 @@ export function AssetTradeModal({
   const QuantityIcon = isBuy ? ArrowUpRight : ArrowDownRight
 
   return (
-    <SimpleModal title={asset ? `${asset.name} ${isBuy ? 'al' : 'sat'}` : 'Varlık işlemi'} open={Boolean(trade)} onClose={onClose}>
+    <SimpleModal busy={saving} title={asset ? `${asset.name} ${isBuy ? 'al' : 'sat'}` : 'Varlık işlemi'} open={Boolean(trade)} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
         {asset ? (
           <div className="rounded-xl border border-line-strong bg-page p-3 text-sm text-ink-muted">

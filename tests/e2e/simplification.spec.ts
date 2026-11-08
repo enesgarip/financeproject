@@ -830,7 +830,7 @@ for (const width of [320, 390, 768]) {
       expect(problems).toEqual([])
       const chart = page.locator('svg:has([data-axis="x"])').first()
       await chart.evaluate(element => element.scrollIntoView({ block: 'center' }))
-      const points = chart.locator(path.includes('altin') ? 'rect[fill="transparent"]' : 'g > rect[fill]:not([fill="transparent"])')
+      const points = chart.locator(path.includes('altin') ? 'rect[fill="transparent"]' : 'g:has(> rect[fill="transparent"])')
       const count = await points.count()
       for (const index of [0, Math.floor(count / 2), count - 1]) {
         await points.nth(index).hover()

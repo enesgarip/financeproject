@@ -1,0 +1,175 @@
+import { expect, test, type Page } from '@playwright/test'
+import { writeFileSync, mkdirSync } from 'node:fs'
+const out = 'C:/Users/Enes/.codex/visualizations/2026/11/08/01a1bc52-769a-78e0-b684-cc50be3c452a/visual-probes'
+mkdirSync(out, { recursive: true })
+async function evidence(page: Page, name: string, data: unknown) {
+  writeFileSync(`${out}/${name}.json`, JSON.stringify(data, null, 2))
+  await page.screenshot({ path: `${out}/${name}.png`, fullPage: true, animations: 'disabled' })
+}
+
+// Tüm dış istekler sentetik yanıtlanır: bu test gerçek Supabase'e bağlanamaz.
+const userId = '11111111-1111-4111-8111-111111111111'
+const now = '2026-10-26T09:00:00.000Z'
+const base = { user_id: userId, created_at: now, updated_at: now, note: null }
+const bank = { ...base, id: 'bank-1', bank_name: 'İş Bankası', card_name: 'Örnek hesap', card_type: 'banka_karti', account_kind: 'bank', current_balance: 20000, credit_limit: 0, debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0, provision_amount: 0, statement_day: null, due_day: null, holder_name: null, account_number: null, limit_group_name: null }
+const tables: Record<string, Record<string, unknown>[]> = {
+  cards: [bank, { ...bank, id: 'bank-2', card_name: 'Diğer hesap', bank_name: 'Garanti', current_balance: 5000 }, { ...bank, id: 'credit-1', card_name: 'Örnek kart', card_type: 'kredi_karti', current_balance: 0, credit_limit: 10000, debt_amount: 1000, current_period_spending: 1000, statement_day: 4, due_day: 14 }],
+  assets: [{ ...base, id: 'asset-1', name: 'Örnek yatırım', category: 'Diğer', amount: 1, unit: 'adet', unit_cost: 5000, estimated_value_try: 5000, auto_valued: false, currency: 'TRY', ticker: null, source: null }],
+  payments: [{ ...base, id: 'payment-1', title: 'Örnek aidat', category: 'Kira / aidat', amount: 100, amount_status: 'exact', due_date: '2026-10-28', status: 'bekliyor', payment_method: 'manual', recurrence: 'monthly', recurrence_day: 28, recurrence_end_date: null, auto_source_card_id: null }],
+  salary_history: [{ ...base, id: 'salary-1', title: 'Örnek maaş', amount: 50000, effective_date: '2026-10-01' }],
+  kasa_buckets: [{ ...base, id: 'reserve-1', name: 'Bağımsız pay', reserved_amount: 100, goal_id: null, last_contribution_month: null, sort_order: 0 }, { ...base, id: 'reserve-2', name: 'Hedefe bağlı pay', reserved_amount: 200, goal_id: 'goal-1', last_contribution_month: '2026-10-01', sort_order: 1 }],
+  savings_goals: [{ ...base, id: 'goal-1', name: 'Örnek hedef', value_type: 'TRY', target_amount: 10000, current_amount: 1000, estimated_value_try: 1000, auto_valued: false, valued_at: null, valuation_rate: null, target_date: '2027-10-01', status: 'active', target_anchor: 'manual', target_anchor_units: null, target_anchor_months: null }],
+  wishlist_items: [{ ...base, id: 'wish-1', name: 'Bekleyen ürün', estimated_price: 500, is_purchased: false, purchased_at: null, sort_order: 0 }, { ...base, id: 'wish-2', name: 'Alınmış ürün', estimated_price: 100, is_purchased: true, purchased_at: now, sort_order: 1 }],
+  cars: [{ ...base, id: 'car-1', name: 'Örnek araç', plate: 'TEST', current_odometer_km: 50000, sort_order: 0 }],
+  expense_contexts: [{ ...base, id: 'context-1', name: 'Örnek grup', kind: 'pet', budget_amount: 1000, starts_on: '2026-10-01', ends_on: null, completed_at: null, sort_order: 0 }],
+}
+const snapshotKeys = ['assets', 'cards', 'loans', 'loan_installments', 'debts', 'payments', 'salary_history', 'transaction_history', 'budgets', 'card_expenses', 'card_installments', 'card_statement_archives', 'card_statement_payments', 'savings_goals', 'savings_goal_components', 'savings_goal_sources', 'account_reconciliations', 'missing_tables']
+
+async function mockApp(page: Page, theme: string, overrides: typeof tables = {}) {
+  const rows = { ...tables, ...overrides }
+  const snapshot = Object.fromEntries(snapshotKeys.map(key => [key, rows[key] ?? []]))
+  await page.clock.install({ time: new Date(now) })
+  const user = { id: userId, email: 'synthetic@example.test', aud: 'authenticated', role: 'authenticated', created_at: now, app_metadata: {}, user_metadata: {} }
+  const token = `${Buffer.from('{"alg":"HS256","typ":"JWT"}').toString('base64url')}.${Buffer.from(JSON.stringify({ sub: userId, role: 'authenticated', aud: 'authenticated', exp: 2100000000 })).toString('base64url')}.synthetic`
+  await page.addInitScript(({ user, token, theme, now }) => {
+    localStorage.setItem('sb-example-auth-token', JSON.stringify({ access_token: token, refresh_token: 'synthetic', expires_at: 2100000000, expires_in: 3600, token_type: 'bearer', user }))
+    localStorage.setItem('theme', theme)
+    localStorage.setItem('denge:theme-preference', theme)
+    localStorage.setItem('denge:net-worth-snapshot-day', `${user.id}:2026-10-26`)
+    localStorage.setItem('fp.marketRates.v1', JSON.stringify({ rates: { USD: { buying: 40, selling: 41 }, GRA: { buying: 5000, selling: 5100 }, CEYREKALTIN: { buying: 8000, selling: 8100 } }, asOf: now, fetchedAt: now }))
+  }, { user, token, theme, now })
+  await page.route('**/*', route => {
+    const url = new URL(route.request().url())
+    if (['127.0.0.1', 'localhost'].includes(url.hostname)) {
+      if (url.pathname.startsWith('/_vercel/')) return route.fulfill({ body: '', contentType: 'application/javascript' })
+      return route.continue()
+    }
+    if (url.hostname === 'example.supabase.co') {
+      const name = url.pathname.split('/').at(-1)!
+      let data: unknown = name === 'fetch_finance_snapshot' ? snapshot : name === 'bist-quote' ? { prices: {}, asOf: now } : url.pathname.includes('/rpc/') ? 0 : name === 'user' ? user : rows[name] ?? []
+      if (['card_ledger', 'account_ledger', 'card_expenses', 'card_installments', 'card_statement_archives'].includes(name)) {
+        const before = url.searchParams.get('id')?.replace(/^lt\./, '')
+        const cardId = url.searchParams.get('card_id')?.replace(/^eq\./, '')
+        data = (rows[name] ?? []).filter(row => (!before || String(row.id) < before) && (!cardId || row.card_id === cardId))
+          .toSorted((a, b) => String(b.id).localeCompare(String(a.id))).slice(0, Number(url.searchParams.get('limit') ?? 1000))
+      }
+      return route.fulfill({ json: data })
+    }
+    return route.abort()
+  })
+}
+
+for (const width of [320, 390]) test(`visual budget ${width}`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 })
+  await mockApp(page, 'light', {
+    budgets: [{ ...base, id: 'b-1', category: 'Market', month: '2026-10-01', limit_amount: 9876543.21, limit_anchor: 'manual', limit_anchor_value: null }],
+    card_expenses: [{ ...base, id: 'e-1', card_id: 'credit-1', spent_at: '2026-10-25', description: 'Market', category: 'Market', amount: 1234567.89, status: 'posted', installment_count: 1 }],
+  })
+  await page.goto('/odemeler/hedefler')
+  await expect(page.getByText('Ay bütçesi', { exact: true })).toBeVisible()
+  const data = await page.locator('p').filter({ hasText: '1.234.567,89' }).first().evaluate(e => {
+    const range = document.createRange(); range.selectNodeContents(e)
+    return { text: e.textContent, viewport: innerWidth, scroll: document.documentElement.scrollWidth, box: e.getBoundingClientRect().toJSON(), textBox: range.getBoundingClientRect().toJSON(), font: getComputedStyle(e).fontSize }
+  })
+  await evidence(page, `probe-budget-${width}`, data)
+})
+
+for (const theme of ['light', 'dark']) for (const unit of ['Gram altın', 'USD']) test(`visual trend ${theme} ${unit}`, async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 1400 })
+  await mockApp(page, theme, { net_worth_snapshots: [
+    { ...base, id: 'n-2', snapshot_date: '2026-10-26', net_worth: 110000, total_assets: 110000, total_debt: 0, gold_try: 10000, usd_try: 55 },
+    { ...base, id: 'n-1', snapshot_date: '2026-10-25', net_worth: 100000, total_assets: 100000, total_debt: 0, gold_try: 5000, usd_try: 40 },
+  ] })
+  await page.addInitScript(now => localStorage.setItem('fp.marketRates.v1', JSON.stringify({ rates: { GRA: { buying: 10000, selling: 10100 }, USD: { buying: 55, selling: 56 } }, asOf: now, fetchedAt: now })), now)
+  await page.goto('/analiz')
+  await page.getByRole('button', { name: `Net değeri ${unit} cinsinden göster`, exact: true }).click()
+  const panel = page.locator('[data-slot="card"]').filter({ has: page.getByText('Net değer trendi', { exact: true }) })
+  await panel.scrollIntoViewIfNeeded()
+  const chart = panel.locator('div[role="img"]')
+  await expect(chart.locator('svg')).toBeVisible()
+  await chart.evaluate(e => e.scrollIntoView({ block: 'center' }))
+  await chart.locator('svg g rect[fill="var(--success)"]').first().hover()
+  await expect(panel.getByText('Tutar', { exact: true })).toBeVisible()
+  await evidence(page, `probe-trend-${theme}-${unit === 'USD' ? 'usd' : 'gra'}`, { text: await panel.innerText(), chartLabel: await chart.getAttribute('aria-label'), chartText: await chart.innerText() })
+  await panel.screenshot({ path: `${out}/probe-trend-${theme}-${unit === 'USD' ? 'usd' : 'gra'}-panel.png` })
+})
+
+for (const width of [320, 390]) test(`visual car ${width}`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 })
+  await mockApp(page, 'light', { cars: [{ ...tables.cars[0], name: 'Aile aracı İstanbul şubesi uzun model ismi', plate: '34 TEST 123' }], car_reminders: [
+    { ...base, id: 'r-1', car_id: 'car-1', title: 'Periyodik bakım ve yağ filtresi değişimi — ön takım kontrolü', kind: 'bakim', due_date: '2026-10-25', due_odometer_km: 51000, repeat_months: 12, repeat_km: 10000 },
+    { ...base, id: 'r-2', car_id: 'car-1', title: 'Periyodik bakım ve yağ filtresi değişimi — arka takım kontrolü', kind: 'bakim', due_date: '2026-10-25', due_odometer_km: 51000, repeat_months: 12, repeat_km: 10000 },
+  ] })
+  await page.goto('/varliklar/araclar')
+  await expect(page.getByText('Bakım ve yenilemeler', { exact: true })).toBeVisible()
+  const panel = page.locator('[data-slot="card"]').filter({ has: page.getByText('Bakım ve yenilemeler', { exact: true }) })
+  await panel.scrollIntoViewIfNeeded()
+  const data = await panel.locator('li').evaluateAll(els => els.map(e => {
+    const p = e.querySelector('p')!, actions = Array.from(e.querySelectorAll('button'))
+    return { text: p.textContent, width: p.clientWidth, scrollWidth: p.scrollWidth, row: e.getBoundingClientRect().toJSON(), title: p.title, buttons: actions.map(b => {
+      const r = b.getBoundingClientRect(), x = r.right + 2, y = r.top + r.height / 2
+      return { label: b.getAttribute('aria-label'), rect: r.toJSON(), hitAtRightPlus2: document.elementFromPoint(x, y)?.closest('button')?.getAttribute('aria-label') }
+    }) }
+  }))
+  await evidence(page, `probe-car-${width}`, data)
+  await panel.screenshot({ path: `${out}/probe-car-${width}-panel.png` })
+})
+
+for (const theme of ['light', 'dark']) test(`visual contrast and targets ${theme}`, async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  await mockApp(page, theme)
+  await page.goto('/analiz#ay-kapanisi')
+  await expect(page.getByText('Net değer trendi', { exact: true })).toBeVisible()
+  const contrast = await page.locator('main').evaluate(main => {
+    const c = document.createElement('canvas').getContext('2d')!
+    function rgba(value: string): number[] { c.clearRect(0,0,1,1); c.fillStyle = value; c.fillRect(0,0,1,1); const a = c.getImageData(0,0,1,1).data; return [a[0],a[1],a[2],a[3]/255] }
+    function over(a: number[], b: number[]) { return [0,1,2].map(i => a[i]*a[3]+b[i]*(1-a[3])).concat(1) }
+    function lum(a: number[]) { return a.slice(0,3).map(v=>v/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4).reduce((s,v,i)=>s+v*[0.2126,0.7152,0.0722][i],0) }
+    const results: unknown[] = []
+    for (const e of main.querySelectorAll<HTMLElement>('p,span,button,a,li,h2,h3,label')) {
+      if (e.childElementCount || !e.textContent?.trim() || e.closest('[disabled],[aria-hidden="true"],.sr-only') || !e.getBoundingClientRect().height || e.closest('details:not([open])') && !e.closest('summary')) continue
+      const chain: Element[] = []; for(let n: Element|null=e;n;n=n.parentElement) chain.unshift(n)
+      let bg=[255,255,255,1],opacity=1
+      for(const n of chain) { const s=getComputedStyle(n); bg=over(rgba(s.backgroundColor),bg); opacity*=Number(s.opacity) }
+      const style=getComputedStyle(e), fg=rgba(style.color); fg[3]*=opacity
+      const rendered=over(fg,bg), l1=lum(rendered), l2=lum(bg), ratio=(Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05)
+      const fs=parseFloat(style.fontSize), large=fs>=24 || fs>=18.66 && Number(style.fontWeight)>=700
+      if(ratio<(large?3:4.5))results.push({text:e.textContent,ratio,fg:style.color,bg,opacity,font:style.fontSize,class:e.className})
+    }
+    return results
+  })
+  const targets = await page.locator('main button,main a').evaluateAll(els=>els.filter(e=>e.getBoundingClientRect().height>0).map(e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e,'::before'),a=getComputedStyle(e,'::after');return {text:e.textContent?.trim(),aria:e.getAttribute('aria-label'),width:r.width,height:r.height,before:s.content,after:a.content}}).filter(x=>x.height<44&&x.before==='none'&&x.after==='none'))
+  await evidence(page, `probe-contrast-${theme}`, {contrast,targets})
+})
+
+test('visual compact car actions hit area', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 })
+  await mockApp(page, 'light', { car_reminders: [{ ...base, id: 'r-1', car_id: 'car-1', title: 'Bakım', kind: 'bakim', due_date: '2026-10-25', due_odometer_km: null, repeat_months: null, repeat_km: null }] })
+  await page.goto('/varliklar/araclar')
+  const complete = page.getByRole('button', { name: 'Tamamlandı', exact: true })
+  await complete.evaluate(e => e.scrollIntoView({block:'center'}))
+  const geometry = await complete.evaluate(e=> {
+    const r=e.getBoundingClientRect(), next=e.nextElementSibling!, n=next.getBoundingClientRect(), pseudo=getComputedStyle(e,'::after')
+    const samples=Array.from({length:9},(_,i)=>({ x:r.right-4+i, y:r.top+r.height/2 })).map(p=>({...p,hit:document.elementFromPoint(p.x,p.y)?.closest('button')?.getAttribute('aria-label')}))
+    return {complete:r.toJSON(),remove:n.toJSON(),pseudo:{width:pseudo.width,height:pseudo.height},samples}
+  })
+  await evidence(page,'probe-hit-overlap',geometry)
+})
+
+for (const mode of ['loading', 'error', 'empty', 'modal']) test(`visual state ${mode}`, async ({ page }) => {
+  await page.setViewportSize({width:320,height:900})
+  await mockApp(page,'light',mode==='empty'?Object.fromEntries(Object.keys(tables).map(k=>[k,[]])):{})
+  if(mode==='loading')await page.route('**/rest/v1/rpc/fetch_finance_snapshot',()=>{})
+  if(mode==='error')await page.route('**/rest/v1/rpc/fetch_finance_snapshot',r=>r.fulfill({status:500,json:{message:'Sentetik görsel hata senaryosu',code:'XX001'}}))
+  await page.goto(mode==='modal'?'/kartlar':'/odemeler/hedefler')
+  if(mode==='loading')await expect(page.getByRole('status').first()).toBeVisible()
+  if(mode==='error'){await page.clock.resume(); await expect(page.getByText('Plan verileri yüklenemedi',{exact:true})).toBeVisible({timeout:20000})}
+  if(mode==='empty')await expect(page.getByText('Bu ay için bütçe eklediğinde kategori kullanımı burada görünecek.',{exact:true})).toBeVisible()
+  if(mode==='modal'){
+    await page.getByRole('button',{name:'Hesap ekle',exact:true}).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+  }
+  await evidence(page,`probe-state-${mode}`,await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth})))
+})
+
+

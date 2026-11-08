@@ -1,0 +1,69 @@
+import { chromium } from 'playwright'
+import { spawn, spawnSync } from 'node:child_process'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
+const dir = path.resolve('.audit-visual-artifacts')
+mkdirSync(dir, { recursive: true })
+const status = spawnSync('cmd.exe', ['/c', 'npx', 'supabase', 'status', '-o', 'json'], { encoding: 'utf8', windowsHide: true })
+const config = JSON.parse(status.stdout)
+if (new URL(config.API_URL).hostname !== '127.0.0.1') throw Error('local only')
+const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '4187', '--strictPort'], { env: { ...process.env, VITE_SUPABASE_URL: config.API_URL, VITE_SUPABASE_ANON_KEY: config.ANON_KEY }, stdio: 'ignore', windowsHide: true })
+let browser
+const inventory = []
+const blocks = {}
+const routes = [
+ ['dashboard','/'], ['accounts','/kartlar'], ['credit','/kartlar?section=kartlar'], ['bank-detail','/kartlar?section=hesaplar&card=de110000-0000-4000-8000-000000000001'],
+ ['card-detail','/kartlar?section=kartlar&card=de110000-0000-4000-8000-000000000003'], ['assets','/varliklar'], ['asset-records','/varliklar?view=records'], ['salary','/varliklar/maas'], ['gold','/varliklar/altin'], ['stocks','/varliklar/borsa'], ['cars','/varliklar/araclar'], ['loans','/borclar/krediler'], ['people','/borclar/kisiler'], ['tracking','/borclar/kisiler?section=takip'], ['payments','/odemeler'], ['goals','/odemeler/hedefler'], ['decision','/odemeler/alsam-mi?tutar=10000'], ['wishlist','/odemeler/liste'], ['contexts','/odemeler/baglamlar'], ['analysis','/analiz'], ['analysis-detail','/analiz/detay'], ['assistant','/analiz/asistan'], ['health','/veri-sagligi'], ['operations','/veri-sagligi/islemler']
+]
+try {
+ for(let i=0;i<80;i++) { try { if((await fetch('http://127.0.0.1:4187/login')).ok) break } catch {} await new Promise(r=>setTimeout(r,250)) }
+ browser = await chromium.launch()
+ for (const [width, theme] of [[390,'light'],[390,'dark'],[1280,'light']]) {
+  const context = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: theme, locale: 'tr-TR', timezoneId: 'Europe/Istanbul', reducedMotion: 'reduce' })
+  await context.addInitScript(({theme}) => {
+   localStorage.setItem('theme', theme)
+   const now = new Date().toISOString()
+   localStorage.setItem('fp.marketRates.v1', JSON.stringify({ rates: { USD: { buying: 40, selling: 41 }, EUR: { buying: 45, selling: 46 }, GRA: { buying: 5000, selling: 5100 }, CEYREKALTIN: { buying: 8000, selling: 8100 } }, asOf: now, fetchedAt: now }))
+  }, {theme})
+  await context.route('**/*', route => {
+   const req = route.request(), url = new URL(req.url())
+   if (!['127.0.0.1','localhost'].includes(url.hostname)) return route.abort()
+   if (url.pathname.startsWith('/_vercel/')) return route.fulfill({ body: '', contentType: 'application/javascript' })
+   if (url.origin === config.API_URL && url.pathname.includes('/functions/')) return route.fulfill({ json: { prices: {}, asOf: new Date().toISOString() } })
+   if (url.pathname.startsWith('/rest/v1/') && req.method() !== 'GET' && req.method() !== 'HEAD') {
+    const name = url.pathname.split('/').at(-1)
+    if (['fetch_finance_snapshot','fetch_automation_health'].includes(name)) return route.continue()
+    blocks[name] = (blocks[name] ?? 0) + 1
+    return route.fulfill({ json: url.pathname.includes('/rpc/') ? 0 : [] })
+   }
+   return route.continue()
+  })
+  const page = await context.newPage()
+  await page.goto('http://127.0.0.1:4187/login')
+  if(theme==='light' && width===390) await page.screenshot({ path: path.join(dir,'login-390-light.png'), fullPage:true })
+  await page.locator('input[type=email]').fill('t@t.com')
+  await page.locator('input[type=password]').fill('password123')
+  await page.locator('button[type=submit]').click()
+  await page.waitForURL('http://127.0.0.1:4187/')
+  for (const [id, route] of routes) {
+   await page.goto('http://127.0.0.1:4187'+route)
+   await page.waitForLoadState('networkidle')
+   await page.evaluate(() => document.fonts.ready)
+   await page.screenshot({ path: path.join(dir,`${id}-${width}-${theme}.png`), fullPage:true, animations:'disabled' })
+   if ((await page.locator('body').innerText()).includes('Bir şeyler ters gitti')) throw new Error('Capture failed on '+id)
+   const data = await page.evaluate(() => {
+    const visible = e => { const r=e.getBoundingClientRect(), s=getComputedStyle(e); return r.width>0 && r.height>0 && s.visibility!=='hidden' && s.display!=='none' && !e.closest('[hidden],details:not([open]) > :not(summary)') }
+    const main=document.querySelector('main')
+    const clipped = Array.from(main?.querySelectorAll('*')??[]).filter(e=>visible(e) && e.childElementCount===0 && e.textContent.trim() && e.scrollWidth>e.clientWidth+2 && e.clientWidth>5).map(e=>({text:e.textContent.trim().slice(0,120),tag:e.tagName,classes:String(e.className),width:e.clientWidth,scroll:e.scrollWidth})).slice(0,30)
+    const smallTargets = Array.from(main?.querySelectorAll('button,a,summary,input,select')??[]).filter(e=>visible(e) && !e.disabled).map(e=>{const r=e.getBoundingClientRect(),p=getComputedStyle(e,'::after');return {text:(e.getAttribute('aria-label')||e.textContent||'').trim().slice(0,70),width:r.width,height:r.height,classes:String(e.className),pseudo:p.content,pseudoWidth:p.width,pseudoHeight:p.height}}).filter(x=>x.height<43 || x.width<43).slice(0,70)
+    return { title: document.querySelector('h1')?.textContent, width:innerWidth, scroll:document.documentElement.scrollWidth, mainText:main?.innerText.slice(0,1600), clipped, smallTargets }
+   })
+   inventory.push({id,route,width,theme,...data})
+  }
+  await context.close()
+  console.log(`captured ${routes.length} screens: ${width} ${theme}`)
+ }
+ writeFileSync(path.join(dir,'inventory.json'),JSON.stringify({inventory,blockedMutations:blocks},null,2))
+ console.log('Read-only blocks:',JSON.stringify(blocks))
+} finally { await browser?.close(); server.kill() }
+

@@ -1,5 +1,54 @@
 # AI Context Index
 
+9 Kasım düzeltme uygulaması: `docs/AUDIT_REMEDIATION_2026-11-09.md`.
+`data/repositories/readAllRows.ts` PK imleciyle tam okuma ve atomik hata
+sözleşmesidir; CRUD, kredi, snapshot fallback ve trend/radar okumaları kullanır.
+`app/useResolvedSnapshotGoals.ts` karar/analiz hedef kaynaklarını ve güvenini paylaşır.
+`services/financeOperations.ts`, `utils/operationAttempt.ts` ve
+`components/finance/PendingOperationsPanel.tsx` kalıcı niyet/makbuz doğrulamasını
+sunar. Migration: `supabase/migrations/20261109010000_audit_operation_receipts.sql`;
+SQL: `supabase/tests/audit_operations_and_gold.sql`. Aşağıdaki 8 Kasım notları
+tarama anındaki tarihsel durumdur; güncel kapanış kaydı düzeltme belgesindedir.
+
+
+8 Kasım form/iptal taraması: `docs/FORM_NAV_AUDIT_2026-11-08.md`.
+F01–F05: 1 P1/4 P2; birleşik M01–M23 + V01–V07 + F01–F05 + T01,
+35 ürün maddesi (15 P1/20 P2), henüz düzeltme yok. F01 ölü menü tetikleyicisine
+odak dönüşü; F02 pending kapanış/eski yanıt; F03 dirty kapsamı; F04 modal
+jestinde arka plan refresh; F05 touchcancel boşluğu. U01 telefonda iptal sonrası
+navbarın ortada kalmasıdır; tam belirti yeniden üretilemedi ve açık tutulur.
+46/46 mobil Chromium/WebKit gözlemi; gerçek soft keyboard/PWA testi değildir.
+Kanıt: `docs/audit-evidence/2026-11-08/form-pass/README.md`.
+
+8 Kasım son görsel tarama: `docs/VISUAL_UI_AUDIT_2026-11-08.md`.
+Yeni V01–V07 (2 P1/5 P2); birleşik M01–M23 + V01–V07 + T01,
+30 ürün maddesi (14 P1/16 P2), henüz düzeltme yok. V01 bütçe kahramanı;
+V02 trend birim etiketleri; V03 seçili birimin değişim/uç değerleri;
+V04 uzun bakım satırı eylem kırpılması; V05 ay kapanışı kontrastı;
+V06 metinli hedef boyutu; V07 komşu ikon hit alanı çakışması.
+72 demo görünümü, 15/15 özel Chromium gözlemi; üretim kullanılmadı.
+Kanıt: `docs/audit-evidence/2026-11-08/visual-pass/README.md`.
+UI sözleşmesi `docs/UI_ARCHITECTURE.md`; bu tur davranışı değiştirmedi.
+
+8 Kasım ikinci mantık taraması: `docs/LOGIC_UI_AUDIT_SECOND_PASS_2026-11-08.md`.
+Birleşik kapsam M01–M23 + T01; 12 P1/11 P2 ürün maddesi, henüz düzeltme yok.
+M12 hesap/transfer/al-sat retry; M13 native miktar parser'ı; M14 altın
+projeksiyon hassasiyeti; M15 yön değişimi senkron anahtarı; M16 altın envanteri;
+M17 katkılı değer retry; M18 satır içi taslak; M19 geçersiz sayı→sıfır;
+M20 sohbet temizleme yarışı; M21 engelli storage; M22 uzun kredi planı;
+M23 restore belirsiz sonucu. M06/M08/M10 ikinci kanıtlarla genişletildi.
+Kanıt: `docs/audit-evidence/2026-11-08/second-pass/README.md`.
+
+8 Kasım uygulama/UI mantık denetimi: `docs/LOGIC_UI_AUDIT_2026-11-08.md`.
+11 ürün bulgusu + 1 test bakım bulgusu, kanıt düzeyi ve üç çözüm paketi;
+düzeltmeler henüz uygulanmadı. M01/M07 kredi CRUD sonrası hata ve taksit
+okuma durumu; M02 rezerv ayırma retry; M03/M04 karar güveni ve rezerv tabanı;
+M05 hedef referansları; M06 gizlilik; M08 bütçe cache'i; M09 şema kapsamı;
+M10 tam-geçmiş sayfalama; M11 altın birim toleransı; T01 canlı test seçicisi.
+Kanıt arşivi: `docs/audit-evidence/2026-11-08/README.md`.
+Geçici gözlem testleri otomatik pakette değildir; hatalı davranışı kalıcı
+beklenti yapmadan, düzeltmede doğru kabul testine dönüştürülmelidir.
+
 8 Kasım ikinci akış paketi (altın alımı kapsam dışı):
 Sözleşme: `docs/LINKED_FINANCE_WORKFLOWS.md`.
 `data/repositories/linkedWorkflowsRepo.ts` para girişi sınıfları ve bakım
@@ -771,3 +820,5 @@ yan etkisini kontrol et.
 - Kirli form/gezinme ve güncelleme: src/lib/navigationSafety.ts, src/lib/serviceWorkerRegistration.ts. Giriş paketi dinamik yükler.
 - Kullanıcıya teknik hata sızdırma: src/utils/userMessage.ts; src/data/result.ts ortak dönüşümü.
 - SMS kart sahibi çözümleme ve gelecek hisse tarihi: supabase/migrations/20260912090000_audit_sms_lookup_and_stock_date.sql; SQL regresyonu supabase/tests/audit_sms_and_stock.sql.
+
+| Tam sayfalı tablo okuma | `src/data/repositories/readAllRows.ts` |

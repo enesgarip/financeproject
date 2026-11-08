@@ -83,6 +83,7 @@ type CrudPageProps<T extends CrudTableName> = {
    *  doğrulamak için gerekir (ör. eldekinden fazla altın satılamaz). */
   validateForm?: (formData: FormData, values: Record<string, string>, editing: RowFor<T> | null, rows: RowFor<T>[]) => FormErrors
   afterSave?: (row: RowFor<T>, action: SaveAction, helpers: { reload: () => Promise<void>; setError: (message: string) => void; previousRow: RowFor<T> | null }) => Promise<void> | void
+  validateDelete?: (row: RowFor<T>, rows: RowFor<T>[]) => string | null
   afterDelete?: (row: RowFor<T> | null, helpers: { reload: () => Promise<void>; setError: (message: string) => void }) => Promise<void> | void
   renderTitle: (row: RowFor<T>) => string
   renderSubtitle?: (row: RowFor<T>) => string
@@ -153,6 +154,7 @@ export function CrudPage<T extends CrudTableName>({
   validateForm,
   afterSave,
   afterDelete,
+  validateDelete,
   renderTitle,
   renderSubtitle,
   renderDetails,
@@ -188,6 +190,7 @@ export function CrudPage<T extends CrudTableName>({
   const rows = rowsQuery.data ?? EMPTY_ROWS
   const loading = rowsQuery.isPending
   const [saving, setSaving] = useState(false)
+  const submitting = useRef(false)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState<RowFor<T> | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -309,10 +312,12 @@ export function CrudPage<T extends CrudTableName>({
   }
 
   async function confirmDelete() {
-    if (!deleteId) return
+    if (!deleteId || deleting) return
 
     setDeleting(true)
     const deletedRow = rows.find((row) => row.id === deleteId) ?? null
+    const validationError = deletedRow ? validateDelete?.(deletedRow, rows) : null
+    if (validationError) { setError(validationError); setDeleting(false); setDeleteId(null); return }
     const deleteResult = await deleteCrudRow(table, deleteId)
     if (!deleteResult.ok) {
       setError(deleteResult.error.message ?? 'Kayıt silinemedi.')
@@ -338,7 +343,7 @@ export function CrudPage<T extends CrudTableName>({
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!user) return
+    if (!user || submitting.current) return
 
     const formData = new FormData(event.currentTarget)
     const validationErrors = {
@@ -351,36 +356,46 @@ export function CrudPage<T extends CrudTableName>({
       return
     }
 
+    submitting.current = true
     setSaving(true)
-    setError('')
-    setFormError('')
-    const payload = mapForm(formData, user.id, editing, fieldContext)
-    const action: SaveAction = editing ? 'update' : 'create'
+    try {
+      setError('')
+      setFormError('')
+      const payload = mapForm(formData, user.id, editing, fieldContext)
+      const action: SaveAction = editing ? 'update' : 'create'
 
-    const saveResult = await saveCrudRow(table, payload, editing?.id ?? null)
+      const saveResult = await saveCrudRow(table, payload, editing?.id ?? null)
 
-    if (!saveResult.ok) {
-      setError(saveResult.error.message ?? 'Kayıt kaydedilemedi.')
-      setSaving(false)
-      return
-    }
-
-    const savedRow = saveResult.data
-    if (savedRow) {
-      try {
-        await afterSave?.(savedRow, action, { reload, setError, previousRow: editing })
-      } catch (saveError) {
-        setError(saveError instanceof Error ? saveError.message : 'Kayıt sonrası işlem tamamlanamadı.')
+      if (!saveResult.ok) {
+        setError(saveResult.error.message ?? 'Kayıt kaydedilemedi.')
         setSaving(false)
         return
       }
-    }
 
-    setModalOpen(false)
-    setEditing(null)
-    setFormErrors({})
-    setSaving(false)
-    await reload()
+      const savedRow = saveResult.data
+      if (savedRow) {
+        // Ana INSERT başarıyla bitti: sonraki iş hata verirse aynı kimlikle devam et.
+        setEditing(savedRow)
+        try {
+          await afterSave?.(savedRow, action, { reload, setError, previousRow: editing })
+        } catch (saveError) {
+          setFormError(`Kayıt kaydedildi; sonraki işlem tamamlanamadı. Aynı kayıtta yeniden deneyebilirsin. ${saveError instanceof Error ? saveError.message : ''}`)
+          setSaving(false)
+          return
+        }
+      }
+
+      setModalOpen(false)
+      setEditing(null)
+      setFormErrors({})
+      setSaving(false)
+      await reload()
+    } catch (cause) {
+      setFormError(cause instanceof Error ? cause.message : 'Kayıt tamamlanamadı; yeniden dene.')
+    } finally {
+      submitting.current = false
+      setSaving(false)
+    }
   }
 
   if (loadError) return <QueryError title="Kayıtlar yüklenemedi" message={loadError} onRetry={() => void reload()} />
@@ -624,9 +639,10 @@ export function CrudPage<T extends CrudTableName>({
       <SimpleModal
         title={editing ? 'Kaydı düzenle' : addLabel}
         open={modalOpen}
+        busy={saving}
         onClose={() => setModalOpen(false)}
       >
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate aria-busy={saving}>
           {formError ? <Alert variant="destructive">{formError}</Alert> : null}
           <FormSection
             title={editing ? 'Kayıt bilgileri' : 'Yeni kayıt bilgileri'}
@@ -644,6 +660,7 @@ export function CrudPage<T extends CrudTableName>({
                 </span>
                 {field.type === 'select' ? (
                   <Select
+                    disabled={saving}
                     name={field.name}
                     required={field.required}
                     value={formValues[field.name] ?? ''}
@@ -659,6 +676,7 @@ export function CrudPage<T extends CrudTableName>({
                   </Select>
                 ) : field.type === 'textarea' ? (
                   <Textarea
+                    disabled={saving}
                     name={field.name}
                     rows={3}
                     value={formValues[field.name] ?? ''}
@@ -669,6 +687,7 @@ export function CrudPage<T extends CrudTableName>({
                 ) : field.type === 'date' ? (
                   <div className="relative mt-1">
                     <Input
+                      disabled={saving}
                       name={field.name}
                       type="date"
                       required={field.required}
@@ -688,6 +707,7 @@ export function CrudPage<T extends CrudTableName>({
                 ) : field.type === 'day' ? (
                   <div className="relative mt-1">
                     <Select
+                      disabled={saving}
                       name={field.name}
                       required={field.required}
                       value={formValues[field.name] ?? ''}
@@ -717,6 +737,7 @@ export function CrudPage<T extends CrudTableName>({
                   </div>
                 ) : (
                   <Input
+                    disabled={saving}
                     name={field.name}
                     type={field.type}
                     required={field.required}
@@ -783,11 +804,14 @@ export function RowMenu({
   children: ReactNode
 }) {
   const menuRef = useRef<HTMLDivElement>(null)
+  const closeRef = useRef(onClose)
+  useEffect(() => { closeRef.current = onClose })
 
   useEffect(() => {
     if (!open) return
     const menu = menuRef.current
     if (!menu) return
+    const trigger = menu.parentElement?.querySelector<HTMLElement>('button[aria-haspopup="menu"]')
 
     // Çağıranın `renderMenuActions` ile eklediği öğeler `role="menuitem"` taşımayabilir;
     // gezinme yine de onları kapsasın diye seçici etkileşimli öğelere bakar.
@@ -797,7 +821,7 @@ export function RowMenu({
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.stopPropagation()
-        onClose()
+        closeRef.current()
         return
       }
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Home' && event.key !== 'End') return
@@ -815,8 +839,11 @@ export function RowMenu({
     }
 
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      if (trigger?.isConnected && (document.activeElement === document.body || menu.contains(document.activeElement))) trigger.focus({ preventScroll: true })
+    }
+  }, [open])
 
   return (
     <div className="relative shrink-0">

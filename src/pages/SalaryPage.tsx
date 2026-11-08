@@ -3,8 +3,9 @@ import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { Delta, HeroNumber, SectionEyebrow, TrendBars } from '../components/serit'
 import type { SalaryHistory } from '../types/database'
 import { formatDate } from '../utils/date'
-import { parseNumber } from '../utils/formatCurrency'
+import { parseNativeNumber } from '../utils/formatCurrency'
 import { getSalaryTrend } from '../utils/financeSummary'
+import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 
 const salaryFields: FormField[] = [
   { name: 'title', label: 'Başlık', type: 'text', required: true },
@@ -48,10 +49,13 @@ function SalaryOverview({ rows }: { rows: SalaryHistory[] }) {
 }
 
 export function SalaryPage() {
+  const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const { formatAmount, maskText } = useBalancePrivacy()
   return (
     <CrudPage
       table="salary_history"
+      afterSave={() => invalidateSnapshot()}
+      afterDelete={() => invalidateSnapshot()}
       pageTitle="Maaş geçmişi"
       pageLabel="Gelir merkezi"
       pageDescription="Maaş değişimlerini izle; nakit akışı tahminleri güncel maaşını kullansın."
@@ -71,7 +75,7 @@ export function SalaryPage() {
       mapForm={(formData, userId) => ({
         user_id: userId,
         title: String(formData.get('title') ?? '').trim() || 'Maaş',
-        amount: parseNumber(formData.get('amount')),
+        amount: parseNativeNumber(formData.get('amount')),
         effective_date: String(formData.get('effective_date') ?? ''),
         note: String(formData.get('note') ?? '') || null,
       })}

@@ -1,5 +1,5 @@
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
-import { parseNumber } from '../../utils/formatCurrency'
+import { parseNumberStrict } from '../../utils/formatCurrency'
 import { Input } from '../ui/input'
 
 type MoneyInputProps = {
@@ -22,7 +22,7 @@ export function MoneyInput({
   onParsedChange,
 }: MoneyInputProps) {
   const { formatAmount } = useBalancePrivacy()
-  const parsedValue = parseNumber(value)
+  const parsedValue = parseNumberStrict(value)
 
   function handleBlur() {
     if (!value.trim()) {
@@ -30,9 +30,10 @@ export function MoneyInput({
       return
     }
 
-    const effective = parsedValue > 0 ? parsedValue : 0
-    onValueChange(effective > 0 ? String(effective) : '')
-    onParsedChange?.(effective)
+    if (!Number.isFinite(parsedValue) || parsedValue < 0) return
+    // Virgül, üç ondalık hanenin binlik nokta diye tekrar yorumlanmasını önler.
+    onValueChange(String(parsedValue).replace('.', ','))
+    onParsedChange?.(parsedValue)
   }
 
   return (

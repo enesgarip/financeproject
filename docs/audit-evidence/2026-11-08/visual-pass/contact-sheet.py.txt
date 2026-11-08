@@ -1,0 +1,16 @@
+from PIL import Image,ImageOps,ImageDraw
+from pathlib import Path
+p=Path('.audit-visual-artifacts')
+names=['dashboard','accounts','credit','assets','salary','gold','stocks','cars','loans','people','payments','goals','decision','wishlist','contexts','analysis','analysis-detail','health','operations']
+for mode in ['light','dark']:
+ canvas=Image.new('RGB',(1000,5*390),'#dddddd')
+ draw=ImageDraw.Draw(canvas)
+ for i,name in enumerate(names):
+  path=p/f'{name}-390-{mode}.png'
+  if not path.exists():continue
+  im=Image.open(path).convert('RGB')
+  im=im.crop((0,0,390,min(im.height,1380)))
+  im.thumbnail((240,360))
+  x=(i%4)*250;y=(i//4)*390
+  canvas.paste(im,(x,y+24));draw.text((x+4,y+4),name,fill='black')
+ canvas.save(p/f'contact-{mode}.jpg',quality=85)

@@ -1,5 +1,11 @@
 # Uygulama çalışma zamanı performansı
 
+9 Kasım: push abonelik onarımı oturumdan sonra dinamik yüklenir; aynı
+onarım akışı korunur, izin istemez. Bekleyen işlem paneli lazy yüklenir.
+Entry/toplam bundle bütçeleri artırılmadı. Tam-geçmiş okumaları 500 satırlı
+PK imleci kullanır; hata varsa kısmi toplam yayımlanmaz.
+
+
 Last reviewed: 2026-10-18
 
 ## 7 Kasım 2026 — Kur isteğinde yeniden deneme aralığı

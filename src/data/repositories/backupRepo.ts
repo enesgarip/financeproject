@@ -1,5 +1,7 @@
 import { supabase } from '../../lib/supabase'
 import { isMissingSupabaseCapabilityError } from '../../utils/supabaseErrors'
+import { executeFinanceOperation, uncertainOperation } from '../../services/financeOperations'
+import type { Json } from '../../types/database'
 
 /**
  * Tam yedek/geri yükleme için ham tablo I/O'su. Yedek şeması, FK sırası,
@@ -81,14 +83,15 @@ export async function resetOwnFinanceData(): Promise<void> {
  */
 export async function restoreViaTransactionalRpc(
   tables: Record<string, BackupRow[]>,
+  userId: string,
 ): Promise<Record<string, number> | null> {
-  const { data, error } = await supabase.rpc('restore_user_finance_data_tx', {
-    p_payload: { schema: 'financeproject-v2', tables },
+  const { error } = await executeFinanceOperation(userId, 'restore_user_finance_data_tx', 'restore', {
+    p_payload: { schema: 'financeproject-v2', tables } as Json,
   })
   if (error) {
-    if (isMissingSupabaseCapabilityError(error)) return null
-    throw new Error(`Geri yükleme başarısız — hiçbir veri değişmedi: ${error.message}`)
+    if (isMissingSupabaseCapabilityError(error)) throw new Error('Güvenli geri yükleme altyapısı güncel değil. Geri yükleme gönderilmedi.')
+    if (uncertainOperation(error)) throw new Error(`Geri yüklemenin sonucu belirsiz; uygulanmış olabilir. Aynı yedek dosyasıyla sonucu doğrula. ${error.message}`)
+    throw new Error(`Geri yükleme doğrulanamadı: ${error.message}`)
   }
-  const report = data as { tables?: Record<string, number> } | null
-  return report?.tables ?? {}
+  return Object.fromEntries(Object.entries(tables).map(([table, rows]) => [table, rows.length]))
 }

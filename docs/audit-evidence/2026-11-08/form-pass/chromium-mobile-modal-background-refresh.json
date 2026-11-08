@@ -1,0 +1,42 @@
+{
+  "before": 1,
+  "after": 2,
+  "state": {
+    "url": "/varliklar/maas",
+    "scrollY": 0,
+    "innerHeight": 839,
+    "innerWidth": 412,
+    "visual": {
+      "height": 839,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "fixed",
+      "top": "0px",
+      "overflow": "hidden"
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 714,
+        "width": 412,
+        "height": 125,
+        "top": 714,
+        "right": 412,
+        "bottom": 839,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 1,
+    "active": {
+      "tag": "SECTION",
+      "text": "Maaş ekleYeni kayıt bilgileriZorunlu alanları doldur; para v",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  }
+}

@@ -1,0 +1,312 @@
+import { expect, test, type Page } from '@playwright/test'
+
+// Tüm dış istekler sentetik yanıtlanır: bu test gerçek Supabase'e bağlanamaz.
+const userId = '11111111-1111-4111-8111-111111111111'
+const now = '2026-10-26T09:00:00.000Z'
+const base = { user_id: userId, created_at: now, updated_at: now, note: null }
+const bank = { ...base, id: 'bank-1', bank_name: 'İş Bankası', card_name: 'Örnek hesap', card_type: 'banka_karti', account_kind: 'bank', current_balance: 20000, credit_limit: 0, debt_amount: 0, statement_debt_amount: 0, current_period_spending: 0, provision_amount: 0, statement_day: null, due_day: null, holder_name: null, account_number: null, limit_group_name: null }
+const tables: Record<string, Record<string, unknown>[]> = {
+  cards: [bank, { ...bank, id: 'bank-2', card_name: 'Diğer hesap', bank_name: 'Garanti', current_balance: 5000 }, { ...bank, id: 'credit-1', card_name: 'Örnek kart', card_type: 'kredi_karti', current_balance: 0, credit_limit: 10000, debt_amount: 1000, current_period_spending: 1000, statement_day: 4, due_day: 14 }],
+  assets: [{ ...base, id: 'asset-1', name: 'Örnek yatırım', category: 'Diğer', amount: 1, unit: 'adet', unit_cost: 5000, estimated_value_try: 5000, auto_valued: false, currency: 'TRY', ticker: null, source: null }],
+  payments: [{ ...base, id: 'payment-1', title: 'Örnek aidat', category: 'Kira / aidat', amount: 100, amount_status: 'exact', due_date: '2026-10-28', status: 'bekliyor', payment_method: 'manual', recurrence: 'monthly', recurrence_day: 28, recurrence_end_date: null, auto_source_card_id: null }],
+  salary_history: [{ ...base, id: 'salary-1', title: 'Örnek maaş', amount: 50000, effective_date: '2026-10-01' }],
+  kasa_buckets: [{ ...base, id: 'reserve-1', name: 'Bağımsız pay', reserved_amount: 100, goal_id: null, last_contribution_month: null, sort_order: 0 }, { ...base, id: 'reserve-2', name: 'Hedefe bağlı pay', reserved_amount: 200, goal_id: 'goal-1', last_contribution_month: '2026-10-01', sort_order: 1 }],
+  savings_goals: [{ ...base, id: 'goal-1', name: 'Örnek hedef', value_type: 'TRY', target_amount: 10000, current_amount: 1000, estimated_value_try: 1000, auto_valued: false, valued_at: null, valuation_rate: null, target_date: '2027-10-01', status: 'active', target_anchor: 'manual', target_anchor_units: null, target_anchor_months: null }],
+  wishlist_items: [{ ...base, id: 'wish-1', name: 'Bekleyen ürün', estimated_price: 500, is_purchased: false, purchased_at: null, sort_order: 0 }, { ...base, id: 'wish-2', name: 'Alınmış ürün', estimated_price: 100, is_purchased: true, purchased_at: now, sort_order: 1 }],
+  cars: [{ ...base, id: 'car-1', name: 'Örnek araç', plate: 'TEST', current_odometer_km: 50000, sort_order: 0 }],
+  expense_contexts: [{ ...base, id: 'context-1', name: 'Örnek grup', kind: 'pet', budget_amount: 1000, starts_on: '2026-10-01', ends_on: null, completed_at: null, sort_order: 0 }],
+}
+const snapshotKeys = ['assets', 'cards', 'loans', 'loan_installments', 'debts', 'payments', 'salary_history', 'transaction_history', 'budgets', 'card_expenses', 'card_installments', 'card_statement_archives', 'card_statement_payments', 'savings_goals', 'savings_goal_components', 'savings_goal_sources', 'account_reconciliations', 'missing_tables']
+
+async function mockApp(page: Page, theme: string, overrides: typeof tables = {}) {
+  const rows = { ...tables, ...overrides }
+  const snapshot = Object.fromEntries(snapshotKeys.map(key => [key, rows[key] ?? []]))
+  await page.clock.install({ time: new Date(now) })
+  const user = { id: userId, email: 'synthetic@example.test', aud: 'authenticated', role: 'authenticated', created_at: now, app_metadata: {}, user_metadata: {} }
+  const token = `${Buffer.from('{"alg":"HS256","typ":"JWT"}').toString('base64url')}.${Buffer.from(JSON.stringify({ sub: userId, role: 'authenticated', aud: 'authenticated', exp: 2100000000 })).toString('base64url')}.synthetic`
+  await page.addInitScript(({ user, token, theme, now }) => {
+    localStorage.setItem('sb-example-auth-token', JSON.stringify({ access_token: token, refresh_token: 'synthetic', expires_at: 2100000000, expires_in: 3600, token_type: 'bearer', user }))
+    localStorage.setItem('theme', theme)
+    localStorage.setItem('denge:theme-preference', theme)
+    localStorage.setItem('denge:net-worth-snapshot-day', `${user.id}:2026-10-26`)
+    localStorage.setItem('fp.marketRates.v1', JSON.stringify({ rates: { USD: { buying: 40, selling: 41 }, GRA: { buying: 5000, selling: 5100 }, CEYREKALTIN: { buying: 8000, selling: 8100 } }, asOf: now, fetchedAt: now }))
+  }, { user, token, theme, now })
+  await page.route('**/*', route => {
+    const url = new URL(route.request().url())
+    if (['127.0.0.1', 'localhost'].includes(url.hostname)) {
+      if (url.pathname.startsWith('/_vercel/')) return route.fulfill({ body: '', contentType: 'application/javascript' })
+      return route.continue()
+    }
+    if (url.hostname === 'example.supabase.co') {
+      const name = url.pathname.split('/').at(-1)!
+      let data: unknown = name === 'fetch_finance_snapshot' ? snapshot : name === 'bist-quote' ? { prices: {}, asOf: now } : url.pathname.includes('/rpc/') ? 0 : name === 'user' ? user : rows[name] ?? []
+      if (['card_ledger', 'account_ledger', 'card_expenses', 'card_installments', 'card_statement_archives'].includes(name)) {
+        const before = url.searchParams.get('id')?.replace(/^lt\./, '')
+        const cardId = url.searchParams.get('card_id')?.replace(/^eq\./, '')
+        data = (rows[name] ?? []).filter(row => (!before || String(row.id) < before) && (!cardId || row.card_id === cardId))
+          .toSorted((a, b) => String(b.id).localeCompare(String(a.id))).slice(0, Number(url.searchParams.get('limit') ?? 1000))
+      }
+      return route.fulfill({ json: data })
+    }
+    return route.abort()
+  })
+}
+
+
+
+
+
+const goldLot = (id: string, quantity: number, date: string, direction = 'buy') => ({ ...base, id, direction, gold_type: 'gram', quantity, unit_price: 5000, purchase_date: date, ayar: 24 })
+
+test('ikinci tarama: number alanındaki 1.234 gram 1234 olarak yazılıyor', async ({ page }) => {
+  await mockApp(page, 'light', { gold_lots: [] })
+  const writes: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/gold_lots*', route => {
+    if (route.request().method() === 'POST') { const row = { ...base, ...route.request().postDataJSON(), id: 'new-gold' }; writes.push(row); return route.fulfill({ json: row }) }
+    return route.fulfill({ json: writes })
+  })
+  await page.goto('/varliklar/altin')
+  await page.getByRole('button', { name: 'Alım / satım ekle', exact: true }).first().click()
+  const modal = page.getByRole('dialog')
+  await modal.getByLabel('Miktar', { exact: false }).fill('1.234')
+  await modal.getByRole('button', { name: 'Kaydet', exact: true }).click()
+  await expect(modal).toHaveCount(0)
+  expect(writes[0].quantity).toBe(1234)
+  console.log('AUDIT_GOLD_PARSE', { entered: '1.234', written: writes[0].quantity })
+  await page.screenshot({ path: 'test-results/audit2-gold-parsing.png', fullPage: true })
+})
+
+test('ikinci tarama: altın alımı satıma dönünce varlık özeti yenilenmiyor', async ({ page }) => {
+  let lots = [goldLot('gold-1', 10, '2026-10-01'), goldLot('gold-2', 4, '2026-10-05')]
+  const managed = { ...tables.assets[0], id: 'gold-asset', category: 'Altın', amount: 14, unit: 'gram', auto_valued: true, source: 'gold_ledger', name: 'Altın Defteri - Gram', unit_cost: 5000, estimated_value_try: 70000 }
+  await mockApp(page, 'light', { gold_lots: lots, assets: [managed] })
+  const syncWrites: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/assets*', route => {
+    if (route.request().method() === 'PATCH') { const body = route.request().postDataJSON(); syncWrites.push(body); Object.assign(managed, body); return route.fulfill({ json: [managed] }) }
+    return route.fulfill({ json: [managed] })
+  })
+  await page.route('**/rest/v1/gold_lots*', route => {
+    if (route.request().method() === 'PATCH') { const body = route.request().postDataJSON(); lots = lots.map(row => row.id === 'gold-2' ? { ...row, ...body } : row); return route.fulfill({ json: lots[1] }) }
+    return route.fulfill({ json: lots })
+  })
+  await page.goto('/varliklar/altin')
+  await expect(page.getByRole('heading', { name: 'Alım', exact: true })).toHaveCount(2)
+  const initialWrites = syncWrites.length
+  const article = page.locator('article').filter({ hasText: '05 Eki 2026' })
+  await article.getByRole('button', { name: /işlemleri/i }).click()
+  await page.getByRole('menuitem', { name: 'Düzenle', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await modal.getByLabel('İşlem türü', { exact: false }).selectOption('sell')
+  await modal.getByRole('button', { name: 'Kaydet', exact: true }).click()
+  await expect(modal).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Satım', exact: true })).toBeVisible()
+  expect(lots[1].direction).toBe('sell')
+  expect(syncWrites.length).toBe(initialWrites)
+  expect(managed.amount).toBe(14)
+  console.log('AUDIT_GOLD_DIRECTION', { ledgerQuantity: 6, assetQuantity: managed.amount, syncWrites: syncWrites.length })
+  await page.screenshot({ path: 'test-results/audit2-gold-direction.png', fullPage: true })
+})
+
+test('ikinci tarama: altın alış miktarı satılanın altına indirilebiliyor', async ({ page }) => {
+  let lots = [goldLot('gold-1', 10, '2026-10-01'), goldLot('gold-2', 4, '2026-10-05', 'sell')]
+  await mockApp(page, 'light', { gold_lots: lots })
+  await page.route('**/rest/v1/gold_lots*', route => {
+    if (route.request().method() === 'PATCH') { const body = route.request().postDataJSON(); lots = lots.map(row => row.id === 'gold-1' ? { ...row, ...body } : row); return route.fulfill({ json: lots[0] }) }
+    return route.fulfill({ json: lots })
+  })
+  await page.goto('/varliklar/altin')
+  const article = page.locator('article').filter({ hasText: '01 Eki 2026' })
+  await article.getByRole('button', { name: /işlemleri/i }).click()
+  await page.getByRole('menuitem', { name: 'Düzenle', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await modal.getByLabel('Miktar', { exact: false }).fill('1')
+  await modal.getByRole('button', { name: 'Kaydet', exact: true }).click()
+  await expect(modal).toHaveCount(0)
+  expect(lots[0].quantity).toBe(1)
+  expect(lots[1].quantity).toBe(4)
+  console.log('AUDIT_GOLD_OVERSOLD', { bought: 1, sold: 4 })
+  await page.screenshot({ path: 'test-results/audit2-gold-oversold.png', fullPage: true })
+})
+
+
+test('ikinci tarama: gelen para kayıp yanıttan sonra ikinci kez yazılıyor', async ({ page }) => {
+  await mockApp(page, 'light', { cards: [bank] })
+  let balance = 20000
+  const calls: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/rpc/record_manual_account_movement', route => {
+    calls.push(route.request().postDataJSON())
+    balance += calls.at(-1)!.p_amount as number
+    return calls.length === 1 ? route.abort('connectionreset') : route.fulfill({ json: { ...bank, current_balance: balance } })
+  })
+  await page.goto('/kartlar?section=hesaplar&card=bank-1')
+  await page.getByRole('button', { name: 'Para hareketi', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await modal.getByRole('textbox', { name: 'Tutar', exact: false }).fill('500')
+  await modal.getByRole('button', { name: 'Bakiyeyi güncelle', exact: true }).click()
+  await expect(modal.getByText(/tamamlanamadı|fetch|network/i)).toBeVisible()
+  await modal.getByRole('button', { name: 'Bakiyeyi güncelle', exact: true }).click()
+  await expect(modal).toHaveCount(0)
+  expect(calls).toHaveLength(2)
+  expect(calls[0]).toEqual(calls[1])
+  expect(balance).toBe(21000)
+  console.log('AUDIT_MOVEMENT_RETRY', { intended: 20500, balance })
+})
+
+test('ikinci tarama: varlık alımı kayıp yanıttan sonra ikinci kez yazılıyor', async ({ page }) => {
+  await mockApp(page, 'light')
+  const calls: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/rpc/trade_asset_with_account', route => {
+    calls.push(route.request().postDataJSON())
+    return calls.length === 1 ? route.abort('connectionreset') : route.fulfill({ json: tables.assets[0] })
+  })
+  await page.goto('/varliklar?view=records')
+  await page.getByRole('button', { name: 'Al', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await modal.getByRole('textbox', { name: 'İşlem tutarı', exact: false }).fill('500')
+  await modal.getByRole('button', { name: 'Alımı tamamla', exact: true }).click()
+  await expect(modal.getByText(/fetch|network|tamamlanamadı/i)).toBeVisible()
+  await modal.getByRole('button', { name: 'Alımı tamamla', exact: true }).click()
+  await expect(modal).toHaveCount(0)
+  expect(calls).toHaveLength(2)
+  expect(calls[0]).toEqual(calls[1])
+})
+
+test('ikinci tarama: değer güncelleme taslağı gezinirken sorulmadan kayboluyor', async ({ page }) => {
+  await mockApp(page, 'light')
+  let dialogs = 0
+  page.on('dialog', dialog => { dialogs++; return dialog.dismiss() })
+  await page.goto('/varliklar?view=records')
+  await page.getByRole('button', { name: 'Değer güncelle', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Örnek yatırım yeni değer', exact: true }).fill('8000')
+  await page.locator('aside').getByRole('link', { name: 'Analiz', exact: true }).click()
+  await expect(page).toHaveURL(/\/analiz$/)
+  expect(dialogs).toBe(0)
+})
+
+test('ikinci tarama: sohbet temizlenirken devam eden yanıt geçmişi geri getiriyor', async ({ page }) => {
+  await mockApp(page, 'light')
+  let rows: Record<string, unknown>[] = []
+  let release!: () => void
+  const hold = new Promise<void>(resolve => { release = resolve })
+  await page.route('**/rest/v1/ai_chat_messages*', route => {
+    if (route.request().method() === 'POST') { const row = { ...base, ...route.request().postDataJSON(), id: `chat-${rows.length}` }; rows.push(row); return route.fulfill({ json: row }) }
+    if (route.request().method() === 'DELETE') { rows = []; return route.fulfill({ status: 204 }) }
+    return route.fulfill({ json: rows.toReversed() })
+  })
+  await page.route('**/functions/v1/ai-chat', async route => {
+    await hold
+    return route.fulfill({ contentType: 'text/event-stream', body: 'data: {"text":"Gecikmiş yanıt"}\n\ndata: {"done":true}\n\n' })
+  })
+  await page.goto('/analiz/asistan')
+  await page.getByRole('textbox', { name: 'Asistana mesaj', exact: true }).fill('Bu ayı yorumla')
+  await page.getByRole('button', { name: 'Gönder', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Geçmişi temizle', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Geçmişi temizle', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Geçmişi sil', exact: true }).click()
+  await expect.poll(() => rows.length).toBe(0)
+  release()
+  await expect(page.getByText('Gecikmiş yanıt', { exact: true })).toBeVisible()
+  expect(rows).toHaveLength(1)
+  expect(rows[0].role).toBe('assistant')
+  console.log('AUDIT_CHAT_CLEAR', { afterClearMessages: rows.length, orphanRole: rows[0].role })
+  await page.screenshot({ path: 'test-results/audit2-chat-clear.png', fullPage: true })
+})
+
+test('ikinci tarama: geçersiz varlık değeri sessizce sıfıra dönüşüyor', async ({ page }) => {
+  await mockApp(page, 'light')
+  const writes: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/rpc/update_asset_value', route => {
+    writes.push(route.request().postDataJSON())
+    return route.fulfill({ json: { ...tables.assets[0], estimated_value_try: 0 } })
+  })
+  await page.goto('/varliklar?view=records')
+  await page.getByRole('button', { name: 'Değer güncelle', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Örnek yatırım yeni değer', exact: true }).fill('abc')
+  await page.getByRole('button', { name: 'Kaydet', exact: true }).click()
+  await expect.poll(() => writes.length).toBe(1)
+  expect(writes[0].p_value).toBe(0)
+  console.log('AUDIT_INVALID_VALUE', { entered: 'abc', storedValue: writes[0].p_value })
+})
+
+test('ikinci tarama: geçersiz tampon girdisi güvenlik tamponunu sıfırlıyor', async ({ page }) => {
+  await mockApp(page, 'light')
+  await page.addInitScript(() => localStorage.setItem('denge:safe-to-spend-buffer', '5000'))
+  await page.goto('/')
+  await page.getByRole('button', { name: '5.000,00 ₺', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Güvenlik tamponu tutarı', exact: true }).fill('abc')
+  await page.getByRole('button', { name: 'Tamponu kaydet', exact: true }).click()
+  expect(await page.evaluate(() => localStorage.getItem('denge:safe-to-spend-buffer'))).toBe('0')
+})
+
+test('ikinci tarama: tema depolaması engellenince uygulama boş açılıyor', async ({ page }) => {
+  await mockApp(page, 'light')
+  await page.addInitScript(() => {
+    const original = Storage.prototype.getItem
+    Storage.prototype.getItem = function(key) {
+      if (key === 'theme') throw new DOMException('Blocked storage', 'SecurityError')
+      return original.call(this, key)
+    }
+  })
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.goto('/')
+  await expect.poll(() => errors.length).toBeGreaterThan(0)
+  expect(await page.locator('#root').innerHTML()).toBe('')
+  await page.screenshot({ path: 'test-results/audit2-storage-blank.png', fullPage: true })
+})
+
+test('ikinci tarama: maaş kaydı sonrası ortak snapshot eski maaşla kalıyor', async ({ page }) => {
+  const salaries = tables.salary_history.map(row => ({ ...row }))
+  await mockApp(page, 'light', { salary_history: salaries })
+  let snapshotReads = 0
+  page.on('request', request => { if (request.url().endsWith('/rpc/fetch_finance_snapshot')) snapshotReads++ })
+  await page.route('**/rest/v1/salary_history*', route => {
+    if (route.request().method() === 'PATCH') { Object.assign(salaries[0], route.request().postDataJSON()); return route.fulfill({ json: salaries[0] }) }
+    return route.fulfill({ json: salaries })
+  })
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Finans özeti', exact: true })).toBeVisible()
+  await expect.poll(() => snapshotReads).toBe(1)
+  const initialReads = snapshotReads
+  await page.locator('aside').getByRole('link', { name: 'Varlıklar', exact: true }).click()
+  await page.getByRole('link', { name: /Maaş geçmişi|Maaş/, exact: true }).first().click()
+  await page.locator('article').getByRole('button', { name: /işlemleri/i }).click()
+  await page.getByRole('menuitem', { name: 'Düzenle', exact: true }).click()
+  const modal = page.getByRole('dialog')
+  await modal.getByLabel('Net maaş', { exact: false }).fill('60000')
+  await modal.getByRole('button', { name: 'Kaydet', exact: true }).click()
+  await expect(modal).toHaveCount(0)
+  await page.locator('aside').getByRole('link', { name: 'Özet', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Finans özeti', exact: true })).toBeVisible()
+  expect(salaries[0].amount).toBe(60000)
+  expect(snapshotReads).toBe(initialReads)
+  console.log('AUDIT_SALARY_CACHE', { snapshotReads, salary: salaries[0].amount })
+})
+
+
+test('ikinci tarama: gizlilik açıkken döviz varlığının miktarı açık kalıyor', async ({ page }) => {
+  await mockApp(page, 'light', { assets: [{ ...tables.assets[0], name: 'USD Birikim', category: 'Nakit', currency: 'USD', amount: 1234, unit: 'adet', auto_valued: true }] })
+  await page.addInitScript(() => localStorage.setItem('financeproject.balancePrivacy', 'hidden'))
+  await page.goto('/varliklar?view=records')
+  await expect(page.getByText('1.234 USD', { exact: true })).toBeVisible()
+  await page.screenshot({ path: 'test-results/audit2-privacy-quantity.png', fullPage: true })
+})
+
+test('ikinci tarama: katkılı değer güncellemesi kayıp yanıtta aynı katkıyı tekrar gönderiyor', async ({ page }) => {
+  await mockApp(page, 'light')
+  const writes: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/rpc/update_asset_value', route => {
+    writes.push(route.request().postDataJSON())
+    return writes.length === 1 ? route.abort('connectionreset') : route.fulfill({ json: { ...tables.assets[0], estimated_value_try: 5500 } })
+  })
+  await page.goto('/varliklar?view=records')
+  await page.getByRole('button', { name: 'Değer güncelle', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Örnek yatırım yeni değer', exact: true }).fill('5500')
+  await page.getByRole('textbox', { name: 'Örnek yatırım dönem katkısı', exact: true }).fill('500')
+  await page.getByRole('button', { name: 'Kaydet', exact: true }).click()
+  await expect(page.getByText(/fetch|network|güncellenemedi/i)).toBeVisible()
+  await page.getByRole('button', { name: 'Kaydet', exact: true }).click()
+  await expect.poll(() => writes.length).toBe(2)
+  expect(writes[0]).toEqual(writes[1])
+  expect(writes[1].p_contribution).toBe(500)
+})

@@ -36,7 +36,7 @@ describe('restoreBackup', () => {
     mocks.restoreViaTransactionalRpc.mockResolvedValue(null)
     const backup = backupFixture()
     backup.tables[table] = [{ id: 'workflow-record' }]
-    await expect(restoreBackup(backup, 'new-user')).rejects.toThrow('Hiçbir veri değiştirilmedi')
+    await expect(restoreBackup(backup, 'new-user')).rejects.toThrow('Geri yükleme gönderilmedi')
     expect(mocks.resetOwnFinanceData).not.toHaveBeenCalled()
     expect(mocks.insertRows).not.toHaveBeenCalled()
   })
@@ -44,7 +44,7 @@ describe('restoreBackup', () => {
     mocks.restoreViaTransactionalRpc.mockResolvedValue(null)
     const backup = backupFixture()
     backup.tables.foreign_card_sms = [{ id: 'pending', native_amount: 59.99, currency: 'USD' }]
-    await expect(restoreBackup(backup, 'new-user')).rejects.toThrow('Hiçbir veri değiştirilmedi')
+    await expect(restoreBackup(backup, 'new-user')).rejects.toThrow('Geri yükleme gönderilmedi')
     expect(mocks.resetOwnFinanceData).not.toHaveBeenCalled()
     expect(mocks.insertRows).not.toHaveBeenCalled()
   })
@@ -60,30 +60,17 @@ describe('restoreBackup', () => {
 
     await restoreBackup(backupFixture(), 'new-user', (item) => progress.push(item))
 
-    expect(mocks.restoreViaTransactionalRpc).toHaveBeenCalledExactlyOnceWith(backupFixture().tables)
+    expect(mocks.restoreViaTransactionalRpc).toHaveBeenCalledExactlyOnceWith(backupFixture().tables, 'new-user')
     expect(mocks.resetOwnFinanceData).not.toHaveBeenCalled()
     expect(mocks.insertRows).not.toHaveBeenCalled()
     expect(progress.at(-1)?.step).toBe('Tamamlandı')
   })
 
-  it('RPC deploy değilse (null) eski REST yolu aynen: reset + parent-first insert + user_id rewrite', async () => {
+  it('RPC yoksa atomik olmayan reset/replay yoluna düşmez', async () => {
     mocks.restoreViaTransactionalRpc.mockResolvedValue(null)
-    const progress: RestoreProgress[] = []
-
-    await restoreBackup(backupFixture(), 'new-user', (item) => progress.push(item))
-
-    expect(mocks.resetOwnFinanceData).toHaveBeenCalledOnce()
-    expect(mocks.insertRows.mock.calls).toEqual([
-      ['cards', [{ id: 'card-1', user_id: 'new-user' }]],
-      ['kasa_buckets', [{ id: 'bucket-1', user_id: 'new-user' }]],
-      ['wishlist_items', [{ id: 'wish-1', user_id: 'new-user' }]],
-      ['data_health_issue_acknowledgements', [{ id: 'ack-1', user_id: 'new-user', issue_id: 'issue-1' }]],
-      ['notification_preferences', [{ user_id: 'new-user', weekly_enabled: false }]],
-    ])
-    expect(mocks.resetOwnFinanceData.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.insertRows.mock.invocationCallOrder[0],
-    )
-    expect(progress.at(-1)?.done).toBe(progress.at(-1)?.total)
+    await expect(restoreBackup(backupFixture(), 'new-user')).rejects.toThrow('Geri yükleme gönderilmedi')
+    expect(mocks.resetOwnFinanceData).not.toHaveBeenCalled()
+    expect(mocks.insertRows).not.toHaveBeenCalled()
   })
 
   it('RPC hatası (deploy-eksikliği dışı) aynen fırlar — REST yolu denenmez, veri değişmemiştir', async () => {
@@ -94,13 +81,10 @@ describe('restoreBackup', () => {
     expect(mocks.insertRows).not.toHaveBeenCalled()
   })
 
-  it('sadece takip kayıtlarını REST fallback yolunda yeni kullanıcıya taşır', async () => {
-    mocks.restoreViaTransactionalRpc.mockResolvedValue(null)
-    const backup = backupFixture()
-    backup.tables.personal_tracking_entries = [{ id: 'track-1', user_id: 'old-user', amount: 2500.25 }]
-    await restoreBackup(backup, 'new-user')
-    expect(mocks.insertRows).toHaveBeenCalledWith('personal_tracking_entries', [
-      { id: 'track-1', user_id: 'new-user', amount: 2500.25 },
-    ])
+  it('kayıp ağ yanıtı uygulanmadı diye sunulmaz ve başka yazma yolu denenmez', async () => {
+    mocks.restoreViaTransactionalRpc.mockRejectedValue(new Error('Sonuç doğrulanamadı; uygulanmış olabilir. Aynı dosyayla doğrula.'))
+    await expect(restoreBackup(backupFixture(), 'new-user')).rejects.toThrow('uygulanmış olabilir')
+    expect(mocks.resetOwnFinanceData).not.toHaveBeenCalled()
+    expect(mocks.insertRows).not.toHaveBeenCalled()
   })
 })

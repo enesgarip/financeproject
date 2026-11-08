@@ -21,7 +21,7 @@ import { readSafeToSpendBuffer, useKasaReserved } from '../hooks/useSafeToSpend'
 import { useWishlistItems, WISHLIST_QUERY_KEY } from '../hooks/useWishlistItems'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { buildFinancialPosition, buildMonthlyCashFlow } from '../utils/financeSummary'
-import { resolveSavingsGoalRows } from '../utils/goalSources'
+import { useResolvedSnapshotGoals } from '../app/useResolvedSnapshotGoals'
 import { buildSafeToSpend } from '../utils/safeToSpend'
 import { buildWishlistAge } from '../utils/wishlistAge'
 import { buildWishlistPlan, type WishlistPlan } from '../utils/wishlistPlan'
@@ -63,10 +63,11 @@ export function WishlistPage() {
   const snapshotQuery = useFinanceSnapshot()
   const { reserved, reservedKnown } = useKasaReserved()
 
+  const goalResolution = useResolvedSnapshotGoals(snapshotQuery.data)
   const planContext = useMemo(() => {
     const snapshot = snapshotQuery.data
     if (!snapshot || snapshotQuery.isError || !reservedKnown) return null
-    if (snapshot.missingTables.some((table) => ['card_installments', 'card_statement_archives', 'card_statement_payments'].includes(table))) return null
+    if (snapshot.missingTables.length) return null
 
     const summaryInput = {
       assets: snapshot.assets,
@@ -98,14 +99,9 @@ export function WishlistPage() {
       // Ay sonunda dokunulmayacak taban; projeksiyon bakiyesi bunları içerir.
       floor: sumTL([buffer, reserved]),
       // Kaynağa bağlı hedefin birikeni DB'de değil burada oluşur (goalSources.ts).
-      goals: resolveSavingsGoalRows(
-        snapshot.savingsGoals,
-        snapshot.savingsGoalComponents,
-        snapshot.savingsGoalSources,
-        { assets: snapshot.assets, cards: snapshot.cards },
-      ).goals,
+      goals: goalResolution.reliableGoals,
     }
-  }, [snapshotQuery.data, snapshotQuery.isError, reserved, reservedKnown])
+  }, [snapshotQuery.data, snapshotQuery.isError, reserved, reservedKnown, goalResolution.reliableGoals])
 
   const [showPurchased, setShowPurchased] = useState(true)
   const [newName, setNewName] = useState('')
@@ -327,7 +323,7 @@ export function WishlistPage() {
         </div>
       )}
 
-      <SimpleModal open={Boolean(decisionItem)} title="Alışverişi değerlendir" onClose={() => { if (!toggleMutation.isPending) setDecisionId(null) }}>
+      <SimpleModal busy={toggleMutation.isPending} open={Boolean(decisionItem)} title="Alışverişi değerlendir" onClose={() => { if (!toggleMutation.isPending) setDecisionId(null) }}>
         {decisionItem ? <Suspense fallback={<p role="status">Değerlendirme yükleniyor…</p>}>
           <PurchaseDecision key={decisionItem.id} item={decisionItem} saving={toggleMutation.isPending} onDefer={() => setDecisionId(null)} onPurchased={() => {
             void toggleMutation.mutateAsync({ id: decisionItem.id, purchased: true }).then(() => setDecisionId(null)).catch(() => { /* Hata toast ile gösterilir; tekrar denenebilir. */ })

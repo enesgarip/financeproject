@@ -1,6 +1,6 @@
 import { Check, Pencil } from 'lucide-react'
 import { useState } from 'react'
-import { parseNumber } from '../../utils/formatCurrency'
+import { parseNumberStrict } from '../../utils/formatCurrency'
 import { useSeritAmount } from '../serit'
 
 /**
@@ -15,10 +15,14 @@ export function SeritBufferRow({ buffer, onChange }: { buffer: number; onChange:
   const format = useSeritAmount()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
+  const [error, setError] = useState('')
   const money = format(buffer)
 
   function commit() {
-    onChange(parseNumber(draft))
+    const value = parseNumberStrict(draft)
+    if (!Number.isFinite(value) || value < 0) { setError('Geçerli ve negatif olmayan bir tutar gir.'); return }
+    onChange(value)
+    setError('')
     setEditing(false)
   }
 
@@ -27,7 +31,7 @@ export function SeritBufferRow({ buffer, onChange }: { buffer: number; onChange:
       <span className="text-xs text-ink-muted">Güvenlik tamponu düşüldü</span>
 
       {editing ? (
-        <span className="flex items-center gap-1.5">
+        <span data-navigation-scope className="flex flex-wrap items-center justify-end gap-1.5">
           <input
             type="text"
             inputMode="decimal"
@@ -45,10 +49,11 @@ export function SeritBufferRow({ buffer, onChange }: { buffer: number; onChange:
             type="button"
             onClick={commit}
             aria-label="Tamponu kaydet"
-            className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground"
+            className="grid size-11 place-items-center rounded-md bg-primary text-primary-foreground"
           >
             <Check size={14} aria-hidden="true" />
           </button>
+          {error ? <span role="alert" className="w-full text-xs text-destructive">{error}</span> : null}
         </span>
       ) : (
         <button

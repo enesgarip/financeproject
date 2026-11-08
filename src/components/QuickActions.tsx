@@ -47,7 +47,11 @@ export function QuickActionsProvider({ children }: { children: ReactNode }) {
     syncFocus()
     document.addEventListener('focusin', syncFocus)
     document.addEventListener('focusout', syncBlur)
+    // WebKit odaklı alan DOM'dan kaldırıldığında focusout göndermeyebilir.
+    const observer = new MutationObserver(syncFocus)
+    observer.observe(document.body, { childList: true, subtree: true })
     return () => {
+      observer.disconnect()
       window.clearTimeout(blurTimer)
       document.removeEventListener('focusin', syncFocus)
       document.removeEventListener('focusout', syncBlur)

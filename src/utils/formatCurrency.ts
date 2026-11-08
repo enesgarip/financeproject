@@ -127,3 +127,21 @@ export function parseNumber(value: FormDataEntryValue | null) {
   // harfini kesmek için kullanılıyor, çarpılmıyordu → "5k" 5000 yerine 5 veriyordu.
   return Number.isFinite(parsed) ? parsed * multiplier : 0
 }
+
+/** HTML number input değeridir: nokta ondalıktır, yerel binlik değildir. */
+export function parseNativeNumber(value: FormDataEntryValue | null | undefined): number {
+  const raw = String(value ?? '').trim()
+  if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(raw)) return NaN
+  const result = Number(raw)
+  return Number.isFinite(result) ? result : NaN
+}
+
+/** Yazma sınırında geçersiz metni gerçek sıfırdan ayırır; legacy parser değişmez. */
+export function parseNumberStrict(value: FormDataEntryValue | null | undefined): number {
+  const raw = String(value ?? '').trim().toLocaleLowerCase('tr-TR')
+    .replace(/^(?:₺|tl)\s*|\s*(?:₺|tl)$/g, '').replace(/\s/g, '').replace(/−/g, '-')
+  const digits = raw.replace(/^[+-]/, '').replace(/k$/, '')
+  if (!digits || !/^(?:\d+(?:[.,]\d+)?|[.,]\d+|\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d{1,3}(?:,\d{3})+(?:\.\d+)?)$/.test(digits)) return NaN
+  const result = parseNumber(raw)
+  return Number.isFinite(result) ? result : NaN
+}

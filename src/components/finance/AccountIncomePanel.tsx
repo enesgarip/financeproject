@@ -62,7 +62,7 @@ export function AccountIncomePanel({ cardId }: { cardId: string }) {
         {label ? <p className="font-semibold text-primary">{LABELS[label.kind]}{label.debt_amount !== null ? ` · ${formatAmount(label.debt_amount)}` : ''}</p> : automatic ? <p className="text-success">SMS ile borç/alacak kaydına zaten bağlandı.</p> : <Button size="sm" variant="outline" onClick={() => { setSelectedId(movement.id); setKind('other'); setDebtId(''); setAmount(String(movement.amount ?? '')); setError('') }}>Bu para neydi?</Button>}
       </li>
     })}</ul>}
-    <SimpleModal title="Gelen parayı sınıflandır" open={!!selected} onClose={() => { if (!busy) setSelectedId(null) }}>
+    <SimpleModal busy={busy} title="Gelen parayı sınıflandır" open={!!selected} onClose={() => { if (!busy) setSelectedId(null) }}>
       <form onSubmit={event => void save(event)} className="space-y-4">
         <p className="text-sm">{maskText(selected?.title ?? '')} · {formatAmount(selected?.amount)}</p>
         <label className="block text-sm font-semibold">Para girişinin türü<Select className="mt-1" value={kind} onChange={event => setKind(event.target.value as AccountIncomeKind)}>{Object.entries(LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</Select></label>

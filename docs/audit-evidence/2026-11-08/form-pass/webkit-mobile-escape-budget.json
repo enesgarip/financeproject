@@ -1,0 +1,117 @@
+{
+  "opened": {
+    "url": "/odemeler/hedefler",
+    "scrollY": 0,
+    "innerHeight": 664,
+    "innerWidth": 390,
+    "visual": {
+      "height": 664,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 539,
+        "width": 390,
+        "height": 125,
+        "top": 539,
+        "right": 390,
+        "bottom": 664,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 1,
+    "active": {
+      "tag": "BODY",
+      "text": "\n    DengeKişisel finansÖzetHesaplarVarlıklarBorçlarPlanAnal",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  "typing": {
+    "url": "/odemeler/hedefler",
+    "scrollY": 0,
+    "innerHeight": 664,
+    "innerWidth": 390,
+    "visual": {
+      "height": 664,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "fixed",
+      "top": "0px",
+      "overflow": "hidden"
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "left": 0
+      },
+      "display": "none"
+    },
+    "dialogs": 1,
+    "active": {
+      "tag": "TEXTAREA",
+      "text": "İptal edilen deneme",
+      "aria": null,
+      "form": true,
+      "connected": true
+    }
+  },
+  "closed": {
+    "url": "/odemeler/hedefler",
+    "scrollY": 0,
+    "innerHeight": 664,
+    "innerWidth": 390,
+    "visual": {
+      "height": 664,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 539,
+        "width": 390,
+        "height": 125,
+        "top": 539,
+        "right": 390,
+        "bottom": 664,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BODY",
+      "text": "\n    DengeKişisel finansÖzetHesaplarVarlıklarBorçlarPlanAnal",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  "prompts": 1
+}

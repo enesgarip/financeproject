@@ -1,0 +1,256 @@
+[
+  {
+    "url": "/odemeler/hedefler",
+    "scrollY": 0,
+    "innerHeight": 664,
+    "innerWidth": 390,
+    "visual": {
+      "height": 664,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": null,
+    "dialogs": 0,
+    "active": {
+      "tag": "BODY",
+      "text": "\n    \n    \n  \n\n",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  {
+    "url": "/odemeler/hedefler",
+    "scrollY": 0,
+    "innerHeight": 664,
+    "innerWidth": 390,
+    "visual": {
+      "height": 664,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "fixed",
+      "top": "0px",
+      "overflow": "hidden"
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 539,
+        "width": 390,
+        "height": 125,
+        "top": 539,
+        "right": 390,
+        "bottom": 664,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 1,
+    "active": {
+      "tag": "DIV",
+      "text": "İşlemlerHarcama ekleHesap veya kart harcamasını kaydetTransf",
+      "aria": "Hızlı işlem menüsü",
+      "form": false,
+      "connected": true
+    }
+  },
+  {
+    "url": "/odemeler/hedefler",
+    "scrollY": 0,
+    "innerHeight": 664,
+    "innerWidth": 390,
+    "visual": {
+      "height": 664,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 539,
+        "width": 390,
+        "height": 125,
+        "top": 539,
+        "right": 390,
+        "bottom": 664,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BODY",
+      "text": "\n    DengeKişisel finansÖzetHesaplarVarlıklarBorçlarPlanAnal",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  {
+    "url": "/odemeler/hedefler",
+    "scrollY": 0,
+    "innerHeight": 664,
+    "innerWidth": 390,
+    "visual": {
+      "height": 664,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "fixed",
+      "top": "0px",
+      "overflow": "hidden"
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 539,
+        "width": 390,
+        "height": 125,
+        "top": 539,
+        "right": 390,
+        "bottom": 664,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 1,
+    "active": {
+      "tag": "DIV",
+      "text": "İşlemlerHarcama ekleHesap veya kart harcamasını kaydetTransf",
+      "aria": "Hızlı işlem menüsü",
+      "form": false,
+      "connected": true
+    }
+  },
+  {
+    "url": "/odemeler/hedefler",
+    "scrollY": 0,
+    "innerHeight": 664,
+    "innerWidth": 390,
+    "visual": {
+      "height": 664,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 539,
+        "width": 390,
+        "height": 125,
+        "top": 539,
+        "right": 390,
+        "bottom": 664,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BODY",
+      "text": "\n    DengeKişisel finansÖzetHesaplarVarlıklarBorçlarPlanAnal",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  },
+  {
+    "url": "/odemeler/hedefler",
+    "scrollY": 0,
+    "innerHeight": 664,
+    "innerWidth": 390,
+    "visual": {
+      "height": 664,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "fixed",
+      "top": "0px",
+      "overflow": "hidden"
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 539,
+        "width": 390,
+        "height": 125,
+        "top": 539,
+        "right": 390,
+        "bottom": 664,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 1,
+    "active": {
+      "tag": "DIV",
+      "text": "İşlemlerHarcama ekleHesap veya kart harcamasını kaydetTransf",
+      "aria": "Hızlı işlem menüsü",
+      "form": false,
+      "connected": true
+    }
+  },
+  {
+    "url": "/odemeler/hedefler",
+    "scrollY": 0,
+    "innerHeight": 664,
+    "innerWidth": 390,
+    "visual": {
+      "height": 664,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 539,
+        "width": 390,
+        "height": 125,
+        "top": 539,
+        "right": 390,
+        "bottom": 664,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BODY",
+      "text": "\n    DengeKişisel finansÖzetHesaplarVarlıklarBorçlarPlanAnal",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  }
+]

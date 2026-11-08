@@ -1,5 +1,12 @@
 # Card Debt Transitions
 
+9 Kasım birleşik denetim: `docs/AUDIT_REMEDIATION_2026-11-09.md`.
+Yeni submit_finance_operation mevcut domain RPC'lerini aynı transaction'da
+UUID/hash makbuzuyla sarar. Kayıp yanıt tekrarında hesap/varlık/rezerv ve
+ledger etkisi yeniden oluşmaz. Kart/hesap borç geçişi ve append-only invariant
+aynıdır; geçmiş satır güncellenmez. Özel makbuz tablosu reset/restore'da korunur.
+
+
 8 Kasım ikinci paket: araç/grup etiketleri ve bakım tamamlama mevcut
 harcamayı yeniden borç yazmaz. Yeni araç gideri raporlamadır. Gelen para
 alacağa kaynak hareketle tek kez bağlanır; banka tekrar kredilendirilmez.

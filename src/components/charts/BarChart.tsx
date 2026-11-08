@@ -17,6 +17,8 @@ type BarChartProps = {
   positiveColor?: string
   negativeColor?: string
   grouped?: boolean
+  formatValue?: (value: number) => string
+  formatAxis?: (value: number) => string
 }
 
 export function BarChart({
@@ -25,8 +27,12 @@ export function BarChart({
   positiveColor = 'var(--primary)',
   negativeColor = 'var(--destructive)',
   grouped = false,
+  formatValue,
+  formatAxis,
 }: BarChartProps) {
-  const { formatAmount } = useBalancePrivacy()
+  const { formatAmount, hidden } = useBalancePrivacy()
+  const valueLabel = (value: number) => hidden ? '••••' : (formatValue ?? formatAmount)(value)
+  const axisLabel = (value: number) => hidden ? '••••' : (formatAxis ?? formatTickValue)(value)
   const [chartRef, chartWidth] = useChartWidth()
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
@@ -36,8 +42,8 @@ export function BarChart({
   const chartSummary = data
     .map((point) =>
       grouped && point.prevValue != null
-        ? `${point.label}: ${formatAmount(point.value)} (önceki ay ${formatAmount(point.prevValue)})`
-        : `${point.label}: ${formatAmount(point.value)}`,
+        ? `${point.label}: ${valueLabel(point.value)} (önceki ay ${valueLabel(point.prevValue)})`
+        : `${point.label}: ${valueLabel(point.value)}`,
     )
     .join('; ')
 
@@ -55,7 +61,7 @@ export function BarChart({
 
   const allValues = data.flatMap((d) => grouped && d.prevValue != null ? [d.value, d.prevValue] : [d.value])
   const ticks = niceScale(Math.min(0, ...allValues), Math.max(0, ...allValues), Math.max(2, Math.floor((height - DEFAULT_PADDING.top - DEFAULT_PADDING.bottom) / 36)))
-  const pad = chartPadding(ticks)
+  const pad = chartPadding(ticks, axisLabel)
   const plotW = Math.max(1, chartWidth - pad.left - pad.right)
   const plotH = Math.max(1, height - pad.top - pad.bottom)
   const yMin = ticks[0]
@@ -84,6 +90,7 @@ export function BarChart({
     >
       {chartWidth > 0 ? (
         <svg
+          aria-hidden="true"
           width={chartWidth}
           height={height}
           className="select-none"
@@ -114,7 +121,7 @@ export function BarChart({
               fill="var(--muted-foreground)"
               fontSize={12}
             >
-              {formatTickValue(tick)}
+              {axisLabel(tick)}
             </text>
           ))}
 
@@ -171,8 +178,8 @@ export function BarChart({
         <ChartTooltip
           label={hovered.label}
           items={[
-            { label: 'Tutar', value: formatAmount(hovered.value), color: hovered.color ?? (hovered.value >= 0 ? positiveColor : negativeColor) },
-            ...(grouped && hovered.prevValue != null ? [{ label: 'Önceki ay', value: formatAmount(hovered.prevValue), color: 'var(--muted-foreground)' }] : []),
+            { label: 'Tutar', value: valueLabel(hovered.value), color: hovered.color ?? (hovered.value >= 0 ? positiveColor : negativeColor) },
+            ...(grouped && hovered.prevValue != null ? [{ label: 'Önceki ay', value: valueLabel(hovered.prevValue), color: 'var(--muted-foreground)' }] : []),
           ]}
           anchorX={hoverX}
           anchorY={toY(Math.max(hovered.value, hovered.prevValue ?? 0))}

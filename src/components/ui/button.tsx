@@ -47,16 +47,15 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline p-0 h-auto!",
       },
       size: {
-        xs:      "h-7  px-2    text-xs  rounded-md gap-1    [&_svg:not([class*='size-'])]:size-3",
-        sm:      "h-9  px-3    text-xs  rounded-md gap-1.5  [&_svg:not([class*='size-'])]:size-3.5",
-        default: "h-10 px-4    text-sm",
+        xs:      "min-h-11 sm:min-h-7 h-7  px-2    text-xs  rounded-md gap-1    [&_svg:not([class*='size-'])]:size-3",
+        sm:      "min-h-11 sm:min-h-9 h-9  px-3    text-xs  rounded-md gap-1.5  [&_svg:not([class*='size-'])]:size-3.5",
+        default: "min-h-11 sm:min-h-10 h-10 px-4    text-sm",
         lg:      "h-11 px-5    text-sm",
         xl:      "h-12 px-6    text-base font-bold",
-        // İkon butonları iki boyutta da küçük; görsel ölçü korunurken dokunma
-        // alanı tap-target ile 44px'e çıkar (metinli boyutlar zaten yeterince geniş).
-        icon:        "tap-target size-10 rounded-lg",
-        "icon-xs":   "tap-target size-7  rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":   "tap-target size-9  rounded-md [&_svg:not([class*='size-'])]:size-3.5",
+        // Gerçek 44px kutu: komşu ikonların hit alanları üst üste binmez.
+        icon:        "size-11 rounded-lg",
+        "icon-xs":   "size-11  rounded-md [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm":   "size-11  rounded-md [&_svg:not([class*='size-'])]:size-3.5",
         "icon-lg":   "size-11 rounded-lg",
       },
     },

@@ -1,7 +1,5 @@
 import {
   fetchTableRows,
-  insertRows,
-  resetOwnFinanceData,
   restoreViaTransactionalRpc,
   type BackupRow,
 } from '../data/repositories/backupRepo'
@@ -284,9 +282,8 @@ export type RestoreProgress = { step: string; done: number; total: number }
 /**
  * Birincil yol: tek transaction'lı sunucu RPC'si (restore_user_finance_data_tx)
  * — silme + parent-first ekleme + doğrulama + user_id rewrite tamamı tek
- * işlemde; patlarsa hiçbir şey değişmez (KNOWN_RISKS #6 kapandı). RPC deploy
- * edilmemişse eski REST yoluna düşer: reset RPC + tablo tablo insert —
- * o yol transactional DEĞİLDİR, çağıran güvenlik yedeği almış olmalı.
+ * işlemde. Kalıcı işlem kimliği kayıp yanıtı aynı makbuzla doğrular.
+ * RPC yoksa durur; atomik olmayan REST reset/replay yolu kullanılmaz.
  */
 export async function restoreBackup(
   backup: ParsedBackup,
@@ -294,7 +291,7 @@ export async function restoreBackup(
   onProgress?: (progress: RestoreProgress) => void,
 ): Promise<void> {
   onProgress?.({ step: 'Atomik geri yükleme (tek işlem)', done: 1, total: 2 })
-  const txReport = await restoreViaTransactionalRpc(backup.tables)
+  const txReport = await restoreViaTransactionalRpc(backup.tables, userId)
   // Truthy kontrolü bilinçli: sözleşme obje-veya-null dese de beklenmedik bir
   // undefined "başarı" sanılıp veriyi geri yüklemeden dönmemeli.
   if (txReport) {
@@ -302,30 +299,7 @@ export async function restoreBackup(
     return
   }
 
-  // Eski REST yolu — yalnız RPC henüz deploy değilken (migration drift).
-    if (backup.tables.account_income_labels?.length || backup.tables.car_service_completions?.length) {
-      throw new Error('Bağlı iş akışı kayıtları için güncel atomik geri yükleme gerekli. Hiçbir veri değiştirilmedi.')
-    }
-    if (backup.tables.foreign_card_sms?.length) {
-    throw new Error('Dövizli SMS kayıtları için güncel atomik geri yükleme gerekli. Hiçbir veri değiştirilmedi.')
-  }
-  const steps = RESTORE_TABLE_ORDER.length + 1
-  let done = 1
-
-  onProgress?.({ step: 'Mevcut veriler temizleniyor', done, total: steps })
-  await resetOwnFinanceData()
-
-  // Insert parent-first.
-  for (const table of RESTORE_TABLE_ORDER) {
-    onProgress?.({ step: `${table} geri yükleniyor`, done: ++done, total: steps })
-    const rows = backup.tables[table]
-    if (!rows || rows.length === 0) continue
-
-    for (const part of chunk(rows, 200)) {
-      const deployed = await insertRows(table, part.map((row) => rowForInsert(row, userId)))
-      if (!deployed) break // table not deployed: skip its rows
-    }
-  }
+  throw new Error('Güvenli atomik geri yükleme gerekli. Geri yükleme gönderilmedi.')
 }
 
 export const BACKUP_TABLE_LABELS: Record<RestoreTable, string> = {

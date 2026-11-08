@@ -1,0 +1,47 @@
+[WebServer] 
+[WebServer] > financeproject@0.0.0 dev
+[WebServer] > vite --host 127.0.0.1 --port 4173 --strictPort
+[WebServer] 
+[WebServer] 
+[WebServer]   VITE v7.3.7  ready in 281 ms
+[WebServer] 
+[WebServer]   ➜  Local:   http://127.0.0.1:4173/
+
+Running 3 tests using 1 worker
+
+  ok 1 [chromium] › tests\e2e\goal-sources.spec.ts:22:3 › birikim hedefi takip kaynağı (live backend) › hedef varlık kategorisine bağlanınca tutar türetilir (3.7s)
+  x  2 [chromium] › tests\e2e\goal-sources.spec.ts:55:3 › birikim hedefi takip kaynağı (live backend) › kasa kovası bağlanan hedefte tek tıkla ayırma yapılır (30.0s)
+  ok 3 [chromium] › tests\e2e\money-mutation.spec.ts:28:3 › money mutation (live backend) › adding a card expense raises debt and lands in the ledger (5.4s)
+
+
+  1) [chromium] › tests\e2e\goal-sources.spec.ts:55:3 › birikim hedefi takip kaynağı (live backend) › kasa kovası bağlanan hedefte tek tıkla ayırma yapılır 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.selectOption: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('form').filter({ hasText: 'Hedef adı' }).getByLabel('Kasa kovası')
+
+
+      70 |     await modal.getByLabel('Hedef tarih').fill(`${new Date().getFullYear() + 1}-12-31`)
+      71 |     // Hedef adıyla yeni kova aç: kova harcanabilirden düşen gerçek rezervdir.
+    > 72 |     await modal.getByLabel('Kasa kovası').selectOption('__new__')
+         |                                           ^
+      73 |     await modal.getByRole('button', { name: 'Kaydet' }).click()
+      74 |
+      75 |     const card = page.locator('div').filter({ hasText: goalName }).filter({ hasText: 'Kasada ayrılan' }).last()
+        at C:\Users\Enes\.codex\worktrees\6a24\financeproject\tests\e2e\goal-sources.spec.ts:72:43
+
+    Error Context: test-results\goal-sources-birikim-hedef-b9702-te-tek-tıkla-ayırma-yapılır-chromium\error-context.md
+
+  1 failed
+    [chromium] › tests\e2e\goal-sources.spec.ts:55:3 › birikim hedefi takip kaynağı (live backend) › kasa kovası bağlanan hedefte tek tıkla ayırma yapılır 
+  2 passed (41.0s)
+
+[WebServer] (node:29600) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+(node:22040) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:44116) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+

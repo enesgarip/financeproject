@@ -62,7 +62,7 @@ export function useBodyScrollLock(locked: boolean) {
       body.style.paddingRight = restoreState.bodyPaddingRight
       documentElement.style.overscrollBehavior = restoreState.htmlOverscrollBehavior
 
-      window.scrollTo(0, restoreState.scrollY)
+      window.scrollTo({ top: restoreState.scrollY, left: 0, behavior: 'instant' })
       restoreState = null
     }
   }, [locked])

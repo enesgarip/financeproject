@@ -59,7 +59,7 @@ export function ForeignCardSmsPanel({ cards, onCompleted }: { cards: Card[]; onC
       <p className="text-xs text-ink-muted">{cards.find(card => card.id === row.card_id)?.card_name ?? 'Kredi kartı'} · {new Date(row.spent_at).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })}</p>
       <Button variant="outline" className="min-h-11 whitespace-normal" onClick={() => { setEditing(row); setAmount(''); setError('') }}>Kesin TL tutarını gir</Button>
     </li>)}</ul>}
-    <SimpleModal title="Dövizli işlemi tamamla" open={editing !== null} onClose={() => { if (!busy) setEditing(null) }}>
+    <SimpleModal busy={busy} title="Dövizli işlemi tamamla" open={editing !== null} onClose={() => { if (!busy) setEditing(null) }}>
       <form onSubmit={event => void submit(event)} className="space-y-4">
         <p className="break-words text-sm">{editing?.description} · {editing ? native(editing) : ''}</p>
         <label className="block text-sm font-semibold">Kesin TL tutarı<Input className="mt-1 min-h-11" inputMode="decimal" value={amount} disabled={busy} onChange={event => setAmount(event.target.value)} required /></label>

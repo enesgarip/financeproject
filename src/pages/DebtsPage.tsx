@@ -11,7 +11,7 @@ import { fetchCardsByType } from '../data/repositories/cardsRepo'
 import { saveCrudRow } from '../data/repositories/crudRepo'
 import type { Card as FinanceCard, Debt } from '../types/database'
 import { dateInputValue, formatDate } from '../utils/date'
-import { formatCurrency, formatNumber, parseNumber } from '../utils/formatCurrency'
+import { formatCurrency, formatNumber, parseNativeNumber } from '../utils/formatCurrency'
 import { PeopleLedger } from './AnalysisPage.panels'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { useFinancePaymentDrawer } from '../hooks/useFinancePaymentDrawer'
@@ -36,7 +36,7 @@ function valuationInputFromForm(values: Record<string, string>): Pick<Debt, 'val
     value_type: (values.value_type as Debt['value_type']) ?? 'TRY',
     currency: (values.currency as Debt['currency']) ?? null,
     direction: (values.direction as Debt['direction']) ?? 'borç_aldım',
-    amount: parseNumber(values.amount),
+    amount: parseNativeNumber(values.amount),
   }
 }
 
@@ -372,9 +372,9 @@ export function DebtsPage() {
           const foreignCash = valueType === 'doviz' && currency !== null && currency !== 'TRY'
           const supportsAuto = isGold || foreignCash
           const autoValued = supportsAuto && formData.get('valuation') === 'auto'
-          const amount = isGold || foreignCash ? parseNumber(formData.get('amount')) : 1
+          const amount = isGold || foreignCash ? parseNativeNumber(formData.get('amount')) : 1
 
-          const manualValue = parseNumber(formData.get('estimated_value_try'))
+          const manualValue = parseNativeNumber(formData.get('estimated_value_try'))
           const autoValue = autoValued ? valueDebt({ value_type: valueType, currency, direction, amount }, snapshotForSave) : null
 
           return {

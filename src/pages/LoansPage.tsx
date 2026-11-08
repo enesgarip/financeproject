@@ -4,16 +4,18 @@ import { CrudPage } from '../components/CrudPage'
 import { FinancePaymentDrawer } from '../components/finance/FinancePaymentDrawer'
 import { SimpleModal } from '../components/SimpleModal'
 import { useConfirmDialog } from '../components/ui/use-confirm-dialog'
+import { QueryError } from '../components/ui/query-error'
 import { useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import {
   deleteLoanInstallment,
   fetchLoanInstallments,
+  fetchLoanInstallmentsByLoan,
   updateLoanInstallment,
   upsertLoanInstallments,
 } from '../data/repositories/loansRepo'
 import type { Loan, LoanInstallment } from '../types/database'
 import { formatDate } from '../utils/date'
-import { parseNumber } from '../utils/formatCurrency'
+import { parseNativeNumber } from '../utils/formatCurrency'
 import { sumTL } from '../utils/money'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { useSeritAmount } from '../components/serit'
@@ -51,6 +53,8 @@ export function LoansPage() {
   const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
   const [reloadLoans, setReloadLoans] = useState<(() => Promise<void>) | null>(null)
   const [installments, setInstallments] = useState<LoanInstallment[]>([])
+  const [installmentsError, setInstallmentsError] = useState('')
+  const [installmentsLoading, setInstallmentsLoading] = useState(true)
   const [planMenuOpenId, setPlanMenuOpenId] = useState<string | null>(null)
   const [editingPlanItem, setEditingPlanItem] = useState<LoanInstallment | null>(null)
   const [planDueDate, setPlanDueDate] = useState('')
@@ -61,8 +65,11 @@ export function LoansPage() {
 
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
   const loadInstallments = useCallback(async () => {
+    setInstallmentsLoading(true)
     const result = await fetchLoanInstallments()
-    setInstallments(result.ok ? result.data : [])
+    if (result.ok) { setInstallments(result.data); setInstallmentsError('') }
+    else setInstallmentsError(result.error.message ?? 'Taksitler yüklenemedi.')
+    setInstallmentsLoading(false)
   }, [])
 
   useEffect(() => {
@@ -127,7 +134,7 @@ export function LoansPage() {
     event.preventDefault()
     if (!editingPlanItem) return
 
-    const amount = parseNumber(planAmount)
+    const amount = parseNativeNumber(planAmount)
     if (!planDueDate) {
       setPlanError('Vade tarihi zorunlu.')
       return
@@ -199,6 +206,8 @@ export function LoansPage() {
   }
 
   function renderPaymentPlan(loan: Loan, reload: () => Promise<void>, setError: (message: string) => void) {
+    if (installmentsLoading) return <p role="status" className="py-3 text-sm text-ink-muted">Ödeme planı yükleniyor…</p>
+    if (installmentsError) return <QueryError title="Ödeme planı yüklenemedi" message={installmentsError} onRetry={() => void loadInstallments()} />
     const loanInstallments = installments.filter((item) => item.loan_id === loan.id)
     if (loanInstallments.length === 0) {
       return (
@@ -402,7 +411,9 @@ export function LoansPage() {
           // kurulur. Mevcut planı toplu yenilemek gerekirse "Plan oluştur" (boş
           // planda görünür) veya satır bazlı düzenleme kullanılır.
           const loan = row as Loan
-          const hasPlan = installments.some((item) => item.loan_id === loan.id)
+          const currentPlan = await fetchLoanInstallmentsByLoan(loan.id)
+          if (!currentPlan.ok) throw new Error(`Kredi kaydedildi; mevcut ödeme planı doğrulanamadı. ${currentPlan.error.message}`)
+          const hasPlan = currentPlan.data.length > 0
           if (!hasPlan) {
             await syncLoanInstallmentPlan(loan)
           }
@@ -426,9 +437,9 @@ export function LoansPage() {
           user_id: userId,
           bank_name: String(formData.get('bank_name') ?? '').trim(),
           loan_name: String(formData.get('loan_name') ?? '').trim(),
-          total_amount: parseNumber(formData.get('total_amount')),
-          remaining_amount: existingRow ? (existingRow as Loan).remaining_amount : parseNumber(formData.get('total_amount')),
-          monthly_payment: parseNumber(formData.get('monthly_payment')),
+          total_amount: parseNativeNumber(formData.get('total_amount')),
+          remaining_amount: existingRow ? (existingRow as Loan).remaining_amount : parseNativeNumber(formData.get('total_amount')),
+          monthly_payment: parseNativeNumber(formData.get('monthly_payment')),
           installment_day: optionalDay(formData.get('installment_day')),
           start_date: optionalDate(formData.get('start_date')),
           end_date: optionalDate(formData.get('end_date')),
@@ -518,7 +529,7 @@ export function LoansPage() {
 
       <FinancePaymentDrawer {...drawerProps} />
 
-      <SimpleModal title="Taksiti düzenle" open={Boolean(editingPlanItem)} onClose={() => setEditingPlanItem(null)}>
+      <SimpleModal busy={planSaving} title="Taksiti düzenle" open={Boolean(editingPlanItem)} onClose={() => setEditingPlanItem(null)}>
         <form onSubmit={handlePlanEditSubmit} className="space-y-4">
           <label className="block text-sm font-semibold text-ink">
             Vade tarihi

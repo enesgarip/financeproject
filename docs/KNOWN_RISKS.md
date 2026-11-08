@@ -1,5 +1,13 @@
 # Known Risks
 
+9 Kasım: JSON restore artık eski REST reset/replay yoluna düşmez.
+Ağ yanıtı kaybolursa uygulanmış olabilir; kalıcı UUID/hash ve aynı dosyayla
+sonuç doğrulanır. Yerel depolama kapalıysa idempotent para isteği gönderilmez.
+Altın eski negatif geçmişi otomatik onarılmaz; yeni yazım kronolojik stok
+constraint'iyle reddedilir. U01 fiziksel telefon navbar belirtisi açıktır.
+Sözleşme/kanıt: `docs/AUDIT_REMEDIATION_2026-11-09.md`.
+
+
 3 Kasım senaryo eki: kısmi altın/döviz borçlarında yeni miktar hassasiyeti
 korunur; geçmişte iki/dört haneye yuvarlanarak kaybolan miktar bilgisi migration
 ile tahmin edilmez. Eski kayıtlar banka/işlem kanıtıyla mutabakat gerektirebilir.
@@ -147,9 +155,10 @@ current-settlement markers, inserts only the columns present in the payload (so
 pre-schema-change backups get column DEFAULTs instead of NULL overrides), and a
 final cross-parent ownership assertion rejects any payload row pointing at
 another user's parent — closing the same-card INSERT provenance gap. The client
-(`restoreBackup`) calls the RPC first and falls back to the legacy REST replay
-only when the RPC is not yet deployed (migration drift); the automatic safety
-export remains as defense-in-depth for that fallback path.
+(`restoreBackup`) uses the persistent operation receipt wrapper and requires
+transactional restore. It never falls back to REST reset/replay. A lost response
+is uncertain and is verified with the same file/UUID; the pre-restore JSON
+export remains a recovery aid, not proof that a request did not commit.
 
 ## 7. Limited Safety Net from Tests (mitigated)
 

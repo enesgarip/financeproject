@@ -390,7 +390,7 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
   const completed = checks.filter((check) => check.done).length
 
   return (
-    <DeferredDetails className="lg:col-span-12" openRequestKey={location.hash === '#ay-kapanisi' ? location.key : undefined} summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary" summary={<>Ay kapanış kontrolü <span className={completed < checks.length ? 'text-warning' : 'text-ink-muted'}>· {completed < checks.length ? `${checks.length - completed} kontrol dikkat istiyor` : 'Kontrollerde uyarı yok'}</span></>}>
+    <DeferredDetails className="lg:col-span-12" openRequestKey={location.hash === '#ay-kapanisi' ? location.key : undefined} summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary" summary={<>Ay kapanış kontrolü <span className="text-ink-muted">· {completed < checks.length ? `${checks.length - completed} kontrol dikkat istiyor` : 'Kontrollerde uyarı yok'}</span></>}>
     <Card className="border-0 bg-raised text-ink ring-1 ring-line-strong lg:col-span-12">
       <CardContent className="grid gap-4 p-4 min-[760px]:grid-cols-[0.72fr_1.28fr] min-[760px]:items-center">
         <div>
@@ -406,7 +406,7 @@ export function MonthCloseAssistant({ data, missingTables }: { data: AnalysisDat
           {checks.map((check, index) => (
             <div key={check.label} className={`rounded-lg px-3 py-2 ${check.done ? 'bg-success/10 text-success' : 'bg-page text-ink-muted'}`}>
               <p className="text-xs font-bold">{check.label}</p>
-              <p className="mt-0.5 text-[11px] opacity-70">{check.detail}</p>
+              <p className="mt-0.5 text-xs text-ink-muted">{check.detail}</p>
               <Link className="inline-flex min-h-11 items-center text-xs font-semibold underline underline-offset-2" to={`${destinations[index]}${destinations[index].includes('?') ? '&' : '?'}returnTo=${encodeURIComponent('/analiz#ay-kapanisi')}`}>{check.done ? 'İncele' : 'Kontrolü tamamla'} →</Link>
             </div>
           ))}

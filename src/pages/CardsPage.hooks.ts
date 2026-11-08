@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useRef, useState, type Dispatch, type For
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
+import { useOperationResolution } from '../hooks/useOperationResolution'
 import { cardPageDataKey } from '../app/cardPageDataKey'
 import { useCrudRows } from '../app/useCrudRows'
 import { canCutCurrentStatement } from '../utils/statementCycle'
@@ -314,6 +315,7 @@ export function useAccountMovementModal({
   const [transactionTargetCard, setTransactionTargetCard] = useState('')
   const [transactionError, setTransactionError] = useState('')
   const [transactionSaving, setTransactionSaving] = useState(false)
+  useOperationResolution(['record_manual_account_movement', 'transfer_between_accounts'], transactionCard?.id, () => setTransactionCard(null))
   const [movementAccounts, setMovementAccounts] = useState<Card[]>([])
 
   function openTransaction(card: Card, reload: () => Promise<void>, cards: Card[], type: 'in' | 'out' | 'transfer' = 'in') {
@@ -328,6 +330,7 @@ export function useAccountMovementModal({
   }
 
   function closeTransaction() {
+    if (transactionSaving) return
     setTransactionCard(null)
   }
 
@@ -344,7 +347,7 @@ export function useAccountMovementModal({
 
   async function handleTransactionSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!transactionCard) return
+    if (!transactionCard || transactionSaving) return
 
     const amount = parseNumber(transactionAmount)
     setTransactionSaving(true)

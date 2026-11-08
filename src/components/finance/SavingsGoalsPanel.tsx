@@ -443,7 +443,7 @@ export function SavingsGoalsPanel({
     })
     if (!confirmed) return
     setContributingGoalId(goalId)
-    const result = await contributeToGoalBucket(bucketId, amount)
+    const result = await contributeToGoalBucket(bucketId, amount, user?.id ?? '')
     setContributingGoalId(null)
 
     if (!result.ok) {
@@ -1076,7 +1076,7 @@ export function SavingsGoalsPanel({
         </div>
       )}
 
-      <SimpleModal title={editing ? 'Hedefi düzenle' : 'Hedef ekle'} open={modalOpen} onClose={() => setModalOpen(false)}>
+      <SimpleModal busy={saving} title={editing ? 'Hedefi düzenle' : 'Hedef ekle'} open={modalOpen} onClose={() => setModalOpen(false)}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm font-medium">
             Hedef adı

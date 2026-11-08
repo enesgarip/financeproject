@@ -1,0 +1,43 @@
+{
+  "afterClose": 1,
+  "afterNavigation": 1,
+  "retained": "Kaybolmaması gereken taslak",
+  "state": {
+    "url": "/",
+    "scrollY": 0,
+    "innerHeight": 664,
+    "innerWidth": 390,
+    "visual": {
+      "height": 664,
+      "offsetTop": 0,
+      "pageTop": 0,
+      "scale": 1
+    },
+    "body": {
+      "position": "",
+      "top": "",
+      "overflow": ""
+    },
+    "bar": {
+      "rect": {
+        "x": 0,
+        "y": 539,
+        "width": 390,
+        "height": 125,
+        "top": 539,
+        "right": 390,
+        "bottom": 664,
+        "left": 0
+      },
+      "display": "block"
+    },
+    "dialogs": 0,
+    "active": {
+      "tag": "BODY",
+      "text": "\n    DengeKişisel finansÖzetHesaplarVarlıklarBorçlarPlanAnal",
+      "aria": null,
+      "form": false,
+      "connected": true
+    }
+  }
+}
