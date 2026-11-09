@@ -1,9 +1,11 @@
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
+
 const {
   VERCEL_TOKEN,
   VERCEL_ORG_ID,
   VERCEL_PROJECT_ID,
   DEPLOYMENT_URL,
-  VERCEL_SMOKE_PATH = '/login',
 } = process.env
 
 for (const [name, value] of Object.entries({
@@ -17,6 +19,7 @@ for (const [name, value] of Object.entries({
 
 const sleep = (milliseconds) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds))
+const run = promisify(execFile)
 
 const api = async (path, options = {}) => {
   const separator = path.includes('?') ? '&' : '?'
@@ -70,29 +73,29 @@ const getCanonicalProductionDomain = async () => {
 }
 
 const smokeProduction = async (domain) => {
-  const url = new URL(VERCEL_SMOKE_PATH, `https://${domain}`)
+  const origin = new URL(`https://${domain}`).origin
+  const env = { ...process.env, PLAYWRIGHT_BASE_URL: origin }
+  delete env.VERCEL_TOKEN
   let lastError
 
-  for (let attempt = 1; attempt <= 6; attempt += 1) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const response = await fetch(url, {
-        redirect: 'follow',
-        signal: AbortSignal.timeout(10_000),
+      await run(process.execPath, [
+        'node_modules/@playwright/test/cli.js', 'test', 'tests/e2e/auth-smoke.spec.ts',
+        '--timeout=15000', '--retries=0', '--reporter=line', '--trace=off',
+      ], {
+        env,
+        timeout: 25_000,
       })
-      const html = await response.text()
-      if (response.ok && html.includes('id="root"')) {
-        console.log(`Production smoke başarılı: ${url}`)
-        return
-      }
-      lastError = new Error(
-        `HTTP ${response.status}; uygulama kökü=${html.includes('id="root"')}`,
-      )
+      console.log(`Production tarayıcı kontrolü başarılı: ${origin}/login`)
+      return
     } catch (error) {
       lastError = error
+      console.warn(`Production tarayıcı denemesi ${attempt}/3 başarısız.`)
+      if (error.stdout) console.warn(error.stdout.trim())
+      if (error.stderr) console.warn(error.stderr.trim())
+      if (attempt < 3) await sleep(5_000)
     }
-
-    console.warn(`Smoke denemesi ${attempt}/6 başarısız: ${lastError.message}`)
-    await sleep(5_000)
   }
 
   throw lastError

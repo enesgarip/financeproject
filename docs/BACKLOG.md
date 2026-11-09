@@ -1,5 +1,14 @@
 # Priority Backlog
 
+## 2026-11-09 — Yayın güveni
+
+- [x] Edge fonksiyon seçimini yayın sınıflandırmasının tabanına bağla; arada
+  başarısız olan push'taki edge değişikliğinin sonradan yayımlandığını doğrula.
+- [x] Vercel'e yüklenecek statik çıktıda ve canlı alan adında Chrome ile
+  giriş formunu doğrula. DB kapsamı değiştiğinde yerel demo hesabıyla gerçek
+  oturum ve finans snapshot'ını yayın öncesi test et.
+- [ ] İlk canlı koşuda aday ve canlı tarayıcı kontrolü sürelerini ayrı ölç.
+
 ## 2026-11-09 — Ekran taraması ve yayın kapsamı
 
 - [x] 19 rota × üç görünüm taramasını dört hedeflenebilir gruba ayır. Her

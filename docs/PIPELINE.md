@@ -226,21 +226,29 @@ Order/parallel graph:
    This includes pending paths from failed or superseded runs. A manual dispatch
    or an empty release history opens all release gates.
 2. **Build and stage** — once classification finishes, run the production-env
-   build and staged prebuilt upload when frontend paths changed.
+   build when frontend paths changed. Run the login test in runner Chrome
+   against `.vercel/output/static` via Vite preview before uploading that output.
+   This checks the candidate bytes locally and needs no access to the protected
+   Vercel deployment URL.
    `verify` retains the **Lint and Build** name and requires both jobs to succeed.
    Production build/staging runs only on `main`, including manual dispatch.
    A change confined to tests (including `src/**/*.test.ts` and
    `src/**/*.test.tsx`) and docs uses the quality build with placeholder env.
-3. **Parallel database/edge checks + backup** — a fresh local database with
-   migrations, seed, lint and the full SQL suite when database paths changed;
-   encrypted backup only for migrations. Edge type-check completes before any
-   production migration or function deployment.
+3. **Parallel database/edge checks + backup** — when database paths changed,
+   start a fresh local Supabase, apply seed, run lint and the SQL suite, then
+   verify login, the seeded snapshot RPC response and the rendered Özet in
+   Chrome. The demo login requires loopback app and API URLs. Edge type-check
+   completes before any production write, and migrations require an encrypted
+   backup.
 4. **Supabase release** — after quality and all required DB/backup/edge gates,
-   dry-run/push only when migrations changed; deploy only changed edge
-   functions (`_shared` means all).
+   dry-run/push only when migrations changed. Select changed edge functions
+   using the same base SHA emitted by classification. Shared code, scheduler
+   changes and full releases with an empty base redeploy all functions.
 5. **Promote + smoke** — after required Supabase work, use Vercel's team-scoped
-   promotion API, smoke-test the canonical production `/login` route, and roll
-   back to the previous deployment automatically when smoke fails
+   promotion API, then use the same Chrome test on the canonical domain. It
+   checks the signed-out redirect and direct `/login` reload, including the
+   rendered form. After three failed attempts, restore the previous Vercel
+   deployment when one exists.
 
 Optional jobs may be skipped only when their corresponding change flag is
 false. A failed, cancelled or unexpectedly skipped required job blocks release
@@ -252,7 +260,9 @@ for frontend-only, DB-test-only, migration, edge, combined and docs-only release
 Vercel CLI `54.9.1` is cached under the runner temporary directory by OS,
 architecture, Node major and exact CLI version. Only its installed packages
 are cached; pulled env files and `.vercel/output` are excluded. The token is
-scoped to pull/build/upload steps and passed through `VERCEL_TOKEN`.
+scoped to pull/build/upload and promotion steps. The Chrome tests use the
+runner's installed browser. The production smoke subprocess runs without
+`VERCEL_TOKEN`, credentials, third-party requests or Playwright traces.
 
 ### Süre ölçümü ve hedef
 
