@@ -1,0 +1,44 @@
+name: Setup Node dependencies
+description: Restore the installed lockfile dependencies or perform a clean install.
+
+inputs:
+  save-cache:
+    description: Let the quality job save the clean installation for subsequent runs.
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      id: node
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24
+        cache: npm
+
+    - name: Identify Linux runner image
+      id: image
+      shell: bash
+      run: |
+        source /etc/os-release
+        echo "id=${ID}-${VERSION_ID}" >> "$GITHUB_OUTPUT"
+
+    - name: Restore installed dependencies
+      id: dependencies
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: node_modules
+        key: npm-installed-v1-${{ steps.image.outputs.id }}-${{ runner.arch }}-${{ steps.node.outputs.node-version }}-${{ hashFiles('package.json', 'package-lock.json', '.npmrc') }}
+
+    - name: Install dependencies
+      if: steps.dependencies.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm ci --no-audit --no-fund
+
+    # Save before lint and build create their independent caches in node_modules.
+    - name: Save clean installation
+      if: inputs.save-cache == 'true' && steps.dependencies.outputs.cache-hit != 'true'
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: node_modules
+        key: ${{ steps.dependencies.outputs.cache-primary-key }}

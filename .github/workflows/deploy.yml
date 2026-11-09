@@ -54,7 +54,7 @@ jobs:
             changed=$(git diff --name-only "$BEFORE" "$SHA")
             while IFS= read -r file; do
               case "$file" in
-                supabase/functions/_shared/automationRules.ts|src/*|public/*|index.html|package.json|package-lock.json|vite.config.*|tsconfig*.json|vercel.json|scripts/check-bundle-size.mjs|scripts/archive-source-maps.mjs|scripts/promote-vercel-deployment.mjs|.github/workflows/deploy.yml)
+                supabase/functions/_shared/automationRules.ts|src/*|public/*|index.html|package.json|package-lock.json|.npmrc|vite.config.*|tsconfig*.json|vercel.json|scripts/check-bundle-size.mjs|scripts/archive-source-maps.mjs|scripts/promote-vercel-deployment.mjs|.github/workflows/deploy.yml|.github/actions/setup-dependencies/*)
                   frontend=true
                   ;;
               esac
@@ -80,21 +80,16 @@ jobs:
 
   checks:
     name: Lint, Coverage and Audit
-    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
+      - name: Setup Node dependencies
+        uses: ./.github/actions/setup-dependencies
         with:
-          node-version: 24
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
+          save-cache: 'true'
 
       - name: Restore quality caches
         uses: actions/cache@v4
@@ -129,14 +124,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
+      - name: Setup Node dependencies
+        uses: ./.github/actions/setup-dependencies
 
       - name: Restore TypeScript cache
         uses: actions/cache@v4

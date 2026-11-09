@@ -13,6 +13,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    watch: {
+      // Rapor yazılırken açık Playwright sayfalarını yeniden yükleme.
+      ignored: ['**/coverage', '**/playwright-report', '**/test-results'],
+    },
+  },
   define: {
     // Hata kayıtlarını deploy'a eşleyen sürüm damgası (lib/errorReport):
     // build GH Actions'ta koştuğu için GITHUB_SHA orada hep dolu.

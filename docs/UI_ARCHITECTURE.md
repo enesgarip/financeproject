@@ -4,7 +4,8 @@
 Bekleyen modal kayıt/işleme X/Escape/navigasyonla kapanmaz. Dirty izleme
 kapsama aittir; ilgisiz diyaloğu kapatmak alttaki formu temizlemez. Odak,
 kalıcı ve bağlı tetikleyiciye preventScroll ile döner. WebKit alan kaldırma
-olayında odak olayı gelmezse DOM gözlemi alt menüyü yeniler. Modal/iç scroll
+olayında odak olayı gelmezse DOM gözlemi alt menüyü yeniler. CRUD sayfası
+`?new=1` açma isteğini aynı gezinme kaydında bir kez tüketir. Modal/iç scroll
 jestleri sayfa yenilemesi başlatmaz; touchcancel/orientationchange temizler.
 Bütçe harcama/limit ayrı etiketli satırlarda, bakım eylemleri ayrı sıradadır.
 Grafik etiket/tooltip/aria ve fark/uç değerler seçili TL/gram/USD serisindedir;

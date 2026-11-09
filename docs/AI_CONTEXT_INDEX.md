@@ -1,5 +1,28 @@
 # AI Context Index
 
+## Hızlı görev rotası
+
+`CLAUDE.md` kanonik kuralları tutar. İstekle eşleşen satırdan başlayıp ilgili
+belgeyi, kodu ve en yakın testi aç. Veri akışı bir sınırı aşıyorsa sonraki
+katmana geç. Tarihli kayıtlar bir kararın geçmişini araştırırken kullanılabilir.
+
+| İş | Kural / kapsam | Kod ve ilk test |
+| --- | --- | --- |
+| Kart borcu, ekstre, provizyon | [Kart borcu geçişleri](CARD_DEBT_TRANSITIONS.md) | `src/utils/financeSummary.ts`, `src/utils/financeSummary.test.ts`, ilgili `supabase/tests/*.sql` |
+| Özet, rezerv, harcanabilir tutar | [Özet mimarisi](DASHBOARD_ARCHITECTURE.md) | `src/utils/safeToSpend.ts`, `src/utils/safeToSpend.test.ts`, `src/hooks/useSafeToSpend.ts` |
+| Veri sağlığı ve onarım | [Veri sağlığı mimarisi](DATA_HEALTH_ARCHITECTURE.md) | `src/pages/DataHealth.logic.ts`, `src/pages/DataHealth.logic.test.ts`, ilgili RPC ve SQL testi |
+| Yazma, RPC, migration veya RLS | [RPC sözleşmeleri](RPC_ACTION_REFERENCE.md), [migration kontrolü](MIGRATION_COMPATIBILITY_CHECKLIST.md) | İlgili `src/data/repositories/*` veya `src/services/*`, `src/types/database.ts`, `supabase/tests/*.sql` |
+| Form, iptal ve mobil gezinme | [UI mimarisi](UI_ARCHITECTURE.md) | `src/components/CrudPage.tsx`, `src/lib/navigationSafety.ts`, `tests/e2e/audit-remediation.spec.ts` |
+| Bulgu taraması ve kapanış | [Backlog](BACKLOG.md), [9 Kasım denetim kapanışı](AUDIT_REMEDIATION_2026-11-09.md) | Bulgu kimliğinden rapordaki dosya ve kabul testine geç |
+| CI, test ve yayın | [Pipeline](PIPELINE.md) | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `src/utils/pipeline.guard.test.ts` |
+| Diğer alanlar | [Domain belgeleri](#domain-source-of-truth), [konu ve dosya tablosu](#konu--dosya-hızlı-türkçe-tablo) | İlgili giriş ve yanındaki test |
+
+Geliştirirken tek test dosyasını veya `npm run test:changed` komutunu çalıştır.
+Kapanışta `npm run verify` çalıştır. Migration/trigger değişikliğinde yerel
+Postgres doğrulamasını ekle. Ayrıntılar [doğrulama tablosunda](#verification-ladder).
+
+## Tarihli değişiklik kayıtları
+
 9 Kasım düzeltme uygulaması: `docs/AUDIT_REMEDIATION_2026-11-09.md`.
 `data/repositories/readAllRows.ts` PK imleciyle tam okuma ve atomik hata
 sözleşmesidir; CRUD, kredi, snapshot fallback ve trend/radar okumaları kullanır.
@@ -460,22 +483,6 @@ Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
 özeti, taksit listesi ve ekstre listesi kaldırıldı; bunların tek ayrıntı kaynağı
 üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.
 
-This file is the cheapest starting point for future AI/Codex sessions. Its job
-is to reduce repeated repo discovery: read this first, choose the smallest
-relevant route, then open only the linked source files and docs for the task.
-
-## Cost Rule
-
-Do not start by reading every page, migration, or test file. Start with:
-
-1. The user's exact request.
-2. This index.
-3. One source-of-truth doc for the affected domain.
-4. The target code file and its closest test.
-
-Expand only when the change crosses a boundary such as page -> utility,
-frontend -> RPC, or RPC -> migration.
-
 ## Permanent Context
 
 Gerçek kullanıcı denetimi (9–11 Eylül 2026; 29 bulgu için düzeltme uygulandı; doğrulama tablosu raporda):
@@ -608,9 +615,7 @@ Read:
 Verify:
 
 - `npm exec -- vitest run src/utils/financeSummary.test.ts`
-- `npm run test:unit`
-- `npm run lint`
-- `npm run build`
+- `npm run verify` at completion
 
 ### New Or Changed RPC
 
@@ -691,13 +696,14 @@ production smoke check rolls traffic back to the previous deployment.
 
 ## Verification Ladder
 
-Choose the smallest ladder that matches the risk:
+Use the relevant checks below while iterating. Run `npm run verify` before
+closing a change. Migration and trigger changes also require local Postgres.
 
-| Risk | Commands |
+| Risk | Targeted checks |
 | --- | --- |
 | Docs-only | `git diff --check` |
-| Pure utility change | Targeted Vitest file, then `npm run test:unit` |
-| TypeScript/UI change | `npm run lint`, `npm run test:unit`, `npm run build` |
+| Pure utility change | Targeted Vitest file or `npm run test:changed` |
+| TypeScript/UI change | Targeted Vitest file or `npm run test:changed`, plus `npm run build` for type/bundle feedback |
 | Route/user-flow change | Previous row plus `npm run test:e2e` when feasible |
 | Migration/RPC/RLS change | Previous row plus `npm run db:reset:local`, `npm run db:lint:local`, `npm run db:audit:rls:local`, `npm run db:audit:grants:local` when local Supabase is available; `npm run db:test:all` runs every `supabase/tests/*.sql` (new files are auto-covered in CI too — no per-file wiring, S4) |
 | Yeni tablo | Üsttekilere ek: migration'da **explicit `grant`** olmalı (`db:audit:grants:local` zorlar — policy'si olup grant'i olmayan tablo ölü koddur) |
