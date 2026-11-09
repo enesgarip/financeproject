@@ -1,5 +1,18 @@
 # Priority Backlog
 
+## 2026-11-09 — Ekran taraması ve yayın kapsamı
+
+- [x] 19 rota × üç görünüm taramasını dört hedeflenebilir gruba ayır. Her
+  rotada panel içeriği ve fontlar hazırken taşmayı ölç. Akış testleriyle
+  sentetik oturum ve veri kurulumunu paylaş. İki worker ile yerel Chromium
+  ekran taraması **40,9 sn → 26,2 sn**. 57 rota/görünüm kontrolü geçti.
+- [x] Son başarılı production koşusundan beri değişen yolları sınıflandır.
+  Yalnız test/belge kapsamı kalite build'ini çalıştırır. Birikmiş uygulama,
+  migration ve edge yolları kendi yayın kapılarını tetikler.
+- [x] TypeScript, Vite ve kaynak haritası arşivi sürelerini build loguna yaz.
+- [ ] Sonraki gerçek frontend yayınında sıcak bağımlılık hazırlığını ve
+  build aşamalarını ayrı ölç.
+
 ## 2026-11-09 — Geliştirme ve yayın geri bildirimi
 
 - [x] AI bağlam dizininin ilk bölümüne görev, kaynak kural, kod ve hedefli test
