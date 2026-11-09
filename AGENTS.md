@@ -7,8 +7,9 @@
 ## Önce şunu oku
 
 **Kanonik kural seti `CLAUDE.md`'dir** (proje kökünde). Tam mimari, para modeli,
-ledger invariant'ları ve deploy hattı orada. Bir task'a başlamadan önce `CLAUDE.md`'i
-ve `docs/AI_CONTEXT_INDEX.md`'i oku — bu ikisi keşif turunu (grep fan-out) ortadan kaldırır.
+ledger invariant'ları ve deploy hattı orada. Bir işe başlamadan önce `CLAUDE.md`'i
+ve `docs/AI_CONTEXT_INDEX.md` başındaki **Hızlı görev rotası** bölümünü oku.
+Oradan ilgili domain belgesine, koda ve en yakın teste geç.
 
 **Yaşayan doküman kuralı:** `docs/BACKLOG.md`, `docs/AI_CONTEXT_INDEX.md`,
 `docs/CARD_DEBT_TRANSITIONS.md` ve ilgili domain source-of-truth dokümanı,

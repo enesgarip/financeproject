@@ -6,8 +6,8 @@ keşfetmek zorunda kalmaması.
 
 **Bu dosya kanonik kural setidir.** Eşlik eden dosyalar:
 `AGENTS.md` (Codex giriş noktası — bu dosyaya yönlendirir + 6 kritik kuralı yineler),
-`docs/AI_CONTEXT_INDEX.md` (görev bazlı en ucuz okuma rotası + konu→dosya tablosu;
-keşif turu atmamak için **önce buna bak**),
+`docs/AI_CONTEXT_INDEX.md` (başındaki **Hızlı görev rotası** ve konu→dosya tablosu;
+ilgili domain'e buradan geç),
 `docs/PROJECT_CONTEXT.md` (domain + tablo + route haritası).
 
 **Doküman güncel tutma kuralı:** Yaşayan dokümanlar kodla aynı commit'te güncel
@@ -120,14 +120,15 @@ Düzeltme = **ters kayıt** (append-only history bozulmaz). GUC ile yönlendiril
 ## Deploy hattı (otomatik)
 
 `main`'e **push = üretim deploy** (`.github/workflows/deploy.yml`):
-1. **Classify + paralel kontrol/build** — lint + coverage + production dependency audit, tek production build ile paraleldir; `Lint and Build` iki sonucu zorunlu başarıyla toplar
+1. **Classify + paralel kontrol/build** — lint + coverage + production dependency audit sınıflamayla birlikte başlar; build sınıflamadan sonra başlar; `Lint and Build` iki kalite sonucunu zorunlu başarıyla toplar
 2. **Tek artifact** — frontend değiştiyse production env'i çek, bir kez `vercel build --prod` ile build et, bundle bütçesini doğrula ve `--prebuilt --skip-domain` ile staged yükle; production build yalnız `main`'de koşar
 3. **Paralel DB/edge check + backup** — DB değiştiyse yerel gerçek Postgres kontrolü; migration varsa şifreli yedek; edge tipi üretime herhangi bir yazmadan önce doğrulanır
 4. **Supabase release** — yalnız migration değiştiyse `db push`; yalnız değişen edge function'ları deploy et
 5. **Vercel promote + smoke** — resmi scoped API ile aynı staged build'i canlıya al; `/login` smoke başarısızsa önceki production deployment'a otomatik rollback yap
 
 Gerekli bir DB/yedek/edge/release işi `failure`, `cancelled` veya beklenmedik
-`skipped` ise yayın durur. Lint içerik tabanlı cache kullanır; TypeScript cache'i
+`skipped` ise yayın durur. CI ve deploy, eşleşen temiz `node_modules` cache'ini
+kullanır ve cache yoksa `npm ci` çalıştırır. Lint içerik tabanlı cache kullanır; TypeScript cache'i
 ayrı, Vercel CLI `54.9.1` paket cache'i ortam dosyalarından ayrıdır. `VERCEL_TOKEN`
 yalnız ilgili adımlarda env üzerinden verilir. Her workflow sonunda salt okunur
 `scripts/report-workflow-timings.mjs` iş/adım süreleri ve geçmiş ortalamayı raporlar.
@@ -151,7 +152,8 @@ iptal edemez.
 kaynağı indirme gecikmesiydi; sonraki runner Chrome 150 koşularında gerçek neden
 tüm rotayı ilk karede görünmez yapan page transition'dı. Bunları skor hatası sanıp
 kovalama; önce rapor üretilip üretilmediğini kontrol et.
-Playwright smoke tarayıcısı package-lock
+Playwright smoke kümesi iki runner'a bölünür ve her parça kendi raporunu yükler.
+Tarayıcı package-lock
 sürümünden kurulur ve browser cache'i kullanır; sabit sürümlü Playwright docker
 imajı KULLANMA — Dependabot paket sürümünü yükselttiğinde imaj geride kalıp CI'ı kırıyor.
 Dependabot rutin version-update'larda yalnız patch/minor PR açar, bunları gruplar
@@ -164,9 +166,9 @@ Günlük şifreli DB yedeği cron'u var (`db-backup.yml`).
 1. **Plan önce.** Kullanıcı koddan önce planı birlikte kararlaştırmayı sever.
 2. Migration/trigger değişikliğini **lokal docker'da gerçek Postgres'te doğrula**
    (`npm run db:seed:local`, `docker exec ... psql`), saf util'leri Vitest ile test et.
-3. Doğrulama tümüyle yeşilse (`lint + test:unit + build`, migration varsa lokal docker)
-   **commit + push (= deploy) serbest** — ayrıca onay isteme. Kapı kırmızıysa veya
-   riskli/geri-dönüşü zor durumda (geri alınamaz migration, sır sızıntısı) önce dur ve uyar.
+3. `npm run verify` ve gereken yerel DB doğrulaması geçince çalışma dalında
+   commit ve push yapılabilir. Kullanıcı `main` güncellemesini açıkça istediğinde
+   PR üzerinden ilerle. `main` güncellemesi üretim deploy'unu başlatır.
 4. **Commit öncesi docs güncellemesi:** Kod değişikliğini commit etmeden önce
    `docs/BACKLOG.md` (tamamlanan/ilerleyen maddeyi işaretle) ve
    `docs/AI_CONTEXT_INDEX.md` (yeni/taşınan/silinen dosyayı konu→dosya tablosuna yansıt)

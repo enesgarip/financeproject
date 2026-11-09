@@ -44,6 +44,11 @@ T01 test bakımı. U01 gerçek telefondaki navbar belirtisi ayrıca izlenir.
 - [x] T01 güncel canlı test seçicileri ve fixture temizliği
 - [ ] U01 gerçek telefonda navbarın ortada kalması: birebir yeniden üretim yok; açık tanı sınırı
 
+Takip düzeltmesi: `CrudPage` aynı gezinme kaydındaki `?new=1` isteğini bir
+kez tüketir. URL değiştirme işlemi tamamlanmadan gelen render önceden formu
+tekrar açabiliyordu. İptal sonrası formun kapandığı ve sayfa kaydırma kilidinin
+kalktığı mevcut Playwright senaryolarıyla doğrulanır.
+
 ## Yayın kapıları
 
 - [x] `npm run verify`

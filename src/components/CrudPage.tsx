@@ -273,11 +273,14 @@ export function CrudPage<T extends CrudTableName>({
     setModalOpen(true)
   }, [getInitialValues])
 
+  const openedCreateLocation = useRef<string | null>(null)
   useEffect(() => {
     const params = new URLSearchParams(location.search)
-    if (params.get('new') !== '1') return
+    if (params.get('new') !== '1' || openedCreateLocation.current === location.key) return
 
     const openTimer = window.setTimeout(() => {
+      // Router replace tamamlanmadan gelen bir render aynı açma isteğini yinelememeli.
+      openedCreateLocation.current = location.key
       openCreate()
       params.delete('new')
       navigate(
@@ -290,7 +293,7 @@ export function CrudPage<T extends CrudTableName>({
     }, 0)
 
     return () => window.clearTimeout(openTimer)
-  }, [location.pathname, location.search, navigate, openCreate])
+  }, [location.key, location.pathname, location.search, navigate, openCreate])
 
   function openEdit(row: RowFor<T>) {
     setEditing(row)

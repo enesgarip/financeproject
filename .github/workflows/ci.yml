@@ -47,7 +47,7 @@ jobs:
             changed=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
             while IFS= read -r file; do
               case "$file" in
-                supabase/functions/_shared/automationRules.ts|src/*|public/*|tests/e2e/*|tests/edge/*|index.html|package.json|package-lock.json|vite.config.*|vitest.config.*|playwright.config.*|tsconfig*.json|eslint.config.*|.lighthouserc.cjs|vercel.json|.github/workflows/ci.yml|.github/workflows/deploy.yml|scripts/check-bundle-size.mjs|scripts/archive-source-maps.mjs|scripts/promote-vercel-deployment.mjs)
+                supabase/functions/_shared/automationRules.ts|src/*|public/*|tests/e2e/*|tests/edge/*|index.html|package.json|package-lock.json|.npmrc|vite.config.*|vitest.config.*|playwright.config.*|tsconfig*.json|eslint.config.*|.lighthouserc.cjs|vercel.json|.github/workflows/ci.yml|.github/workflows/deploy.yml|.github/actions/setup-dependencies/*|scripts/check-bundle-size.mjs|scripts/archive-source-maps.mjs|scripts/promote-vercel-deployment.mjs)
                   frontend=true
                   ;;
               esac
@@ -77,24 +77,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
+      - name: Setup Node dependencies
+        uses: ./.github/actions/setup-dependencies
         with:
-          node-version: 24
-          cache: npm
-
-      # setup-node'un npm cache'i yalnız indirme cache'i; npm ci yine tüm
-      # node_modules'ü kurar. Lock hash'i anahtar olduğu için bayatlama yok.
-      - name: Restore node_modules
-        id: node-modules-cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}
-
-      - name: Install dependencies
-        if: ${{ steps.node-modules-cache.outputs.cache-hit != 'true' }}
-        run: npm ci
+          save-cache: 'true'
 
       - name: Restore quality caches
         uses: actions/cache@v4
@@ -123,22 +109,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Restore node_modules
-        id: node-modules-cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}
-
-      - name: Install dependencies
-        if: ${{ steps.node-modules-cache.outputs.cache-hit != 'true' }}
-        run: npm ci
+      - name: Setup Node dependencies
+        uses: ./.github/actions/setup-dependencies
 
       - name: Restore TypeScript cache
         uses: actions/cache@v4
@@ -196,22 +168,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Restore node_modules
-        id: node-modules-cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}
-
-      - name: Install dependencies
-        if: ${{ steps.node-modules-cache.outputs.cache-hit != 'true' }}
-        run: npm ci
+      - name: Setup Node dependencies
+        uses: ./.github/actions/setup-dependencies
 
       - name: Use GitHub runner Chrome for Lighthouse
         run: |
@@ -264,30 +222,20 @@ jobs:
           if-no-files-found: error
 
   e2e:
-    name: Playwright Smoke
+    name: Playwright Smoke (${{ matrix.shard }}/2)
     needs: changes
     if: ${{ github.event_name != 'schedule' && needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Restore node_modules
-        id: node-modules-cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json') }}
-
-      - name: Install dependencies
-        if: ${{ steps.node-modules-cache.outputs.cache-hit != 'true' }}
-        run: npm ci
+      - name: Setup Node dependencies
+        uses: ./.github/actions/setup-dependencies
 
       - name: Restore Playwright Chromium
         id: playwright-cache
@@ -304,8 +252,9 @@ jobs:
         run: npx playwright install chromium
 
       - name: Run Playwright smoke tests
-        run: npm run test:e2e
+        run: npm run test:e2e -- --shard="$SHARD/2"
         env:
+          SHARD: ${{ matrix.shard }}
           CI: "1"
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_ANON_KEY: ci-anon-key
@@ -314,7 +263,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: |
             playwright-report
             test-results

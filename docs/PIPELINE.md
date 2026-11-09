@@ -118,6 +118,8 @@ iddiası taşımaz; işi kapatırken `npm run verify` zorunludur. CI tam test
 kümesini koşmaya devam eder. Worker/izolasyon, property-test tekrar sayıları ve
 coverage eşikleri düşürülmedi. Saf veri sağlığı testi boş veri nesnesini
 `DataHealth.logic.ts` üzerinden aldığı için actions/repo/Supabase zincirini yüklemez.
+Vite, üretilen `coverage/`, `playwright-report/` ve `test-results/` dizinlerini
+izlemez. Yerelde coverage raporu yazılırken açık Playwright sayfası yenilenmez.
 
 16 Ekim yerel ölçümü (4 worker, iki koşu): Vitest ortalaması 8,96 → 8,37 sn;
 doğrudan Node guard + Vitest toplamı 9,54 → 9,26 sn (npm/launcher ek yükü hariç).
@@ -163,6 +165,14 @@ config'e; ayrı TypeScript cache'i lockfile + tsconfig'e bağlıdır. PR cache'l
 GitHub'ın dal/ref sınırlarını korur; production için PR artifact'ı veya
 production env içeren `.vercel` dizini cache'lenmez.
 
+CI ve deploy'un ortak `.github/actions/setup-dependencies/action.yml` adımı
+işletim sistemi sürümü, mimari, kesin Node sürümü ve npm girdileri eşleştiğinde
+kurulu `node_modules` ağacını geri yükler. Eşleşme yoksa
+`npm ci --no-audit --no-fund` çalışır. Güvenlik kapısı ayrı
+`npm audit --omit=dev --audit-level=high` adımıdır ve cache isabetinde de koşar.
+Kalite işi kurulumu lint/build öncesi kaydeder. Build, Lighthouse ve Playwright
+aynı girdilerle cache'i okur. Lint ve TypeScript çıktı cache'leri ayrı tutulur.
+
 Lighthouse CI, GitHub status sonucunu yazabilsin diye job-scoped GitHub Actions
 token'ını `LHCI_GITHUB_TOKEN` olarak alır. Bu, "GitHub token not set" uyarısını
 ayrı bir personal access token oluşturmadan giderir; detaylı HTML raporu yine
@@ -185,10 +195,11 @@ sekmesi arka planda kaldığında animasyon ilerlemeyip çalışan login formu i
 `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` ile açar.
 Lighthouse, ayrı Playwright tarayıcısı indirmek yerine GitHub runner'da hazır
 Chrome'u headless kullanır; bu hem browser kurulumunu kaldırır hem de
-LHCI/Playwright Chromium kilitlenmesini önler. Playwright smoke ise package-lock
-sürümüne
-anahtarlanmış Actions cache'ini ve cache miss'te `npx playwright install
-chromium` desenini korur. Sabit `mcr.microsoft.com/playwright:vX-noble` imajını
+LHCI/Playwright Chromium kilitlenmesini önler. Playwright smoke aynı test
+kümesini `fullyParallel` ile iki runner'a dağıtır. İki parça da sonuca ulaşır
+ve `playwright-report-1` / `playwright-report-2` artifact'larını ayrı yükler.
+Tarayıcı cache'i package-lock'a bağlıdır. Cache kaçırıldığında
+`npx playwright install chromium` çalışır. Sabit `mcr.microsoft.com/playwright:vX-noble` imajını
 geri getirme: Dependabot paket sürümünü yükselttiğinde imaj geride kalıp CI'ı
 günlerce kırmızı bırakmıştı (2026-06-22..07-02).
 GitHub runner'da Lighthouse `provided` throttling ve daha uzun FCP/load bekleme
@@ -203,9 +214,10 @@ Runs on push to `main` or manual dispatch.
 
 Order/parallel graph:
 
-1. **Classify** — frontend, database/migration, and edge-function paths
-2. **Parallel checks + build** — lint + coverage + production dependency audit
-   run alongside the one production-env build and staged prebuilt upload.
+1. **Classify and start quality checks** — classify frontend, database/migration,
+   and edge-function paths while lint, coverage and production dependency audit start.
+2. **Build and stage** — once classification finishes, run the production-env
+   build and staged prebuilt upload when frontend paths changed.
    `verify` retains the **Lint and Build** name and requires both jobs to succeed.
    Production build/staging runs only on `main`, including manual dispatch.
 3. **Parallel database/edge checks + backup** — a fresh local database with
@@ -246,6 +258,16 @@ lint 20 sn, coverage 24 sn, build 23 sn, CLI kurulumu 11 sn, staged upload 7 sn.
 sonuç değildir. Önce/sonra aynı değişiklik türünü ve cache isabetini karşılaştır;
 migration'lı release'leri frontend-only koşularla aynı hedefe göre değerlendirme.
 Paralellik daha fazla runner başlangıcı gerektirir; kazancı gerçek koşularda ölç.
+
+9 Kasım 2026 karşılaştırma tabanı, önceki 15 başarılı `main` push koşusunun
+workflow toplamıdır. Yalnız frontend değişen 7 koşuda medyan **107 sn**,
+migration içeren 8 koşuda **163 sn**. npm indirme cache'inin isabet ettiği
+frontend örneğinde iki `npm ci` adımı 39 ve 44 sn, üretim derlemesi 20 sn
+sürdü. [Frontend yayın koşusu](https://github.com/enesgarip/financeproject/actions/runs/42379095886)
+
+Denetim PR'ında tek Playwright işi 180 sn, test adımı 143 sn sürdü. Yeni
+koşularda cache isabetini, en yavaş Playwright parçasını ve toplam runner
+süresini ayrı kaydet. [Denetim PR koşusu](https://github.com/enesgarip/financeproject/actions/runs/42532292045)
 
 The path-aware database check in both `ci.yml` and `deploy.yml` runs the ENTIRE
 `supabase/tests/*.sql` suite in a single loop step after a clean migration

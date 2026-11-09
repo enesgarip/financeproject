@@ -1,5 +1,18 @@
 # Priority Backlog
 
+## 2026-11-09 — Geliştirme ve yayın geri bildirimi
+
+- [x] AI bağlam dizininin ilk bölümüne görev, kaynak kural, kod ve hedefli test
+  rotasını taşı. Tarihli kayıtlar ve ayrıntılı domain haritası aynı dizinde.
+- [x] PR ve production kalite/build işlerinde temiz kurulu bağımlılık
+  cache'ini paylaş. Tam kalite kapısı ve release önkoşulları her yayında uygulanır.
+- [x] CI Playwright kümesini iki runner'a böl, iki raporu ayrı sakla.
+- [x] Vite'ın yerel coverage ve Playwright çıktılarını izlemesini engelle.
+- [x] Aynı `?new=1` gezinmesinin iptalden sonra CRUD formunu yeniden açmasını
+  önle. Mevcut dokuz form iptali senaryosu bu yolu kapsar.
+- [ ] İlk sıcak production koşularında yalnız frontend ve migration yayınlarını
+  ayrı ölç. Önceki medyanlar 107 sn ve 163 sn. Yöntem ve örnekler `docs/PIPELINE.md`.
+
 ## 2026-11-09 — Birleşik denetim düzeltmeleri
 
 35 ürün maddesi (M01–M23/V01–V07/F01–F05) ve T01 uygulandı.
