@@ -121,6 +121,13 @@ coverage eşikleri düşürülmedi. Saf veri sağlığı testi boş veri nesnesi
 Vite, üretilen `coverage/`, `playwright-report/` ve `test-results/` dizinlerini
 izlemez. Yerelde coverage raporu yazılırken açık Playwright sayfası yenilenmez.
 
+Ekran taraması `tests/e2e/layout-viewport.spec.ts` içinde 19 rotayı 320, 390
+ve 1280 px görünümlerde kontrol eder. Test dört rota grubuna ayrılır. Her
+rotada görünen içeriği ve yazı tiplerinin hazır olmasını bekler. Örneğin
+`npm run test:e2e -- tests/e2e/layout-viewport.spec.ts -g "planlama"` yalnız
+planlama grubunu çalıştırır. Tarama ve akış testleri aynı sentetik oturum ve
+veri örneklerini `tests/e2e/audit-fixtures.ts` üzerinden kullanır.
+
 16 Ekim yerel ölçümü (4 worker, iki koşu): Vitest ortalaması 8,96 → 8,37 sn;
 doğrudan Node guard + Vitest toplamı 9,54 → 9,26 sn (npm/launcher ek yükü hariç).
 Bu küçük kazanç GitHub runner'ında henüz ölçülmedi. Etkilenen test komutu bu
@@ -214,12 +221,16 @@ Runs on push to `main` or manual dispatch.
 
 Order/parallel graph:
 
-1. **Classify and start quality checks** — classify frontend, database/migration,
-   and edge-function paths while lint, coverage and production dependency audit start.
+1. **Classify and start quality checks** — compare the current tree to the latest
+   successful production run on `main` while lint, coverage and dependency audit start.
+   This includes pending paths from failed or superseded runs. A manual dispatch
+   or an empty release history opens all release gates.
 2. **Build and stage** — once classification finishes, run the production-env
    build and staged prebuilt upload when frontend paths changed.
    `verify` retains the **Lint and Build** name and requires both jobs to succeed.
    Production build/staging runs only on `main`, including manual dispatch.
+   A change confined to tests (including `src/**/*.test.ts` and
+   `src/**/*.test.tsx`) and docs uses the quality build with placeholder env.
 3. **Parallel database/edge checks + backup** — a fresh local database with
    migrations, seed, lint and the full SQL suite when database paths changed;
    encrypted backup only for migrations. Edge type-check completes before any
@@ -244,6 +255,10 @@ are cached; pulled env files and `.vercel/output` are excluded. The token is
 scoped to pull/build/upload steps and passed through `VERCEL_TOKEN`.
 
 ### Süre ölçümü ve hedef
+
+`npm run build`, TypeScript, Vite ve kaynak haritası arşivleme sürelerini
+`[build]` satırlarında ayrı yazar. Production `vercel build` logunda bu
+satırlar aynı artifact'ın üretim aşamalarını gösterir.
 
 Her iki workflow'un sonundaki **Workflow Timings**, GitHub Actions API'sini salt
 okunur çağırır ve job summary'ye iş/adım süreleri ile aynı dal/tetikleyicinin
