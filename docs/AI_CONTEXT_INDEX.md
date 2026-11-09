@@ -15,7 +15,7 @@ katmana geç. Tarihli kayıtlar bir kararın geçmişini araştırırken kullan�
 | Form, iptal ve mobil gezinme | [UI mimarisi](UI_ARCHITECTURE.md) | `src/components/CrudPage.tsx`, `src/lib/navigationSafety.ts`, `tests/e2e/audit-remediation.spec.ts` |
 | Mobil ve masaüstü ekran taraması | [UI mimarisi](UI_ARCHITECTURE.md), [test komutları](PIPELINE.md#test-geri-bildirimi-ve-tam-kapı) | `tests/e2e/layout-viewport.spec.ts`; özet ve borçlar, varlıklar, planlama, analiz ve veri sağlığı grupları |
 | Bulgu taraması ve kapanış | [Backlog](BACKLOG.md), [9 Kasım denetim kapanışı](AUDIT_REMEDIATION_2026-11-09.md) | Bulgu kimliğinden rapordaki dosya ve kabul testine geç |
-| CI, test ve yayın | [Pipeline](PIPELINE.md) | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `tests/guards/pipeline-classification.guard.test.mjs`, `src/utils/pipeline.guard.test.ts`, `scripts/build.mjs` |
+| CI, test ve yayın | [Pipeline](PIPELINE.md) | `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `tests/guards/pipeline-classification.guard.test.mjs`, `src/utils/pipeline.guard.test.ts`, `tests/e2e/auth-smoke.spec.ts`, `tests/e2e/auth-local.spec.ts` |
 | Diğer alanlar | [Domain belgeleri](#domain-source-of-truth), [konu ve dosya tablosu](#konu--dosya-hızlı-türkçe-tablo) | İlgili giriş ve yanındaki test |
 
 Geliştirirken tek test dosyasını veya `npm run test:changed` komutunu çalıştır.

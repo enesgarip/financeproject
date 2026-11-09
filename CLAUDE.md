@@ -121,10 +121,10 @@ Düzeltme = **ters kayıt** (append-only history bozulmaz). GUC ile yönlendiril
 
 `main`'e **push = üretim deploy** (`.github/workflows/deploy.yml`):
 1. **Classify + paralel kontrol/build** — son başarılı main yayınıyla farkı sınıflar; lint + coverage + production dependency audit eşzamanlı başlar; `Lint and Build` iki kalite sonucunu zorunlu başarıyla toplar
-2. **Tek artifact** — frontend değiştiyse production env'i çek, bir kez `vercel build --prod` ile build et, bundle bütçesini doğrula ve `--prebuilt --skip-domain` ile staged yükle. Yalnız test ve belge değiştiğinde yer tutucu env ile kalite build'i çalışır.
-3. **Paralel DB/edge check + backup** — DB değiştiyse yerel gerçek Postgres kontrolü; migration varsa şifreli yedek; edge tipi üretime herhangi bir yazmadan önce doğrulanır
-4. **Supabase release** — yalnız migration değiştiyse `db push`; yalnız değişen edge function'ları deploy et
-5. **Vercel promote + smoke** — resmi scoped API ile aynı staged build'i canlıya al; `/login` smoke başarısızsa önceki production deployment'a otomatik rollback yap
+2. **Tek artifact** — frontend değiştiyse production env'i çek, bir kez `vercel build --prod` ile build et, bundle bütçesini doğrula, `.vercel/output/static` üzerinde Chrome ile giriş formunu aç ve `--prebuilt --skip-domain` ile staged yükle. Yalnız test ve belge değiştiğinde yer tutucu env ile kalite build'i çalışır.
+3. **Paralel DB/edge check + backup** — DB değiştiyse yerel gerçek Postgres kontrolü ve seed ile girişten Özet'e kadar tarayıcı kontrolü; migration varsa şifreli yedek; edge tipi üretime herhangi bir yazmadan önce doğrulanır
+4. **Supabase release** — yalnız migration değiştiyse `db push`; edge seçimi sınıflandırmanın yayımladığı son başarılı yayın tabanını kullanır
+5. **Vercel promote + smoke** — resmi scoped API ile aynı staged build'i canlıya al; canlı alan adındaki Chrome giriş kontrolü başarısızsa önceki production deployment'a otomatik rollback yap
 
 Gerekli bir DB/yedek/edge/release işi `failure`, `cancelled` veya beklenmedik
 `skipped` ise yayın durur. CI ve deploy, eşleşen temiz `node_modules` cache'ini

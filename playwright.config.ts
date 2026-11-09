@@ -3,6 +3,7 @@ import { defineConfig, devices } from '@playwright/test'
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 4173)
 const externalBaseURL = process.env.PLAYWRIGHT_BASE_URL
 const baseURL = externalBaseURL ?? `http://127.0.0.1:${port}`
+const prebuilt = process.env.PLAYWRIGHT_PREBUILT === '1'
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -16,9 +17,11 @@ export default defineConfig({
   webServer: externalBaseURL
     ? undefined
     : {
-        command: `npm run dev -- --host 127.0.0.1 --port ${port} --strictPort`,
+        command: prebuilt
+          ? `npm run preview -- --outDir .vercel/output/static --host 127.0.0.1 --port ${port} --strictPort`
+          : `npm run dev -- --host 127.0.0.1 --port ${port} --strictPort`,
         url: baseURL,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: !process.env.CI && !prebuilt,
         stdout: 'pipe',
         stderr: 'pipe',
         env: {
@@ -29,7 +32,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], channel: process.env.PLAYWRIGHT_BROWSER_CHANNEL === 'chrome' ? 'chrome' : undefined },
     },
   ],
 })

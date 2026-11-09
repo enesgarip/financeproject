@@ -112,20 +112,24 @@ The `Deploy Production` workflow currently does this on `main`:
 1. Classify frontend, migration/database, and edge-function changes.
 2. Run lint, coverage and production dependency verification in parallel with
    the build. The required `Lint and Build` check aggregates both results.
-3. Pull production environment values on `main`, build once, verify the bundle, and
-   upload that exact artifact as an unaliased prebuilt production deployment.
+3. Pull production environment values on `main`, build once, verify the bundle
+   and open the login form in Chrome using the generated static output. Upload
+   that exact artifact as an unaliased prebuilt production deployment.
 4. In parallel, start a fresh local database, apply seed, run lint and every
-   `supabase/tests/*.sql` file when database files changed.
+   `supabase/tests/*.sql` file when database files changed. Check seeded login,
+   the snapshot RPC and the rendered Özet against that local database.
 5. Run an encrypted pre-migration backup when migrations changed.
 6. Complete the edge type-check (if needed) before any production writes.
    Require quality, DB, backup and edge checks to succeed; only irrelevant
    jobs may be skipped. Then show the production migration dry run and apply pending migrations with
    `--include-all` only when migration files changed.
-7. Deploy only changed edge functions (`_shared` changes redeploy all).
+7. Deploy edge functions selected against the same release base as path
+   classification. Shared code, scheduler changes and full releases deploy all.
 8. Promote the exact staged Vercel deployment through the team-scoped API after
    required Supabase work succeeds; promotion does not rebuild.
-9. Smoke-test the canonical production `/login` route and automatically roll
-   traffic back to the previous deployment when the smoke check fails.
+9. Check the signed-out redirect and rendered login form in Chrome on the
+   canonical production domain. Roll traffic back to the previous deployment
+   if all browser attempts fail.
 
 Do not bypass this order for schema/RPC changes. The app should see the new
 database contract before the new frontend goes live.

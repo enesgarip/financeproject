@@ -26,6 +26,7 @@ jobs:
       database: ${{ steps.detect.outputs.database }}
       migrations: ${{ steps.detect.outputs.migrations }}
       edge: ${{ steps.detect.outputs.edge }}
+      release_base: ${{ steps.detect.outputs.release_base }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -87,6 +88,7 @@ jobs:
           echo "database=$database" >> "$GITHUB_OUTPUT"
           echo "migrations=$migrations" >> "$GITHUB_OUTPUT"
           echo "edge=$edge" >> "$GITHUB_OUTPUT"
+          echo "release_base=$base" >> "$GITHUB_OUTPUT"
 
   checks:
     name: Lint, Coverage and Audit
@@ -196,6 +198,15 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      - name: Verify prebuilt login in Chrome
+        if: ${{ needs.changes.outputs.frontend == 'true' }}
+        env:
+          PLAYWRIGHT_PREBUILT: '1'
+          PLAYWRIGHT_BROWSER_CHANNEL: chrome
+        run: |
+          test -f .vercel/output/static/index.html
+          npm run test:e2e -- tests/e2e/auth-smoke.spec.ts --retries=0 --reporter=line --trace=off
+
       - name: Upload staged prebuilt production
         if: ${{ needs.changes.outputs.frontend == 'true' }}
         id: stage
@@ -266,13 +277,10 @@ jobs:
           sudo chmod +x /usr/local/bin/supabase*
           supabase --version
 
-      - name: Start local Supabase (migration'lar dahil)
-        run: supabase db start
-
-      # `db start` migration'ların tamamını ZATEN uyguluyor (ci.yml'deki notun
-      # eşi); reset'in kalan tek katkısı olan seed psql ile bir kez uygulanır.
-      - name: Apply seed
-        run: docker exec -i supabase_db_financeproject psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < supabase/seed.sql
+      - name: Start local Supabase with Auth and REST API
+        # Giriş testi için Postgres, Auth, PostgREST ve Kong yeterli. Temiz
+        # runner'da start migration'ları ve config'teki seed'i uygular.
+        run: supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 
       - name: Lint local database
         run: supabase db lint --local --fail-on error
@@ -295,16 +303,25 @@ jobs:
             echo "::endgroup::"
           done
 
-      - name: Setup Node for database verification
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
+      - name: Setup Node dependencies
+        uses: ./.github/actions/setup-dependencies
 
       - name: Verify concurrent notification claims
         run: node scripts/test-notification-concurrency.mjs
 
       - name: Verify backup restore and payment replay
         run: node scripts/test-backup-restore.mjs
+
+      - name: Verify seeded login and finance summary in Chrome
+        env:
+          E2E_LOCAL_AUTH_SMOKE: '1'
+          PLAYWRIGHT_BROWSER_CHANNEL: chrome
+        run: |
+          status=$(supabase status -o json)
+          VITE_SUPABASE_URL=$(jq -er '.API_URL' <<< "$status")
+          VITE_SUPABASE_ANON_KEY=$(jq -er '.ANON_KEY' <<< "$status")
+          export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY
+          npm run test:e2e -- tests/e2e/auth-local.spec.ts --retries=0 --reporter=line --trace=off
 
   backup:
     name: Pre-migration backup
@@ -382,20 +399,17 @@ jobs:
       - name: Deploy changed edge functions
         if: ${{ needs.changes.outputs.edge == 'true' }}
         env:
-          BEFORE: ${{ github.event.before }}
+          RELEASE_BASE: ${{ needs.changes.outputs.release_base }}
           SHA: ${{ github.sha }}
-          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ -z "$BEFORE" ] \
-            || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+          if [ -z "$RELEASE_BASE" ]; then
             changed="ALL"
           else
-            changed=$(git diff --name-only "$BEFORE" "$SHA" -- supabase/functions)
-            config_changed=$(git diff --name-only "$BEFORE" "$SHA" -- scripts/configure-push-scheduler.mjs)
-            if [ -n "$config_changed" ]; then changed="ALL"; fi
+            changed=$(git -c core.quotePath=false diff --no-renames --name-only "$RELEASE_BASE" "$SHA" -- supabase/functions scripts/configure-push-scheduler.mjs)
           fi
 
           if [ "$changed" = "ALL" ] \
+            || printf '%s\n' "$changed" | grep -qx 'scripts/configure-push-scheduler.mjs' \
             || printf '%s\n' "$changed" | grep -q '^supabase/functions/_shared/' \
             || printf '%s\n' "$changed" | grep -q '^supabase/functions/[^/]*$'; then
             mapfile -t functions < <(
@@ -451,21 +465,23 @@ jobs:
       }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      DEPLOYMENT_URL: ${{ needs.build.outputs.deployment_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
+      - name: Setup Node dependencies
+        uses: ./.github/actions/setup-dependencies
+
+      - name: Verify Chrome is available
+        run: google-chrome --version
 
       - name: Promote, smoke test, and rollback on failure
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          DEPLOYMENT_URL: ${{ needs.build.outputs.deployment_url }}
+          PLAYWRIGHT_BROWSER_CHANNEL: chrome
         run: node scripts/promote-vercel-deployment.mjs
 
   edge_check:
