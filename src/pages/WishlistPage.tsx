@@ -210,28 +210,30 @@ export function WishlistPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]">
-            <Input
-              ref={nameInputRef}
-              type="text"
-              placeholder="Ne almak istiyorsun?"
-              aria-label="Alınacak ürün"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="h-11"
-              disabled={addMutation.isPending}
-            />
-            <Input
-              type="text"
-              inputMode="decimal"
-              placeholder="Tahmini fiyat"
-              aria-label="Tahmini fiyat"
-              aria-invalid={priceInvalid}
-              aria-describedby={priceInvalid ? 'wishlist-price-error' : undefined}
-              value={newPrice}
-              onChange={(e) => setNewPrice(e.target.value)}
-              className="h-11"
-              disabled={addMutation.isPending}
-            />
+              <label className="space-y-1 text-sm font-semibold">
+                <span>Alınacak ürün</span>
+                <Input
+                  ref={nameInputRef}
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="h-11"
+                  disabled={addMutation.isPending}
+                />
+              </label>
+              <label className="space-y-1 text-sm font-semibold">
+                <span>Tahmini fiyat (TL)</span>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  aria-invalid={priceInvalid}
+                  aria-describedby={priceInvalid ? 'wishlist-price-error' : undefined}
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  className="h-11"
+                  disabled={addMutation.isPending}
+                />
+              </label>
             </div>
             {priceInvalid ? <p id="wishlist-price-error" className="text-xs text-destructive">Pozitif bir fiyat gir. Fiyat bilinmiyorsa alanı boş bırak.</p> : null}
             {newName.trim() ? (

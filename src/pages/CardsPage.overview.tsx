@@ -12,14 +12,14 @@ import { formatCurrency } from '../utils/formatCurrency'
 import { diffTL, sumTL } from '../utils/money'
 import { cardHelp } from './CardsPage.help'
 
-export function OverviewStat({ label, value, help }: { label: string; value: string; help?: HelpTooltipContent }) {
+export function OverviewStat({ label, value, help, wrapValue = false }: { label: string; value: string; help?: HelpTooltipContent; wrapValue?: boolean }) {
   return (
     <div className="min-w-0 rounded-lg bg-page px-2.5 py-2">
       <div className="flex min-w-0 items-center gap-1">
         <p className="truncate text-[11px] font-medium text-ink-muted">{label}</p>
         {help ? <HelpTooltip title={label} content={help} /> : null}
       </div>
-      <p className="mt-1 truncate text-sm font-bold tabular-nums text-ink">{value}</p>
+      <p className={`mt-1 text-sm font-bold tabular-nums text-ink ${wrapValue ? 'wrap-anywhere' : 'truncate'}`}>{value}</p>
     </div>
   )
 }

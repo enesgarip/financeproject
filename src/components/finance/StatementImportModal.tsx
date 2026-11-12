@@ -453,22 +453,24 @@ export function StatementImportModal({ card, onClose, onSuccess }: Props) {
         {/* Mobilde bottom-sheet: tutamak biçimin kendisini anlatır. */}
         <span aria-hidden="true" className="mx-auto mt-3 block h-1 w-9 shrink-0 rounded-full bg-line-strong sm:hidden" />
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-line-strong bg-raised px-4 py-3 backdrop-blur">
-          <div className="flex items-center gap-2">
-            <FileText size={16} className="text-primary" aria-hidden="true" />
-            <span id="statement-import-title" className="text-sm font-black text-ink">Ekstre İçe Aktar</span>
-            <span className="rounded-md bg-page px-2 py-0.5 text-xs font-bold text-ink-muted">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-line-strong bg-raised px-4 py-3 backdrop-blur">
+          <div className="min-w-0 space-y-1">
+            <h2 id="statement-import-title" className="flex items-center gap-2 text-base font-semibold text-ink">
+              <FileText size={16} className="shrink-0 text-primary" aria-hidden="true" />
+              Ekstre İçe Aktar
+            </h2>
+            <p className="wrap-anywhere text-xs font-medium text-ink-muted">
               **** {card.card_name}
-            </span>
+            </p>
           </div>
           <button
             type="button"
             onClick={() => { if (!(importing || parsing)) onClose() }}
             disabled={importing || parsing}
             aria-label="Kapat"
-            className="tap-target grid size-7 place-items-center rounded-lg hover:bg-black/[.03] dark:hover:bg-white/[.04]"
+            className="interaction-press grid size-11 shrink-0 place-items-center rounded-lg border border-line-strong bg-page text-ink-muted hover:bg-primary/8 hover:text-ink"
           >
-            <X size={15} aria-hidden="true" />
+            <X size={20} strokeWidth={1.8} aria-hidden="true" />
           </button>
         </div>
 

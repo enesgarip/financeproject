@@ -209,27 +209,41 @@ function ContextManager({ contexts, userId, onChanged, onError, confirm, showCom
             })}
           </ul>
         ) : <p className="rounded-xl border border-dashed border-line-strong p-4 text-center text-sm text-ink-muted">{showCompleted ? 'Tamamlanan gider grubu yok.' : 'Aktif gider grubu yok. Yeni bir grup ekleyebilir veya tamamlanan bir grubu yeniden açabilirsin.'}</p>}
-        <form onSubmit={add} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
-          <Select
-            value={kind}
-            onChange={(event) => {
-              const next = event.target.value as ExpenseContextKind
-              setKind(next)
-              // Süresiz tür (pet/sağlık/hobi/yan iş) tarih taşımaz — temizle.
-              if (!contextKindTimeboxed(next)) { setStartsOn(''); setEndsOn('') }
-            }}
-            aria-label="Gider grubu türü"
-          >
-            {EXPENSE_CONTEXT_KINDS.map((entry) => (
-              <option key={entry.kind} value={entry.kind}>{entry.label}</option>
-            ))}
-          </Select>
-          <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={namePlaceholder(kind)} aria-label="Gider grubu adı" required />
-          <Input value={budget} onChange={(event) => setBudget(event.target.value)} inputMode="decimal" placeholder="Bütçe (isteğe bağlı)" aria-label="Gider grubu bütçesi" />
+        <form onSubmit={add} className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="min-w-0 space-y-1 text-sm font-semibold">
+            <span>Gider grubu türü</span>
+            <Select
+              value={kind}
+              onChange={(event) => {
+                const next = event.target.value as ExpenseContextKind
+                setKind(next)
+                // Süresiz tür (pet/sağlık/hobi/yan iş) tarih taşımaz — temizle.
+                if (!contextKindTimeboxed(next)) { setStartsOn(''); setEndsOn('') }
+              }}
+            >
+              {EXPENSE_CONTEXT_KINDS.map((entry) => (
+                <option key={entry.kind} value={entry.kind}>{entry.label}</option>
+              ))}
+            </Select>
+          </label>
+          <label className="min-w-0 space-y-1 text-sm font-semibold">
+            <span>Gider grubu adı</span>
+            <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={namePlaceholder(kind)} required />
+          </label>
+          <label className="min-w-0 space-y-1 text-sm font-semibold">
+            <span>Bütçe (TL, isteğe bağlı)</span>
+            <Input value={budget} onChange={(event) => setBudget(event.target.value)} inputMode="decimal" />
+          </label>
           {contextKindTimeboxed(kind) ? (
             <>
-              <Input type="date" value={startsOn} onChange={(event) => setStartsOn(event.target.value)} aria-label="Başlangıç (opsiyonel)" />
-              <Input type="date" value={endsOn} onChange={(event) => setEndsOn(event.target.value)} aria-label="Bitiş (boş bırak = süresiz)" />
+              <label className="min-w-0 space-y-1 text-sm font-semibold">
+                <span>Başlangıç tarihi (isteğe bağlı)</span>
+                <Input type="date" value={startsOn} onChange={(event) => setStartsOn(event.target.value)} />
+              </label>
+              <label className="min-w-0 space-y-1 text-sm font-semibold">
+                <span>Bitiş tarihi (isteğe bağlı)</span>
+                <Input type="date" value={endsOn} onChange={(event) => setEndsOn(event.target.value)} />
+              </label>
             </>
           ) : null}
           <Button type="submit" disabled={!name.trim() || saving}><Plus /> {saving ? 'Ekleniyor...' : 'Ekle'}</Button>

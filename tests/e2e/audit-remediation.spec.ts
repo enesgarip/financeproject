@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { mockApp, base, now } from './audit-fixtures'
+import { mockApp, base, now, tables } from './audit-fixtures'
 
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 async function dockAtBottom(page: Page) {
@@ -15,6 +15,150 @@ for (const path of ['/kartlar?section=hesaplar', '/kartlar?section=kartlar', '/b
     await expect(dialog).toHaveCount(0); await dockAtBottom(page)
   })
 }
+
+for (const [path, field] of [
+  ['/kartlar?section=hesaplar&new=1', 'bank_name'],
+  ['/kartlar?section=kartlar&new=1', 'bank_name'],
+  ['/borclar/krediler?new=1', 'bank_name'],
+  ['/odemeler?view=plans&new=1', 'title'],
+]) {
+  test('kısa ekranda Kaydet alanı örtmez ve ilk hata görünür: ' + path, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 440 })
+    await mockApp(page, 'light')
+    await page.goto(path)
+    await page.clock.resume()
+    const dialog = page.getByRole('dialog')
+    const form = dialog.locator('form')
+    const save = dialog.getByRole('button', { name: 'Kaydet', exact: true })
+    const invalid = dialog.locator('[name="' + field + '"]')
+    const scroller = form.locator('..')
+    await expect(save).toBeInViewport()
+    if (field === 'title') await form.locator('[name=payment_method]').selectOption('bank_auto')
+    await scroller.evaluate(el => { el.scrollTop = el.scrollHeight })
+    await expect(invalid).not.toBeInViewport()
+    const [bodyBox, footerBox] = await Promise.all([scroller.boundingBox(), save.boundingBox()])
+    expect(bodyBox!.y + bodyBox!.height).toBeLessThan(footerBox!.y)
+    await expect(save).toBeInViewport()
+    await save.click()
+    await expect(invalid).toBeFocused()
+    await expect(invalid).toBeInViewport({ ratio: 1 })
+    await expect(invalid).toHaveAccessibleDescription(/zorunlu/i)
+    expect(await invalid.evaluate(el => {
+      const rect = el.getBoundingClientRect()
+      return document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) === el
+    })).toBe(true)
+  })
+}
+
+test('ortak tarih alanı tek takvim göstergesiyle düzenlenebilir', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 })
+  await mockApp(page, 'light')
+  await page.goto('/varliklar/maas?new=1')
+  await page.clock.resume()
+  const date = page.getByRole('dialog').locator('[name=effective_date]')
+  await expect(date).toBeVisible()
+  await expect(date.locator('..').locator('svg')).toHaveCount(1)
+  await date.fill('2026-10-30')
+  await expect(date).toHaveValue('2026-10-30')
+})
+
+test('dar ekranda seçilen uzun kart adı iki işlem formunda da okunur', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 })
+  const credit = tables.cards.find(card => card.id === 'credit-1')!
+  const prefix = 'Aile Harcamaları İçin Özel Platinum Kredi Kartı'
+  await mockApp(page, 'light', { cards: [
+    ...tables.cards.filter(card => card.id !== 'credit-1'),
+    { ...credit, card_name: prefix + ' 4321' },
+    { ...credit, id: 'credit-2', card_name: prefix + ' 9876' },
+  ] })
+  await page.goto('/odemeler?view=plans&new=1')
+  await page.clock.resume()
+  const dialog = page.getByRole('dialog')
+  await dialog.locator('[name=payment_method]').selectOption('bank_auto')
+  const scheduledCard = dialog.locator('[name=auto_source_card_id]')
+  for (const [id, suffix] of [['credit-1', '4321'], ['credit-2', '9876']]) {
+    await scheduledCard.selectOption(id)
+    await expect(scheduledCard).toHaveAccessibleDescription(new RegExp(suffix + '$'))
+    const hint = dialog.getByText('İş Bankası · ' + prefix + ' ' + suffix, { exact: true }).filter({ visible: true })
+    await expect(hint).toBeVisible()
+    expect(await hint.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+  }
+  await page.goto('/kartlar?section=kartlar&panel=manuel')
+  const expenseCard = page.locator('#hizli-harcama').getByRole('combobox', { name: 'Hesap / kredi kartı', exact: true })
+  await expenseCard.selectOption('credit-2')
+  await expect(expenseCard).toHaveAccessibleDescription(/9876$/)
+})
+
+test('gider grubu ve alınacaklar alan etiketleri dolu değerlerle birlikte görünür', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 })
+  await mockApp(page, 'dark')
+  await page.goto('/odemeler/baglamlar')
+  await page.clock.resume()
+  await page.locator('summary').filter({ hasText: 'Gider gruplarını yönet' }).click()
+  await page.getByLabel('Gider grubu türü').selectOption('travel')
+  await page.getByLabel('Gider grubu adı').fill('Yaz tatili')
+  await page.getByLabel('Bütçe (TL, isteğe bağlı)').fill('18500')
+  for (const label of ['Gider grubu adı', 'Bütçe (TL, isteğe bağlı)', 'Başlangıç tarihi (isteğe bağlı)', 'Bitiş tarihi (isteğe bağlı)']) {
+    await expect(page.getByText(label, { exact: true })).toBeVisible()
+  }
+  page.once('dialog', prompt => prompt.accept())
+  await page.goto('/odemeler/liste')
+  await page.getByLabel('Alınacak ürün').fill('Yeni kulaklık')
+  await page.getByLabel('Tahmini fiyat (TL)').fill('1200')
+  await expect(page.getByText('Alınacak ürün', { exact: true })).toBeVisible()
+  await expect(page.getByText('Tahmini fiyat (TL)', { exact: true })).toBeVisible()
+})
+
+test('taksitli harcamada Kaydet ayrıntılardan ve okunabilir tarihlerden sonra gelir', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 })
+  await mockApp(page, 'light')
+  await page.goto('/kartlar?section=kartlar&panel=manuel')
+  await page.clock.resume()
+  const form = page.locator('#hizli-harcama form')
+  const save = form.getByRole('button', { name: 'Harcamayı kaydet' })
+  const details = form.locator('summary').filter({ hasText: 'Ayrıntılar' })
+  expect(await save.evaluate(el => el.nextElementSibling?.tagName)).toBe('DETAILS')
+  await form.getByRole('combobox', { name: 'Hesap / kredi kartı', exact: true }).selectOption('credit-1')
+  await form.getByLabel('Tutar (TL)', { exact: true }).fill('3600')
+  await form.getByLabel('Açıklama', { exact: true }).fill('Taksitli alışveriş')
+  await details.click()
+  await form.getByRole('combobox', { name: 'İşlem türü', exact: true }).selectOption('installment')
+  await form.getByLabel('Taksit sayısı', { exact: true }).fill('6')
+  await form.getByLabel('Şu ana kadar ödenen taksit', { exact: true }).fill('1')
+  await form.getByLabel('Sıradaki taksit tarihi', { exact: true }).fill('2026-11-04')
+  const period = form.getByText('Dönem', { exact: true }).locator('xpath=../following-sibling::p')
+  const statement = form.getByText('Ekstre', { exact: true }).locator('xpath=../following-sibling::p')
+  await expect(save).toBeEnabled()
+  for (const date of [period, statement]) {
+    expect(await date.evaluate(el => el.clientWidth >= el.scrollWidth)).toBe(true)
+    expect((await date.boundingBox())!.y).toBeLessThan((await save.boundingBox())!.y)
+  }
+})
+
+test('Ara ve keşfet listesi kayarken arama sabit kalır ve genişlik değişmez', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 440 })
+  await mockApp(page, 'dark')
+  await page.goto('/')
+  await page.clock.resume()
+  await page.getByRole('button', { name: /^Ara ve keşfet/ }).click()
+  const dialog = page.getByRole('dialog', { name: 'Ara ve keşfet' })
+  const input = dialog.getByRole('searchbox')
+  const list = dialog.locator('.feature-explorer-scroll')
+  await expect(input).toBeInViewport({ ratio: 1 })
+  const width = await list.evaluate(el => el.clientWidth)
+  await list.evaluate(el => { el.scrollTop = 460 })
+  expect(await list.evaluate(el => el.scrollTop)).toBeGreaterThan(0)
+  await expect(input).toBeInViewport({ ratio: 1 })
+  await input.fill('görünmeyen sonuç 9281')
+  await expect(dialog.getByText('Bu aramayla eşleşen özellik bulunamadı.')).toBeVisible()
+  expect(await list.evaluate(el => el.clientWidth)).toBe(width)
+  expect(await list.evaluate(el => el.scrollTop)).toBe(0)
+  await dialog.getByRole('button', { name: 'Tüm özellikleri göster' }).click()
+  await list.evaluate(el => { el.scrollTop = el.scrollHeight })
+  const lastLink = list.locator('li a').last()
+  await expect(lastLink).toBeInViewport({ ratio: 1 })
+  await expect(input).toBeInViewport({ ratio: 1 })
+})
 test('satır menüsünden iptal kalıcı tetikleyiciye odak döndürür', async ({ page }) => {
   await mockApp(page, 'light'); await page.goto('/varliklar/maas'); await page.clock.resume()
   const trigger = page.getByRole('button', { name: /işlemleri/ }).first()
@@ -130,14 +274,25 @@ for (const theme of ['light', 'dark']) test(`ay kapanışı metin kontrastı ${t
 })
 
 test('PDF işlenirken X ve Escape aynı busy korumasına uyar', async ({ page }) => {
-  await mockApp(page, 'light')
+  await page.setViewportSize({ width: 320, height: 740 })
+  const longName = 'Aile Harcamaları İçin Özel Platinum Kredi Kartı'
+  await mockApp(page, 'light', {
+    cards: tables.cards.map(card => card.id === 'credit-1' ? { ...card, card_name: longName } : card),
+  })
   await page.route('**/src/lib/pdfText.ts', route => route.fulfill({ contentType: 'application/javascript', body: 'export async function extractPdfText(){ return new Promise(()=>{}); }' }))
   await page.goto('/kartlar?section=kartlar&card=credit-1'); await page.clock.resume()
-  await page.getByRole('button', { name: 'Örnek kart işlemleri', exact: true }).click()
+  await page.getByRole('button', { name: longName + ' işlemleri', exact: true }).click()
   await page.getByRole('menu').getByRole('button', { name: 'Ekstre içe aktar', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Ekstre İçe Aktar' })
+  const close = dialog.getByRole('button', { name: 'Kapat', exact: true })
+  await expect(dialog.getByText('**** ' + longName, { exact: true })).toBeVisible()
+  const closeBox = await close.boundingBox()
+  expect(closeBox?.width).toBeGreaterThanOrEqual(44)
+  expect(closeBox?.height).toBeGreaterThanOrEqual(44)
+  const heading = dialog.getByRole('heading', { name: 'Ekstre İçe Aktar' })
+  expect((await heading.boundingBox())?.height).toBeLessThan(30)
   await dialog.locator('input[type=file]').setInputFiles({ name: 'sentetik.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% Synthetic audit fixture\n') })
   await expect(dialog.getByText('PDF okunuyor…', { exact: true })).toBeVisible()
-  await expect(dialog.getByRole('button', { name: 'Kapat', exact: true })).toBeDisabled()
+  await expect(close).toBeDisabled()
   await page.keyboard.press('Escape'); await expect(dialog).toBeVisible()
 })

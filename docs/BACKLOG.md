@@ -1,5 +1,16 @@
 # Priority Backlog
 
+## 2026-11-12 — Form görsel denetimi
+
+- [x] Ortak formlarda ayrı Kaydet alanı, görünür ve odaklanmış ilk hata,
+  tek takvim göstergesi.
+- [x] Planlı ödeme ve harcamada tam seçili kart adı, gider grubu ve
+  alınacaklarda görünür alan etiketleri.
+- [x] Harcama ayrıntıları açıldığında Kaydet'i tarihler ve önizleme sonrasına
+  taşı, ekstre tarihlerini dar ekranda sar, PDF başlığında kart adına ayrı yer ayır.
+- [x] Ara ve keşfet'te aramayı sabit tut, tek sonuç kaydırma alanı ve
+  belirgin kaydırma çubuğu kullan.
+
 ## 2026-11-12 — Özet inceleme listesi
 
 - [x] Özet'te başlık bazında **İncelendi** eylemi. Tarayıcı aynı kayıtları

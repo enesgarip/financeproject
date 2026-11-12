@@ -2,7 +2,7 @@ import { QueryError } from './ui/query-error'
 import { useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, Check, ChevronDown, MoreVertical, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { crudRowsKey, useCrudRows, useInvalidateCrudRows } from '../app/useCrudRows'
 import { useAuth } from '../auth/useAuth'
@@ -197,11 +197,24 @@ export function CrudPage<T extends CrudTableName>({
   const [formValues, setFormValues] = useState<Record<string, string>>({})
   const [formErrors, setFormErrors] = useState<FormErrors>({})
   const [formError, setFormError] = useState('')
+  const formId = useId()
+  const formRef = useRef<HTMLFormElement>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const visibleFields = fields.filter((field) => isFieldVisible(field, formValues))
+  useEffect(() => {
+    if (!modalOpen || !formError) return
+    const form = formRef.current
+    const firstInvalid = Object.keys(formErrors).length ? form?.querySelector<HTMLElement>('[aria-invalid="true"]') : null
+    if (firstInvalid) {
+      firstInvalid.closest('[data-crud-field]')?.scrollIntoView({ block: 'nearest' })
+      firstInvalid.focus({ preventScroll: true })
+    } else {
+      form?.querySelector('[role="alert"]')?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [formErrors, formError, modalOpen])
   const normalizedQuery = normalizeSearchText(query)
   const rowMeta = useMemo(() => {
     const map = new Map<string, RowMeta>()
@@ -370,7 +383,7 @@ export function CrudPage<T extends CrudTableName>({
       const saveResult = await saveCrudRow(table, payload, editing?.id ?? null)
 
       if (!saveResult.ok) {
-        setError(saveResult.error.message ?? 'Kayıt kaydedilemedi.')
+        setFormError(saveResult.error.message ?? 'Kayıt kaydedilemedi.')
         setSaving(false)
         return
       }
@@ -644,8 +657,11 @@ export function CrudPage<T extends CrudTableName>({
         open={modalOpen}
         busy={saving}
         onClose={() => setModalOpen(false)}
+        footer={<Button type="submit" form={formId} disabled={saving} className="h-12 w-full">
+          {saving ? 'Kaydediliyor...' : 'Kaydet'}
+        </Button>}
       >
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate aria-busy={saving}>
+        <form id={formId} ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate aria-busy={saving}>
           {formError ? <Alert variant="destructive">{formError}</Alert> : null}
           <FormSection
             title={editing ? 'Kayıt bilgileri' : 'Yeni kayıt bilgileri'}
@@ -654,21 +670,29 @@ export function CrudPage<T extends CrudTableName>({
           {visibleFields.map((field) => {
             const fieldError = formErrors[field.name]
             const hintText = field.hint?.(formValues, fieldContext) ?? null
+            const id = formId + '-' + field.name
+            const errorId = id + '-error'
+            const hintId = id + '-hint'
+            const inputProps = {
+              id,
+              name: field.name,
+              disabled: saving,
+              'aria-invalid': Boolean(fieldError),
+              'aria-describedby': [fieldError && errorId, hintText && hintId].filter(Boolean).join(' ') || undefined,
+            }
 
             return (
-              <label key={field.name} className={cn('block text-sm font-semibold text-ink', field.type === 'textarea' && 'sm:col-span-2')}>
-                <span>
+              <div key={field.name} data-crud-field className={cn('min-w-0 text-sm font-semibold text-ink', field.type === 'textarea' && 'sm:col-span-2')}>
+                <label htmlFor={id}>
                   {field.label}
                   {field.required ? <span className="text-destructive"> *</span> : null}
-                </span>
+                </label>
                 {field.type === 'select' ? (
                   <Select
-                    disabled={saving}
-                    name={field.name}
+                    {...inputProps}
                     required={field.required}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
-                    aria-invalid={Boolean(fieldError)}
                     className="mt-1"
                   >
                     {field.options?.map((option) => (
@@ -679,27 +703,23 @@ export function CrudPage<T extends CrudTableName>({
                   </Select>
                 ) : field.type === 'textarea' ? (
                   <Textarea
-                    disabled={saving}
-                    name={field.name}
+                    {...inputProps}
                     rows={3}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
-                    aria-invalid={Boolean(fieldError)}
                     className="mt-1"
                   />
                 ) : field.type === 'date' ? (
                   <div className="relative mt-1">
                     <Input
-                      disabled={saving}
-                      name={field.name}
+                      {...inputProps}
                       type="date"
                       required={field.required}
                       value={formValues[field.name] ?? ''}
                       onClick={(event) => openNativePicker(event.currentTarget)}
-                      onFocus={(event) => openNativePicker(event.currentTarget)}
+                      onFocus={(event) => { if (!fieldError) openNativePicker(event.currentTarget) }}
                       onChange={(event) => updateFormValue(field.name, event.target.value)}
-                      aria-invalid={Boolean(fieldError)}
-                      className="max-w-full pr-11"
+                      className="max-w-full pr-11 [&::-webkit-calendar-picker-indicator]:opacity-0"
                     />
                     <CalendarDays
                       aria-hidden="true"
@@ -710,12 +730,10 @@ export function CrudPage<T extends CrudTableName>({
                 ) : field.type === 'day' ? (
                   <div className="relative mt-1">
                     <Select
-                      disabled={saving}
-                      name={field.name}
+                      {...inputProps}
                       required={field.required}
                       value={formValues[field.name] ?? ''}
                       onChange={(event) => updateFormValue(field.name, event.target.value)}
-                      aria-invalid={Boolean(fieldError)}
                       className="appearance-none pr-11"
                     >
                       <option value="">Gün seç</option>
@@ -735,36 +753,27 @@ export function CrudPage<T extends CrudTableName>({
                     />
                   </div>
                 ) : field.type === 'computed' ? (
-                  <div className="mt-1 flex min-h-[2.5rem] items-center rounded-xl border border-dashed border-line-strong bg-page px-3 text-sm font-mono font-semibold tabular-nums text-ink">
+                  <output id={id} className="mt-1 flex min-h-[2.5rem] items-center rounded-xl border border-dashed border-line-strong bg-page px-3 text-sm font-mono font-semibold tabular-nums text-ink">
                     {(field.formatComputed ?? defaultFormatComputed)(field.compute?.(formValues, fieldContext) ?? null)}
-                  </div>
+                  </output>
                 ) : (
                   <Input
-                    disabled={saving}
-                    name={field.name}
+                    {...inputProps}
                     type={field.type}
                     required={field.required}
                     min={field.min}
                     step={field.step}
                     value={formValues[field.name] ?? ''}
                     onChange={(event) => updateFormValue(field.name, event.target.value)}
-                    aria-invalid={Boolean(fieldError)}
                     className="mt-1"
                   />
                 )}
-                {fieldError ? <span className="mt-1 block text-xs font-medium text-destructive">{fieldError}</span> : null}
-                {hintText ? <span className="mt-1 block text-xs text-ink-muted">{hintText}</span> : null}
-              </label>
+                {fieldError ? <span id={errorId} className="mt-1 block text-xs font-medium text-destructive">{fieldError}</span> : null}
+                {hintText ? <span id={hintId} className="mt-1 block wrap-anywhere text-xs text-ink-muted">{hintText}</span> : null}
+              </div>
             )
           })}
           </FormSection>
-          <Button
-            type="submit"
-            disabled={saving}
-            className="sticky bottom-0 z-10 h-12 w-full sm:static sm:shadow-none"
-          >
-            {saving ? 'Kaydediliyor...' : 'Kaydet'}
-          </Button>
         </form>
       </SimpleModal>
 

@@ -1,5 +1,5 @@
 import { Camera, CheckCircle2, ClipboardPaste, Heart, Image as ImageIcon, LoaderCircle, RotateCcw, Save, ScanLine } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
@@ -112,7 +112,10 @@ export function QuickExpensePanel({
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const activeCardId = cards.some((card) => card.id === cardId) ? cardId : (cards[0]?.id ?? '')
   const selectedCard = cards.find((card) => card.id === activeCardId)
+  const cardSelectId = useId()
+  const selectedCardLabelId = cardSelectId + '-hint'
   const canUseInstallments = selectedCard?.card_type === 'kredi_karti'
+  const showAdvanced = advancedOpen || (canUseInstallments && paymentMode === 'installment')
   const parsedAmount = parseNumber(amount)
   const parsedInstallmentCount = canUseInstallments && paymentMode === 'installment' ? Math.max(2, Math.min(36, Number(installmentCount) || 2)) : 1
   const parsedPaidInstallments = canUseInstallments && paymentMode === 'installment'
@@ -430,6 +433,20 @@ export function QuickExpensePanel({
 
   if (cards.length === 0) return null
 
+  const submitActions = <>
+    {localError ? <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{localError}</p> : null}
+    {localWarning ? <p role="alert" className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">{localWarning}</p> : null}
+    <button
+      type="submit"
+      disabled={!canSubmitQuickExpense}
+      className="interaction-press flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60 hover:bg-primary/90"
+    >
+      {saving ? <LoaderCircle size={18} strokeWidth={1.8} className="animate-spin" aria-hidden="true" /> : <Save size={18} strokeWidth={1.8} aria-hidden="true" />}
+      {saving ? 'Ekleniyor...' : 'Harcamayı kaydet'}
+    </button>
+    {saved && !amount && !description ? <p role="status" className="flex items-center gap-2 text-sm text-success"><CheckCircle2 size={18} strokeWidth={1.8} aria-hidden="true" />Harcama kaydedildi.</p> : null}
+  </>
+
   return (
     <SurfaceCard id="hizli-harcama" className="border-line-strong">
       <CardHeader className="pb-0">
@@ -473,10 +490,12 @@ export function QuickExpensePanel({
               if (file) void handleScanFile(file)
             }}
           />
-          <label className="block text-sm font-semibold text-ink">
-            Hesap / kredi kartı
+          <div className="min-w-0">
+            <label htmlFor={cardSelectId} className="block text-sm font-semibold text-ink">Hesap / kredi kartı</label>
             <select
+              id={cardSelectId}
               value={activeCardId}
+              aria-describedby={selectedCard ? selectedCardLabelId : undefined}
               onChange={(event) => {
                 const nextCardId = event.target.value
                 setCardId(nextCardId)
@@ -495,7 +514,8 @@ export function QuickExpensePanel({
                 </option>
               ))}
             </select>
-          </label>
+            {selectedCard ? <p id={selectedCardLabelId} className="mt-1 wrap-anywhere text-xs text-ink-muted">{cardOptionLabel(selectedCard)}</p> : null}
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <MoneyInput
               label={canUseInstallments && paymentMode === 'installment' ? 'Toplam tutar' : 'Tutar (TL)'}
@@ -521,20 +541,9 @@ export function QuickExpensePanel({
               />
             </label>
           </div>
-          {localError ? <p role="alert" className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{localError}</p> : null}
-          {localWarning ? <p role="alert" className="rounded-xl border border-warning/20 bg-warning/8 p-3 text-sm font-medium text-warning">{localWarning}</p> : null}
-
-          <button
-            type="submit"
-            disabled={!canSubmitQuickExpense}
-            className="interaction-press flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-60 hover:bg-primary/90"
-          >
-            {saving ? <LoaderCircle size={18} strokeWidth={1.8} className="animate-spin" aria-hidden="true" /> : <Save size={18} strokeWidth={1.8} aria-hidden="true" />}
-            {saving ? 'Ekleniyor...' : 'Harcamayı kaydet'}
-          </button>
-          {saved && !amount && !description ? <p role="status" className="flex items-center gap-2 text-sm text-success"><CheckCircle2 size={18} strokeWidth={1.8} aria-hidden="true" />Harcama kaydedildi.</p> : null}
+          {showAdvanced ? null : submitActions}
           <details
-            open={advancedOpen || (canUseInstallments && paymentMode === 'installment')}
+            open={showAdvanced}
             onToggle={(event) => {
               const nextOpen = event.currentTarget.open
               // Taksitli modda kapatma yok (required alanlar görünür kalmalı).
@@ -710,9 +719,9 @@ export function QuickExpensePanel({
           {selectedCard?.card_type === 'kredi_karti' ? (
             <div className="rounded-xl border border-line-strong bg-page p-3">
               <div className="grid grid-cols-2 gap-2 min-[430px]:grid-cols-4">
-                <OverviewStat label="Dönem" value={statementPreview?.periodLabel ?? 'Gün eksik'} />
-                <OverviewStat label="Ekstre" value={statementPreview ? formatDate(statementPreview.statementDate) : 'Gün eksik'} />
-                <OverviewStat label="Son ödeme" value={statementPreview ? formatDate(statementPreview.dueDate) : 'Gün eksik'} />
+                <OverviewStat label="Dönem" wrapValue value={statementPreview?.periodLabel ?? 'Gün eksik'} />
+                <OverviewStat label="Ekstre" wrapValue value={statementPreview ? formatDate(statementPreview.statementDate) : 'Gün eksik'} />
+                <OverviewStat label="Son ödeme" wrapValue value={statementPreview ? formatDate(statementPreview.dueDate) : 'Gün eksik'} />
                 <OverviewStat
                   label={isCarryover ? 'Kalan borç' : isProvision ? 'Durum' : parsedInstallmentCount > 1 ? 'İlk yansıma' : 'Yansıma'}
                   value={isCarryover ? displayAmount(carryoverAmount) : isProvision ? 'Provizyon' : displayAmount(firstPeriodAmount)}
@@ -758,6 +767,7 @@ export function QuickExpensePanel({
               ) : null}
             </div>
           ) : null}
+          {showAdvanced ? submitActions : null}
           <details className="border-t border-line pt-1">
             <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted">Fiş, pano ve son harcamalar</summary>
             <div className="flex flex-col gap-3 pb-3">

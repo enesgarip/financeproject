@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { ArrowUpRight, Star } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
@@ -27,9 +27,14 @@ export function FeatureExplorer({ open, onClose }: { open: boolean; onClose: () 
   const [query, setQuery] = useState('')
   const [favorites, setFavorites] = useState(() => readFavorites(user?.id))
   const [storageError, setStorageError] = useState(false)
+  const resultsRef = useRef<HTMLDivElement>(null)
   const results = searchFeatures(query)
   const groups = [...new Set(results.map(feature => feature.group))]
   const pinned = favorites.flatMap(id => appFeatures.find(feature => feature.id === id) ?? [])
+  function updateQuery(value: string) {
+    setQuery(value)
+    if (resultsRef.current) resultsRef.current.scrollTop = 0
+  }
   function close() { setQuery(''); onClose() }
   function toggleFavorite(id: string) {
     const next = favorites.includes(id) ? favorites.filter(value => value !== id) : [...favorites, id]
@@ -40,9 +45,18 @@ export function FeatureExplorer({ open, onClose }: { open: boolean; onClose: () 
       setStorageError(false)
     } catch { setStorageError(true) }
   }
-  return <SimpleModal title="Ara ve keşfet" open={open} onClose={close}>
+  return <SimpleModal
+    title="Ara ve keşfet"
+    open={open}
+    onClose={close}
+    scrollRef={resultsRef}
+    scrollClassName="feature-explorer-scroll"
+    pinnedContent={<label className="block text-sm font-semibold">
+      Özellik ara
+      <Input data-navigation-transient type="search" className="mt-2 min-h-11" placeholder="Altın, aylık hedef, SMS…" value={query} onChange={event => updateQuery(event.target.value)} />
+    </label>}
+  >
     <div className="space-y-5">
-      <label className="block text-sm font-semibold">Özellik ara<Input data-navigation-transient type="search" className="mt-2 min-h-11" placeholder="Altın, aylık hedef, SMS…" value={query} onChange={event => setQuery(event.target.value)} /></label>
       <p className="text-[13px] text-ink-muted">Yapmak istediğini yaz veya özellikleri aşağıdan keşfet. Yıldızla işaretlediklerin favorilerine eklenir.</p>
       {storageError ? <p role="status" className="text-sm text-warning">Favoriler bu oturumda kullanılabilir; bu tarayıcıya kaydedilemedi.</p> : null}
       {!query.trim() ? <section aria-label="Favori kısayollar" className="rounded-xl border border-line-strong p-3">
@@ -51,7 +65,7 @@ export function FeatureExplorer({ open, onClose }: { open: boolean; onClose: () 
         <p className="mt-2 text-xs text-ink-muted">Bu cihazda, hesabına özel saklanır.</p>
       </section> : null}
       <p role="status" aria-live="polite" className="text-xs text-ink-muted">{query.trim() ? `${results.length} özellik bulundu` : `${appFeatures.length} özelliği keşfet`}</p>
-      {results.length === 0 ? <div className="space-y-2"><p className="text-sm text-ink">Bu aramayla eşleşen özellik bulunamadı.</p><button type="button" className="min-h-11 text-sm font-semibold text-primary" onClick={() => setQuery('')}>Tüm özellikleri göster</button></div> : groups.map(group => <section key={group} aria-label={group}>
+      {results.length === 0 ? <div className="space-y-2"><p className="text-sm text-ink">Bu aramayla eşleşen özellik bulunamadı.</p><button type="button" className="min-h-11 text-sm font-semibold text-primary" onClick={() => updateQuery('')}>Tüm özellikleri göster</button></div> : groups.map(group => <section key={group} aria-label={group}>
         <h3 className="border-b border-line-strong pb-2 text-sm font-semibold text-primary">{group}</h3>
         <ul>{results.filter(feature => feature.group === group).map(feature => <FeatureRow key={feature.id} feature={feature} favorite={favorites.includes(feature.id)} onToggle={() => toggleFavorite(feature.id)} onSelect={close} />)}</ul>
       </section>)}

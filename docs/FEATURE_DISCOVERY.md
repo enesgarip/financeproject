@@ -1,5 +1,10 @@
 # Özellik arama ve keşif
 
+12 Kasım. Başlık ve arama alanı panelde sabit kalır. Favoriler, sonuç sayısı
+ve özellik listesi tek iç alanda kayar. Kaydırma çubuğu tema metin rengine
+bağlıdır ve klasik çubuk kullanan tarayıcıda sonuç sayısı değişirken içerik
+genişliği korunur. Yeni arama sonuç alanını başa getirir.
+
 8 Kasım ikinci paket: Araç/gider grupları ortak harcama ve mevcut hareket
 bağlantıları taşır. Hesap hareketlerinde para girişi sınıflandırma, Araçlar'da
 bakım tamamlama/geçmiş, ay kapanışında ilgili işe geçiş vardır. Mevcut özellik
