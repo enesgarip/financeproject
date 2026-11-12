@@ -16,7 +16,9 @@
  * Sayfa veri akışı ve modül haritası: docs/CARDS_ARCHITECTURE.md.
  */
 import { Suspense, useState, useCallback } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
+import { useUsageView } from '../app/usageStatistics'
+import { usageSourceFrom } from '../utils/usageStatistics'
 import { ArrowLeft, CalendarClock, FileText, ScanSearch, ShieldCheck, List, Clock, ChevronRight } from 'lucide-react'
 import { CrudPage } from '../components/CrudPage'
 import { CardsPaymentCycle } from '../components/dashboard/CardPaymentCyclePanel'
@@ -80,10 +82,24 @@ const CurrentMovementImportModal = lazyWithReload(() =>
   })),
 )
 
+const cardUsageTabs = {
+  donem: 'card-period',
+  taksitler: 'card-installments',
+  ekstreler: 'card-statements',
+  provizyon: 'card-pending',
+  kategoriler: 'card-categories',
+} as const
+
 export function CardsPage() {
+  const { state: navigationState } = useLocation()
   const [taskParams, setTaskParams] = useSearchParams()
   const selectingTransfer = taskParams.get('task') === 'transfer'
+  const transferEntry = selectingTransfer ? usageSourceFrom(navigationState, 'direct') : null
   const { handleSectionChange, section, selectedCardId, openCardDetails, backToList, panel, openPanel } = useCardSectionNavigation()
+  useUsageView({ kind: 'tab', subject: section === 'kartlar' ? 'cards' : 'accounts' })
+  useUsageView(section === 'kartlar' && panel && panel !== 'manuel'
+    ? { kind: 'tab', subject: cardUsageTabs[panel] }
+    : null)
   const { formatAmount, hidden: balancesHidden } = useBalancePrivacy()
   const {
     installments,
@@ -123,8 +139,8 @@ export function CardsPage() {
     handleTransactionTypeChange,
     openTransaction,
     setTransactionAmount,
-  } = useAccountMovementModal({ invalidateSnapshot, reloadCards, setReloadCards })
-  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
+  } = useAccountMovementModal({ invalidateSnapshot, reloadCards, setReloadCards, transferEntry })
+  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer('accounts')
   // Hızlı harcama kaydı → "Son kart hareketleri" listesi tazelenir (B2).
   const [expensesVersion, setExpensesVersion] = useState(0)
   const [importCard, setImportCard] = useState<Card | null>(null)
@@ -247,7 +263,7 @@ export function CardsPage() {
         <div className="flex"><button type="button" onClick={() => openPanel(null)} aria-label={panel === 'manuel' ? 'Kapat' : undefined} className="interaction-press flex min-h-11 items-center gap-2 text-sm font-semibold text-primary">{panel === 'manuel' ? <><ArrowLeft size={18} strokeWidth={1.8} aria-hidden="true" />Hesaplara dön</> : 'Dökümü kapat'}</button></div>
         {panel === 'donem' ? <><PeriodSpendingBreakdown cards={scopedCards} /><CategoryCleanupPanel key={selectedCardId ?? 'all'} collapsible cardId={selectedCardId ?? undefined} refreshKey={expensesVersion} onChanged={() => { void invalidateSnapshot(); setExpensesVersion((version) => version + 1) }} /><RecentCardExpensesPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} cards={cardRows} reload={refresh} setError={setError} refreshKey={expensesVersion} /></> : null}
         {panel === 'kategoriler' ? <CategoryCleanupPanel key={selectedCardId ?? 'all'} cardId={selectedCardId ?? undefined} onChanged={() => { void invalidateSnapshot(); setExpensesVersion((version) => version + 1) }} /> : null}
-        {panel === 'manuel' ? <QuickExpensePanel key={`${taskParams.get('car') ?? ''}:${taskParams.get('context') ?? ''}`} initialTags={{ carId: taskParams.get('car') ?? undefined, contextId: taskParams.get('context') ?? undefined }} rows={cardRows} reload={refresh} setError={setError} focus={selectedCardId ? { cardId: selectedCardId, mode: 'cash', nonce: 0 } : null} formatAmount={formatAmount} onSaved={() => setExpensesVersion((version) => version + 1)} /> : null}
+        {panel === 'manuel' ? <QuickExpensePanel key={`${taskParams.get('car') ?? ''}:${taskParams.get('context') ?? ''}`} usageSource={usageSourceFrom(navigationState, selectedCardId ? 'accounts' : 'direct')} initialTags={{ carId: taskParams.get('car') ?? undefined, contextId: taskParams.get('context') ?? undefined }} rows={cardRows} reload={refresh} setError={setError} focus={selectedCardId ? { cardId: selectedCardId, mode: 'cash', nonce: 0 } : null} formatAmount={formatAmount} onSaved={() => setExpensesVersion((version) => version + 1)} /> : null}
         {panel === 'taksitler' ? (
           installmentsError ? <p role="alert" className="text-sm text-warning">{installmentsError} <button type="button" className="min-h-11 font-semibold underline" onClick={() => void loadInstallments()}>Tekrar dene</button></p> : <>
             <CardInstallmentCalendarPanel cards={scopedCards} installments={scopedInstallments} loading={installmentsLoading} />
@@ -342,7 +358,7 @@ export function CardsPage() {
           </div>
         ) : <AccountListRow actionLabel={selectingTransfer ? `${row.card_name} hesabından transfer` : undefined} card={row as Card} statements={statements} statementPayments={statementPayments} statementsKnown={!statementsLoading && !statementError} onOpen={(card) => {
           if (!selectingTransfer) return openCardDetails(card)
-          openTransaction(card, helpers.reload, helpers.rows as Card[], 'transfer')
+          openTransaction(card, helpers.reload, helpers.rows as Card[], 'transfer', transferEntry ?? 'direct')
           const next = new URLSearchParams(taskParams)
           next.delete('task')
           setTaskParams(next, { replace: true })

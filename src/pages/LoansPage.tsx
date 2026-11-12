@@ -50,7 +50,7 @@ export function LoansPage() {
   // formatAmount metnini kullanır; ikisi de kuruşu korur.
   const seritAmount = useSeritAmount()
   const { confirm, confirmDialog } = useConfirmDialog()
-  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
+  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer('loans')
   const [reloadLoans, setReloadLoans] = useState<(() => Promise<void>) | null>(null)
   const [installments, setInstallments] = useState<LoanInstallment[]>([])
   const [installmentsError, setInstallmentsError] = useState('')

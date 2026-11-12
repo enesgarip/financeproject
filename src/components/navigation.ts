@@ -23,6 +23,7 @@ import {
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
+import type { UsageSource } from '../utils/usageStatistics'
 
 export type NavItem = {
   to: string
@@ -67,7 +68,7 @@ export const overflowNavItems: readonly NavItem[] = [
   ...secondaryNavItems,
 ]
 
-export type HubTab = { to: string; label: string; icon: LucideIcon; end?: boolean }
+export type HubTab = { to: string; label: string; icon: LucideIcon; end?: boolean; usageSource?: UsageSource }
 
 export const assetsHubTabs: HubTab[] = [
   { to: '/varliklar', label: 'Varlıklar', icon: Gem, end: true },
@@ -85,7 +86,7 @@ export const liabilitiesHubTabs: HubTab[] = [
 export const planningHubTabs: HubTab[] = [
   { to: '/odemeler', label: 'Ödemeler', icon: CalendarDays, end: true },
   { to: '/odemeler/hedefler', label: 'Bütçe ve hedefler', icon: Target },
-  { to: '/odemeler/alsam-mi', label: 'Alsam mı?', icon: ShoppingCart },
+  { to: '/odemeler/alsam-mi', label: 'Alsam mı?', icon: ShoppingCart, usageSource: 'plan' },
   { to: '/odemeler/liste', label: 'Alınacaklar', icon: ListChecks },
   { to: '/odemeler/baglamlar', label: 'Gider grupları', icon: FolderKanban },
 ]
@@ -99,6 +100,7 @@ export const analysisHubTabs: HubTab[] = [
 export const dataHealthHubTabs: HubTab[] = [
   { to: '/veri-sagligi', label: 'Bulgular', icon: ShieldCheck, end: true },
   { to: '/veri-sagligi/islemler', label: 'Bakım', icon: DatabaseBackup },
+  { to: '/veri-sagligi/kullanim', label: 'Kullanım', icon: BarChart3 },
 ]
 
 type RouteWidth = 'wide' | 'medium' | 'narrow'
@@ -123,6 +125,14 @@ const routeMeta: Record<string, { title: string; subtitle?: string; width: Route
   '/analiz/asistan': { title: 'Asistan', subtitle: 'Finansal verilerinle sohbet', width: 'narrow' },
   '/veri-sagligi': { title: 'Veri kontrolü', subtitle: 'Tutarlılık denetimi ve bulgular', width: 'wide' },
   '/veri-sagligi/islemler': { title: 'Bakım', subtitle: 'Veri yedekleme ve bakım', width: 'medium' },
+  '/veri-sagligi/kullanim': { title: 'Kullanım istatistikleri', width: 'medium' },
+}
+
+export const usagePagePaths = Object.keys(routeMeta).filter(path => path !== '/veri-sagligi/kullanim')
+
+export function knownPagePath(pathname: string): string | null {
+  const path = pathname.toLowerCase().replace(/\/+$/, '') || '/'
+  return Object.hasOwn(routeMeta, path) ? path : null
 }
 
 const WIDTH_CLASS: Record<RouteWidth, string> = {

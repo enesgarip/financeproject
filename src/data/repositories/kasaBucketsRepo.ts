@@ -2,6 +2,8 @@ import { supabase } from '../../lib/supabase'
 import type { InsertFor, KasaBucket, UpdateFor } from '../../types/database'
 import { appErrorFromSupabase, fail, ok, voidResultFromSupabase, type Result } from '../result'
 import { executeFinanceOperation } from '../../services/financeOperations'
+import { recordUsage } from '../../lib/usageTelemetry'
+import type { UsageSource } from '../../utils/usageStatistics'
 
 export async function fetchKasaBuckets(): Promise<Result<KasaBucket[]>> {
   const { data, error } = await supabase
@@ -48,12 +50,14 @@ export async function updateKasaBucket(
  * Artırım RPC'de: client'ta oku-değiştir-yaz yapılsaydı iki sekme aynı anda
  * ayırdığında biri diğerini ezerdi. Dönen değer ayırma sonrası toplam rezerv.
  */
-export async function contributeToGoalBucket(bucketId: string, amount: number, userId: string): Promise<Result<void>> {
+export async function contributeToGoalBucket(bucketId: string, amount: number, userId: string, source: UsageSource = 'goals'): Promise<Result<void>> {
+  recordUsage(userId, { kind: 'attempted', subject: 'reserve', source })
   const { error } = await executeFinanceOperation(userId, 'contribute_to_goal_bucket', bucketId, {
     p_bucket_id: bucketId,
     p_amount: amount,
   })
 
+  recordUsage(userId, { kind: error ? 'failed' : 'completed', subject: 'reserve' })
   if (error) return fail(appErrorFromSupabase(error, 'Kovaya ayrılamadı.'))
   return ok(undefined)
 }

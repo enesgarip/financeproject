@@ -1,5 +1,10 @@
 # UI Architecture
 
+**Kontrol › Kullanım** sayfası 7/30 günlük dönem karşılaştırmasını, işlem
+akışlarını, başlangıç noktalarını ve SMS otomasyonu özetini gösterir.
+Sayfa, sekme ve keşif sayaçları aynı ekrandadır.
+[Kullanım istatistikleri](USAGE_STATISTICS.md).
+
 12 Kasım form denetimi. Ortak kayıt penceresinde form gövdesi kayar ve Kaydet
 ayrı alt bölümde kalır. Doğrulama ilk hatalı alanı görünür konuma getirip
 odaklar; hata metni alana bağlıdır. Tarih alanı tek takvim simgesi gösterir.

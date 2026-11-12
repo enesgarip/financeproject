@@ -218,7 +218,7 @@ export function DashboardPage() {
   // (PaymentsPage/LoansPage ile aynı) sayfa değiştirmeden açılır, ödeme sonrası
   // snapshot cache'i tazelenir.
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
-  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
+  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer('overview')
   const handleUpcomingPay = useCallback(
     (obligation: FinanceObligation) => {
       void openPaymentDrawer(obligation, {

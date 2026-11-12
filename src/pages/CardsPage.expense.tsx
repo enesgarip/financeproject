@@ -2,6 +2,8 @@ import { Camera, CheckCircle2, ClipboardPaste, Heart, Image as ImageIcon, Loader
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
+import { useUsageFlow } from '../hooks/useUsageFlow'
+import type { UsageSource } from '../utils/usageStatistics'
 import { CategoryPicker } from '../components/finance/CategoryPicker'
 import { MoneyInput } from '../components/finance/MoneyInput'
 import { Card as SurfaceCard, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -40,6 +42,7 @@ export function QuickExpensePanel({
   formatAmount,
   onSaved,
   initialTags,
+  usageSource = 'accounts',
 }: {
   rows: Card[]
   reload: () => Promise<void>
@@ -49,6 +52,7 @@ export function QuickExpensePanel({
   /** Başarılı kayıttan sonra; aynı sayfadaki "Son kart hareketleri" listesi bununla tazelenir (UX turu B2). */
   onSaved?: () => void
   initialTags?: { carId?: string; contextId?: string }
+  usageSource?: UsageSource
 }) {
   const [cardId, setCardId] = useState(() => getLastUsed('expenseCard'))
   const [amount, setAmount] = useState('')
@@ -81,6 +85,7 @@ export function QuickExpensePanel({
   const submissionIdentityRef = useRef<{ signature: string; eventId: string } | null>(null)
   const categoryMemory = useCategoryMemory()
   const { user } = useAuth()
+  const expenseUsage = useUsageFlow(user?.id, 'expense', usageSource)
   // Alias listesi ÖNCEDEN elde tutulur: paste handler'ında readText'ten önce
   // await olamaz (iOS transient activation). Anahtar CardsPage.list ile ortak.
   const aliasesQuery = useQuery({
@@ -369,6 +374,7 @@ export function QuickExpensePanel({
     setLocalError('')
     setLocalWarning('')
     setError('')
+    const reportExpense = expenseUsage.attempt()
     const submitResult = isCarryover
       ? await recordCardInstallmentCarryover({
         cardId: selectedCard.id,
@@ -398,6 +404,7 @@ export function QuickExpensePanel({
 
     submittingRef.current = false
     setSaving(false)
+    reportExpense(submitResult.ok ? 'completed' : 'failed')
     if (!submitResult.ok) {
       setLocalError(
         isMissingSupabaseCapabilityError(submitResult.error)

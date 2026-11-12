@@ -3,6 +3,7 @@ import { FeatureDetails, FeatureSection } from '../components/FeatureSection'
 import { DatabaseZap, Download, Settings, Upload } from 'lucide-react'
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useLocation } from 'react-router'
 import { useAuth } from '../auth/useAuth'
 import { userMessage } from '../utils/userMessage'
 import { clearUserPaymentAttempts } from '../utils/paymentAttempt'
@@ -24,6 +25,8 @@ import {
   resetUserFinanceData,
 } from '../data/repositories/dataHealthRepo'
 import { downloadDataCsv } from './DataHealth.actions'
+import { recordUsage } from '../lib/usageTelemetry'
+import { usageSourceFrom } from '../utils/usageStatistics'
 import { isMissingSupabaseCapabilityError, missingSupabaseCapabilityMessage } from '../utils/supabaseErrors'
 import {
   ResetDataModal,
@@ -33,6 +36,7 @@ import {
 export function DataHealthOperationsPage() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const location = useLocation()
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [resetOpen, setResetOpen] = useState(false)
@@ -49,11 +53,15 @@ export function DataHealthOperationsPage() {
   async function handleFullExport() {
     setExporting(true)
     setError('')
+    const source = location.hash === '#yedek' ? usageSourceFrom(location.state, 'maintenance') : 'maintenance'
+    recordUsage(user?.id, { kind: 'attempted', subject: 'backup', source })
     try {
       const { payload, totalRows } = await buildBackupPayload()
       downloadBackupFile(payload)
+      recordUsage(user?.id, { kind: 'completed', subject: 'backup' })
       setMessage(`Tam yedek indirildi (${totalRows} kayıt).`)
     } catch (exportError) {
+      recordUsage(user?.id, { kind: 'failed', subject: 'backup' })
       setError(exportError instanceof Error ? exportError.message : 'Yedek alınamadı.')
     } finally {
       setExporting(false)

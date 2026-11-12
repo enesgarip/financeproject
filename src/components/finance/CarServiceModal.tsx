@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../auth/useAuth'
 import { useCars } from '../../app/useCars'
+import { useUsageFlow } from '../../hooks/useUsageFlow'
 import { fetchTaggableCardExpenses } from '../../data/repositories/cardsRepo'
 import { completeCarService, fetchCarServiceHistory } from '../../data/repositories/linkedWorkflowsRepo'
 import { useBalancePrivacy } from '../../hooks/useBalancePrivacy'
@@ -18,6 +19,7 @@ import { QueryError } from '../ui/query-error'
 
 export function CarServiceModal({ reminder, car, onClose, onCompleted }: { reminder: CarReminder; car: Car; onClose: () => void; onCompleted: () => Promise<void> }) {
   const { user } = useAuth()
+  const serviceUsage = useUsageFlow(user?.id, 'car-service', 'vehicle')
   const { formatAmount, maskText } = useBalancePrivacy()
   const cars = useCars()
   const [initial] = useState(() => {
@@ -37,6 +39,7 @@ export function CarServiceModal({ reminder, car, onClose, onCompleted }: { remin
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(initial.error)
   const inFlight = useRef(false)
+  const completionTracked = useRef(false)
   const expenses = useQuery({ queryKey: ['service-expenses', user?.id, car.id], enabled: !!user && mode === 'card', queryFn: async () => {
     const result = await fetchTaggableCardExpenses(100)
     if (!result.ok) throw new Error(result.error.message)
@@ -57,22 +60,33 @@ export function CarServiceModal({ reminder, car, onClose, onCompleted }: { remin
     if (!attempt && (input.completedOn > dateInputValue(new Date()) || (input.odometerKm !== null && (!Number.isInteger(input.odometerKm) || input.odometerKm < 0)) || (input.nextKm !== null && (!Number.isInteger(input.nextKm) || input.nextKm < 0)) || (mode === 'manual' && (!input.amount || !Number.isFinite(input.amount) || input.amount <= 0)) || ((mode === 'card' || mode === 'existing_manual') && !input.existingExpenseId))) { setError('Tarih, kilometre ve gider bilgilerini kontrol et.'); return }
     const pending = attempt ?? { id: crypto.randomUUID(), input }
     let completed = false
+    let reportService: ReturnType<typeof serviceUsage.attempt> | undefined
     inFlight.current = true; setBusy(true); setError('')
     try {
       // Önce sakla: yenileme veya belirsiz yanıtta aynı isteği doğrula.
       saveCarServiceAttempt(user.id, pending)
       setAttempt(pending)
+      if (!completionTracked.current) reportService = serviceUsage.attempt()
       const result = await completeCarService(pending.id, pending.input)
       if (!result.ok) {
+        reportService?.('failed')
+        reportService = undefined
         setError(result.error.message)
         if (result.error.code) { clearCarServiceAttempt(user.id, reminder.id); setAttempt(null) }
         return
       }
       completed = true
+      if (!completionTracked.current) {
+        completionTracked.current = true
+        reportService?.('completed')
+      }
       await onCompleted()
       clearCarServiceAttempt(user.id, reminder.id)
       onClose()
-    } catch { setError(completed ? 'İş tamamlandı, ancak listeler yenilenemedi. Sonucu doğrula ile aynı kaydı yeniden kontrol et.' : 'İşlem sonucu doğrulanamadı. Aynı bilgilerle tekrar dene; yeni gider oluşturulmaz.') }
+    } catch {
+      if (!completed) reportService?.('failed')
+      setError(completed ? 'İş tamamlandı, ancak listeler yenilenemedi. Sonucu doğrula ile aynı kaydı yeniden kontrol et.' : 'İşlem sonucu doğrulanamadı. Aynı bilgilerle tekrar dene; yeni gider oluşturulmaz.')
+    }
     finally { inFlight.current = false; setBusy(false) }
   }
 

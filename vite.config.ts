@@ -36,6 +36,8 @@ export default defineConfig({
         // Aylarca değişmeyen vendor'lar ayrı chunk'ta tarayıcı cache'inde kalır.
         manualChunks(id: string) {
           const normalized = id.replace(/\\/g, '/')
+          // Katalog yalnız ilgili sayfalar ve rapor tarafından kullanılır.
+          if (normalized.endsWith('/src/utils/usageStatistics.ts')) return 'usage-statistics'
           if (!normalized.includes('node_modules')) return undefined
           // pdfjs-dist yalnız lib/pdfText.ts'ten dinamik import edilir; bir
           // vendor chunk'ına sabitlemek onu kritik yola çeker. Dokunma.
@@ -43,6 +45,7 @@ export default defineConfig({
           if (/node_modules\/(react|react-dom|react-router|scheduler)\//.test(normalized)) return 'vendor-react'
           if (normalized.includes('node_modules/@supabase/')) return 'vendor-supabase'
           if (normalized.includes('node_modules/@tanstack/')) return 'vendor-query'
+          if (normalized.includes('node_modules/@vercel/analytics/')) return 'vendor-analytics'
           // İkonlar tek deterministik chunk'ta: 51 adet <2 kB'lık ikon chunk'ı
           // (her biri ayrı HTTP isteği) yerine bir kez inip cache'lenen tek dosya.
           if (normalized.includes('node_modules/lucide-react/')) return 'vendor-icons'
@@ -50,7 +53,7 @@ export default defineConfig({
           return undefined
         },
         // Kalan cüce chunk'ları (paylaşılan 1-2 kB'lık modüller) komşularına kat.
-        experimentalMinChunkSize: 5_000,
+        experimentalMinChunkSize: 4_500,
       },
     },
     chunkSizeWarningLimit: 700,

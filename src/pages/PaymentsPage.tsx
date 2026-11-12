@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router'
+import { useUsageView } from '../app/usageStatistics'
 import { FeatureDetails } from '../components/FeatureSection'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
 import { CalendarDays, CreditCard, Receipt } from 'lucide-react'
@@ -258,10 +259,11 @@ function PaymentsOverview({ rows, transactionHistory }: { rows: Payment[]; trans
 export function PaymentsPage() {
   const [viewParams] = useSearchParams()
   const [showPlans, setShowPlans] = useState(() => viewParams.get('view') === 'plans' || viewParams.get('new') === '1')
+  useUsageView({ kind: 'tab', subject: showPlans ? 'payment-plans' : 'payment-due' })
   const { maskText, formatAmount } = useBalancePrivacy()
   const snapshotQuery = useFinanceSnapshot()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
-  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
+  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer('payments')
   /** Tahmini tutarı tazelenen ödeme (butonu kilitler). */
   const [updatingPaymentId, setUpdatingPaymentId] = useState<string | null>(null)
   const [matchMonth, setMatchMonth] = useState(() => startOfMonth(new Date()))

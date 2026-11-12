@@ -34,6 +34,7 @@ export function HubNav({ tabs }: { tabs: HubTab[] }) {
         <NavLink
           key={tab.to}
           to={tab.to}
+          state={tab.usageSource ? { usageSource: tab.usageSource } : undefined}
           end={tab.end}
           className={({ isActive }) =>
             cn(

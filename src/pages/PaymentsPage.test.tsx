@@ -7,6 +7,7 @@ import { BalancePrivacyProvider } from '../hooks/useBalancePrivacy'
 import type { Card, Payment, TransactionHistory } from '../types/database'
 
 const mocks = vi.hoisted(() => ({ rows: [] as Payment[], snapshot: {} as Record<string, unknown>, open: vi.fn() }))
+vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: null }) }))
 vi.mock('../app/useFinanceSnapshot', () => ({
   useFinanceSnapshot: () => ({ data: mocks.snapshot, isPending: false, error: null }),
   useInvalidateFinanceSnapshot: () => vi.fn(),

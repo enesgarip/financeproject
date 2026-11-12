@@ -2,6 +2,8 @@ import { useCallback, useLayoutEffect, useRef, useState, type Dispatch, type For
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
+import { useUsageFlow } from '../hooks/useUsageFlow'
+import type { UsageSource } from '../utils/usageStatistics'
 import { useOperationResolution } from '../hooks/useOperationResolution'
 import { cardPageDataKey } from '../app/cardPageDataKey'
 import { useCrudRows } from '../app/useCrudRows'
@@ -94,7 +96,8 @@ export function useCardSectionNavigation() {
     nextParams.set('section', section)
     if (next && next !== panel) nextParams.set('panel', next)
     else nextParams.delete('panel')
-    setSearchParams(nextParams, { replace: true, state: location.state })
+    const state = next === 'manuel' && next !== panel ? { ...location.state, usageSource: 'accounts' } : location.state
+    setSearchParams(nextParams, { replace: true, state })
   }, [searchParams, section, panel, setSearchParams, location.state])
 
   return {
@@ -304,13 +307,19 @@ export function useAccountMovementModal({
   invalidateSnapshot,
   reloadCards,
   setReloadCards,
+  transferEntry,
 }: {
   invalidateSnapshot: () => Promise<void>
   reloadCards: ReloadCards
   setReloadCards: Dispatch<SetStateAction<ReloadCards>>
+  transferEntry: UsageSource | null
 }) {
+  const { user } = useAuth()
   const [transactionCard, setTransactionCard] = useState<Card | null>(null)
   const [transactionType, setTransactionType] = useState<'in' | 'out' | 'transfer'>('in')
+  const [movementSource, setMovementSource] = useState<UsageSource>('accounts')
+  const isTransfer = Boolean(transactionCard && transactionType === 'transfer')
+  const transferUsage = useUsageFlow(user?.id, 'transfer', transferEntry ?? movementSource, isTransfer || transferEntry !== null)
   const [transactionAmount, setTransactionAmount] = useState('')
   const [transactionTargetCard, setTransactionTargetCard] = useState('')
   const [transactionError, setTransactionError] = useState('')
@@ -318,12 +327,13 @@ export function useAccountMovementModal({
   useOperationResolution(['record_manual_account_movement', 'transfer_between_accounts'], transactionCard?.id, () => setTransactionCard(null))
   const [movementAccounts, setMovementAccounts] = useState<Card[]>([])
 
-  function openTransaction(card: Card, reload: () => Promise<void>, cards: Card[], type: 'in' | 'out' | 'transfer' = 'in') {
+  function openTransaction(card: Card, reload: () => Promise<void>, cards: Card[], type: 'in' | 'out' | 'transfer' = 'in', source: UsageSource = 'accounts') {
     const accounts = cards.filter((row) => row.card_type === 'banka_karti')
     setTransactionCard(card)
     setReloadCards(() => reload)
     setMovementAccounts(accounts)
     setTransactionType(type)
+    setMovementSource(source)
     setTransactionAmount('')
     setTransactionTargetCard('')
     setTransactionError('')
@@ -352,6 +362,7 @@ export function useAccountMovementModal({
     const amount = parseNumber(transactionAmount)
     setTransactionSaving(true)
     setTransactionError('')
+    const reportTransfer = isTransfer ? transferUsage.attempt() : undefined
     const { error } = await submitAccountMovement({
       sourceAccount: transactionCard,
       targetAccount: movementAccounts.find((card) => card.id === transactionTargetCard),
@@ -360,6 +371,7 @@ export function useAccountMovementModal({
     })
 
     setTransactionSaving(false)
+    reportTransfer?.(error ? 'failed' : 'completed')
     if (error) {
       setTransactionError(error.message ?? 'Para hareketi tamamlanamadı.')
       return

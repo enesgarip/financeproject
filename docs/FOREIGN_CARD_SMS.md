@@ -49,3 +49,7 @@ Kanıt: `smsParser.test.ts`, `clipboardExpense.test.ts`, gerçek edge harness'i
 `tests/edge/parseSms.test.ts`, `foreignCardSmsRepo.test.ts`,
 `supabase/tests/foreign_card_sms.sql`, `backup.restore.test.ts` ve 320px
 Playwright (eski kayıt kurtarma, Özet uyarısı, gizlilik, kesin TL, kayıp yanıt).
+
+Kontrol › Kullanım, `completed_at` üzerinden dönem içindeki elle tamamlanan
+kayıtları ve güncel kuyruktaki bekleyen kayıt sayılarını gösterir.
+[Kullanım istatistikleri](USAGE_STATISTICS.md).
