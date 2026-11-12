@@ -1,3 +1,5 @@
+import type { UsageInsights, UsageSource, UsageSummaryRow } from '../utils/usageStatistics'
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type AssetCategory = 'Nakit' | 'Altın' | 'Fon' | 'Hisse' | 'Araç' | 'BES' | 'Diğer'
@@ -915,6 +917,11 @@ export type Database = {
         Omit<SmsLog, 'id' | 'created_at'> & { id?: string; created_at?: string },
         Partial<Omit<SmsLog, 'id'>>
       >
+      usage_events: Table<
+        Pick<UsageSummaryRow, 'kind' | 'subject'> & { id: string; user_id: string; created_at: string; flow_id: string | null; source: UsageSource | null },
+        Pick<UsageSummaryRow, 'kind' | 'subject'> & { user_id: string; flow_id?: string; source?: UsageSource },
+        never
+      >
       dismissed_upcoming_items: Table<
         DismissedUpcomingItem,
         Omit<DismissedUpcomingItem, 'id' | 'created_at'> & { id?: string; created_at?: string },
@@ -923,6 +930,14 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      fetch_usage_insights: {
+        Args: { p_days: number }
+        Returns: UsageInsights | null
+      }
+      fetch_usage_summary: {
+        Args: { p_days: number }
+        Returns: UsageSummaryRow[]
+      }
       queue_foreign_card_sms: {
         Args: { p_user_id: string; p_card_id: string; p_native_amount: number; p_currency: string; p_description: string; p_spent_at: string; p_category: string; p_source_event_id: string; p_raw_sms: string }
         Returns: string

@@ -1,11 +1,12 @@
-import { Suspense, useEffect, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
-import { Analytics } from '@vercel/analytics/react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './app/queryClient'
+import { useUsageView } from './app/usageStatistics'
 import { AuthProvider } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { Layout } from './components/Layout'
+import { knownPagePath } from './components/navigation'
 import { AnalysisHub } from './pages/AnalysisHub'
 import { AssetsHub } from './pages/AssetsHub'
 import { DataHealthHub } from './pages/DataHealthHub'
@@ -13,6 +14,10 @@ import { LiabilitiesHub } from './pages/LiabilitiesHub'
 import { PlanningHub } from './pages/PlanningHub'
 import { ToastProvider } from './components/ui/toast'
 import { lazyWithReload } from './lib/lazyWithReload'
+
+const Analytics = lazy(() => import('@vercel/analytics/react')
+  .then(module => ({ default: module.Analytics }))
+  .catch(() => ({ default: () => null })))
 
 // A failed dynamic import almost always means a new deploy changed the chunk
 // hashes while this tab still references the old ones (Vercel then serves
@@ -55,6 +60,9 @@ const DataHealthPage = lazyWithReload(() =>
 const DataHealthOperationsPage = lazyWithReload(() =>
   import('./pages/DataHealthOperationsPage').then((m) => ({ default: m.DataHealthOperationsPage })),
 )
+const UsageStatisticsPage = lazyWithReload(() =>
+  import('./pages/UsageStatisticsPage').then((m) => ({ default: m.UsageStatisticsPage })),
+)
 const DebtsPage = lazyWithReload(() =>
   import('./pages/DebtsPage').then((m) => ({ default: m.DebtsPage })),
 )
@@ -81,6 +89,9 @@ const ExpenseContextsPage = lazyWithReload(() =>
 )
 
 function PageTransition({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation()
+  const path = knownPagePath(pathname)
+  useUsageView(path && path !== '/veri-sagligi/kullanim' ? { kind: 'page', subject: path } : null)
   return (
     <div className="page-route-transition w-full">
       {children}
@@ -184,6 +195,7 @@ function AnimatedRoutes() {
         <Route path="veri-sagligi" element={<DataHealthHub />}>
           <Route index element={routeElement(<DataHealthPage />, 'veri-sagligi')} />
           <Route path="islemler" element={routeElement(<DataHealthOperationsPage />, 'veri-sagligi-islemler')} />
+          <Route path="kullanim" element={routeElement(<UsageStatisticsPage />, 'veri-sagligi-kullanim')} />
         </Route>
 
         {/* Legacy redirect: loans moved from /krediler to /borclar/krediler. */}
@@ -194,6 +206,13 @@ function AnimatedRoutes() {
   )
 }
 
+function redactAnalyticsUrl<T extends { url: string }>(event: T): T | null {
+  const url = new URL(event.url, window.location.origin)
+  const path = knownPagePath(url.pathname) ?? (url.pathname === '/login' ? '/login' : null)
+  if (!path) return null
+  return { ...event, url: new URL(path, url.origin).href }
+}
+
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -201,7 +220,7 @@ export function App() {
         <ToastProvider>
           <ThemeBoot />
           <AnimatedRoutes />
-          <Analytics />
+          <Suspense fallback={null}><Analytics beforeSend={redactAnalyticsUrl} /></Suspense>
         </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>

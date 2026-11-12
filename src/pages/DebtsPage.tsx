@@ -250,7 +250,7 @@ export function DebtsPage() {
   const { formatAmount } = useBalancePrivacy()
   const { snapshot } = useMarketRates()
   const invalidateSnapshot = useInvalidateFinanceSnapshot()
-  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
+  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer('people')
   const [deferringDebtId, setDeferringDebtId] = useState<string | null>(null)
 
   async function deferReceivable(debt: Debt, reload: () => Promise<void>, setError: (message: string) => void) {

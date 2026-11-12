@@ -12,7 +12,7 @@ export function BottomNav() {
   return (
     <div className={cn('fixed inset-x-0 bottom-0 z-30 border-t border-line-strong bg-raised md:hidden', tucked && 'hidden')}>
       {!enteringExpense ? <div className="flex items-center gap-2 px-4 pb-2 pt-2.5">
-        <Link to={quickExpensePath} className="interaction-press flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground">
+        <Link to={quickExpensePath} state={{ usageSource: 'bottom-nav' }} className="interaction-press flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground">
           <Plus size={20} strokeWidth={1.8} aria-hidden="true" />Harcama ekle
         </Link>
         <QuickActionsFab />

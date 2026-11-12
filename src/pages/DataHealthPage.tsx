@@ -94,7 +94,7 @@ export function DataHealthPage() {
   const [reviewIssue, setReviewIssue] = useState<HealthIssue | null>(null)
   const [reviewBusy, setReviewBusy] = useState(false)
   const [reviewError, setReviewError] = useState('')
-  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer()
+  const { drawerProps, openPaymentDrawer } = useFinancePaymentDrawer('control')
 
   const loadData = useCallback(async () => {
     setLoading(true)

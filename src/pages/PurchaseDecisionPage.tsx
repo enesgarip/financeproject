@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CircleAlert, CircleCheck, CircleX, ShoppingCart } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import { SAVINGS_GOAL_SNAPSHOTS_QUERY_KEY } from '../app/savingsGoalSnapshotsKey'
 import { useFinanceSnapshot } from '../app/useFinanceSnapshot'
+import { useUsageFlow } from '../hooks/useUsageFlow'
 import { useAuth } from '../auth/useAuth'
 import { useOperationResolution } from '../hooks/useOperationResolution'
 import { useBalancePrivacy } from '../hooks/useBalancePrivacy'
@@ -15,6 +16,7 @@ import { QueryError } from '../components/ui/query-error'
 import { fetchSavingsGoalSnapshots } from '../data/repositories/analysisRepo'
 import { contributeToGoalBucket } from '../data/repositories/kasaBucketsRepo'
 import { insertWishlistItem } from '../data/repositories/wishlistRepo'
+import { usageSourceFrom, type UsageSource } from '../utils/usageStatistics'
 import { buildCardTimingChoices } from '../utils/cardTimingChoice'
 import { buildCashFlowForecast } from '../utils/cashFlowForecast'
 import { dateInputValue } from '../utils/date'
@@ -51,20 +53,23 @@ const VERDICT_PRESENTATION: Record<PurchaseVerdict, { label: string; className: 
 
 export function PurchaseDecisionPage() {
   const [searchParams] = useSearchParams()
-  return <PurchaseDecision initialAmount={searchParams.get('tutar') ?? ''} />
+  const { state } = useLocation()
+  return <PurchaseDecision initialAmount={searchParams.get('tutar') ?? ''} usageSource={usageSourceFrom(state, 'direct')} />
 }
 
 /** Liste içi değerlendirme ve hızlı karar aynı formu ve hesapları kullanır. */
-export function PurchaseDecision({ initialAmount = '', item, onDefer, onPurchased, saving = false }: {
+export function PurchaseDecision({ initialAmount = '', item, onDefer, onPurchased, saving = false, usageSource = item ? 'wishlist' : 'direct' }: {
   initialAmount?: string
   item?: WishlistItem
   onDefer?: () => void
   onPurchased?: () => void
   saving?: boolean
+  usageSource?: UsageSource
 }) {
   const { formatAmount, maskText } = useBalancePrivacy()
   const snapshotQuery = useFinanceSnapshot()
   const { user } = useAuth()
+  const { complete: recordEvaluation } = useUsageFlow(user?.id, 'purchase', usageSource)
   const qc = useQueryClient()
   const [amountInput, setAmountInput] = useState(() => {
     // Wishlist köprüsü: ?tutar=12500 ile gelince form dolu açılır. TEK SEFERLİK
@@ -147,6 +152,10 @@ export function PurchaseDecision({ initialAmount = '', item, onDefer, onPurchase
   }, [snapshotQuery.isError, reservedKnown, snapshotQuery.data, hasAmount, amount, installments, method, reserved, calendarIncomplete])
 
   const verdict = impact ? VERDICT_PRESENTATION[impact.verdict] : null
+  const hasEvaluation = Boolean(impact)
+  useEffect(() => {
+    if (hasEvaluation) recordEvaluation()
+  }, [hasEvaluation, recordEvaluation, usageSource, user?.id])
 
   // Kaynağa bağlı hedefin birikeni DB'de değil burada oluşur (goalSources.ts) —
   // ham snapshot.savingsGoals ile hesap remaining'i şişirirdi.
@@ -194,7 +203,7 @@ export function PurchaseDecision({ initialAmount = '', item, onDefer, onPurchase
     setForegoError('')
     // Tek yazma yolu MEVCUT RPC: çift muhasebe riski yok; kova ay damgasını
     // basar (o ayın "hedefe ayır" dürtmeleri susar — bilinçli kabul).
-    const result = await contributeToGoalBucket(foregone.dominant.bucket.id, amount, user?.id ?? '')
+    const result = await contributeToGoalBucket(foregone.dominant.bucket.id, amount, user?.id ?? '', 'purchase')
     if (!result.ok) {
       setForegoState('idle')
       setForegoError(result.error.message)

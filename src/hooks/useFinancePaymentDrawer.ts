@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useAuth } from '../auth/useAuth'
+import { useUsageFlow } from './useUsageFlow'
+import type { UsageSource } from '../utils/usageStatistics'
 import {
   emptyAccountMessageForObligation,
   getAccountsForObligation,
@@ -57,10 +59,11 @@ type FinancePaymentDrawerState = {
   afterSuccess?: () => Promise<void>
 }
 
-export function useFinancePaymentDrawer() {
+export function useFinancePaymentDrawer(source: UsageSource) {
   const { user } = useAuth()
   const submitting = useRef(false)
   const [state, setState] = useState<FinancePaymentDrawerState | null>(null)
+  const { attempt: trackPaymentAttempt } = useUsageFlow(user?.id, 'payment', source, Boolean(state))
 
   const closePaymentDrawer = useCallback(() => {
     setState(null)
@@ -131,6 +134,7 @@ export function useFinancePaymentDrawer() {
     const submitContext = { intent: current.intent, account, amount }
     setState({ ...current, attempt, saving: true, error: '' })
     current.onSubmitStart?.(submitContext)
+    const reportPayment = trackPaymentAttempt()
 
     const { error } = await submitFinanceObligationPayment({
       requestId: attempt.id,
@@ -140,6 +144,7 @@ export function useFinancePaymentDrawer() {
       skipSourceDebit: attempt.skipSourceDebit,
       paidAt: attempt.paidAt,
     }).catch((cause: unknown) => ({ error: { message: cause instanceof Error ? cause.message : 'Bağlantı sonucu doğrulanamadı.' } as SupabaseLikeError }))
+    reportPayment(error ? 'failed' : 'completed')
     current.onSubmitEnd?.({ ...submitContext, error })
 
     if (error) {
@@ -166,7 +171,7 @@ export function useFinancePaymentDrawer() {
     setState((latest) => latest?.intent.id === current.intent.id ? null : latest)
     await Promise.allSettled([current.reload?.(), current.afterSuccess?.()])
     submitting.current = false
-  }, [state, user])
+  }, [state, trackPaymentAttempt, user])
 
   const drawerProps = useMemo(() => ({
     intent: state?.intent ?? null,

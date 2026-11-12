@@ -706,7 +706,7 @@ function CarSummaryCard({
           </div>
         </div>
       </CardHeader>
-      <div className="flex flex-wrap gap-x-4 px-4"><Link to={`/kartlar?section=kartlar&panel=manuel&car=${encodeURIComponent(car.id)}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Harcama kaydet →</Link><Link to={`/varliklar/araclar?car=${encodeURIComponent(car.id)}#kart-iliskilendir`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Mevcut hareketi ilişkilendir →</Link></div>
+      <div className="flex flex-wrap gap-x-4 px-4"><Link to={`/kartlar?section=kartlar&panel=manuel&car=${encodeURIComponent(car.id)}`} state={{ usageSource: 'vehicle' }} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Harcama kaydet →</Link><Link to={`/varliklar/araclar?car=${encodeURIComponent(car.id)}#kart-iliskilendir`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary">Mevcut hareketi ilişkilendir →</Link></div>
       <CardContent className="flex flex-col gap-4">
         {total === 0 ? (
           <p className="rounded-xl border border-dashed border-line-strong p-4 text-center text-sm text-ink-muted">

@@ -27,7 +27,7 @@ export function useQuickActions() {
 
 function ActionLink({ action, onSelect }: { action: typeof actions[number]; onSelect: () => void }) {
   return (
-    <Link to={action.to} onClick={onSelect} className="interaction-press flex min-h-16 items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/8">
+    <Link to={action.to} state={{ usageSource: 'quick-actions' }} onClick={onSelect} className="interaction-press flex min-h-16 items-center gap-3 rounded-xl px-3 py-3 hover:bg-primary/8">
       <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><action.icon size={20} strokeWidth={1.8} aria-hidden="true" /></span>
       <span className="min-w-0"><span className="block text-sm font-semibold text-ink">{action.label}</span><span className="mt-0.5 block text-[13px] text-ink-muted">{action.description}</span></span>
     </Link>

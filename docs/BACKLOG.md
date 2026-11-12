@@ -1,5 +1,20 @@
 # Priority Backlog
 
+## 2026-11-12 — Kullanım istatistikleri
+
+- [x] 7/30 günlük dönemi önceki eşit aralıkla karşılaştır. Harcama, transfer,
+  ödeme, araç bakımı ve “Alsam mı?” akışlarını form açılışına bağla. Rezerv
+  ve yedek alma dahil başlangıç noktalarını göster.
+- [x] Kart ve hesap SMS işleme sonuçlarını, elle tamamlanan dövizli SMS'leri
+  ve güncel bekleme listesini mevcut otomasyon kayıtlarından özetle.
+
+- [x] Korumalı sayfa ve seçili sekme açılışlarını, altı işlem akışını ve
+  Ara ve keşfet kullanımını ölç. Kontrol › Kullanım'da 7 ve 30 günlük
+  açılış, sonuç ve aktif gün sayılarını göster.
+- [x] Kullanım olaylarını hesap sahibiyle sınırla, sabit olay kataloğunu
+  SQL'de doğrula ve 90 günden eski kayıtları günlük temizle.
+  [Kullanım istatistikleri sözleşmesi](USAGE_STATISTICS.md).
+
 ## 2026-11-12 — Form görsel denetimi
 
 - [x] Ortak formlarda ayrı Kaydet alanı, görünür ve odaklanmış ilk hata,
