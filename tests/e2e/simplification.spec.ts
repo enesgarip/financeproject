@@ -257,16 +257,44 @@ test('kategori hareketlerinden bütçe düzenlenir; ekstre veya tek kartta limit
   await expect(chart.getByRole('button', { name: 'Limiti düzenle' })).toHaveCount(0)
 })
 
-test('inceleme listesi düzeltilmiş hesap farkını tekrar açmaz ve ödemelerde keşfi açar', async ({ page }) => {
+test('inceleme listesi işaretlenen kayıtları hatırlar ve yeni hesap farkını gösterir', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 })
+  const reconciliations = [
+    { ...base, id: 'recon-1', card_id: 'bank-1', reconciled_at: now, app_amount: 20000, real_amount: 19900, drift: 100, resolution: 'corrected' },
+    { ...base, id: 'recon-2', card_id: 'bank-2', reconciled_at: now, app_amount: 5000, real_amount: 4900, drift: 100, resolution: 'open' },
+  ]
   await mockApp(page, 'light', {
-    account_reconciliations: [{ ...base, id: 'recon-1', card_id: 'bank-1', reconciled_at: now, app_amount: 20000, real_amount: 19900, drift: 100, resolution: 'corrected' }, { ...base, id: 'recon-2', card_id: 'bank-2', reconciled_at: now, app_amount: 5000, real_amount: 4900, drift: 100, resolution: 'open' }],
+    account_reconciliations: reconciliations,
+    card_expenses: ['2026-09-17', '2026-10-17'].map(spent_at => ({
+      ...base, id: `expense-${spent_at}`, card_id: 'credit-1', spent_at, amount: 150, status: 'posted',
+      description: 'Netflix', category: 'Abonelik', installment_count: 1,
+    })),
   })
   await page.goto('/')
-  await expect(page.getByRole('region', { name: 'İncelenecekler' })).toContainText('1 hesap veya kart karşılaştırmasında açık fark var.')
-  await page.goto('/odemeler?view=plans#abonelikler')
-  await expect(page.locator('#abonelikler details')).toHaveAttribute('open', '')
+  const review = page.getByRole('region', { name: 'İncelenecekler' })
+  const difference = '1 hesap veya kart karşılaştırmasında açık fark var.'
+  await expect(review).toContainText(difference)
+  await expect(review.getByRole('heading')).toHaveText('İncelenecekler · 2 başlık')
+  expect(await review.evaluate(box => box.scrollWidth <= box.clientWidth + 1)).toBe(true)
+  await review.getByRole('link', { name: 'Abonelik adaylarını incele →' }).click()
+  await expect(page.locator('#abonelikler > details')).toHaveAttribute('open', '')
   await expect(page.getByRole('heading', { name: 'Ekstrelerden abonelik adayları', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Kayıtlı planlar', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.goBack()
+  await expect(review.getByRole('heading')).toHaveText('İncelenecekler · 2 başlık')
+
+  await review.getByRole('button', { name: 'İncelendi olarak işaretle (Hesap farkları)' }).click()
+  await expect(review.getByRole('heading')).toHaveText('İncelenecekler · 1 başlık')
+  await page.reload()
+  await expect(review).toContainText('1 abonelik adayı inceleme bekliyor.')
+  await expect(review).not.toContainText(difference)
+  await review.getByRole('button', { name: 'İncelendi olarak işaretle (Abonelik adayları)' }).click()
+  await expect(review).toHaveCount(0)
+
+  reconciliations[1] = { ...reconciliations[1]!, id: 'recon-3' }
+  await page.reload()
+  await expect(review.getByRole('heading')).toHaveText('İncelenecekler · 1 başlık')
+  await expect(review).toContainText(difference)
 })
 
 test('320px otomasyon durumu API sonucunu gösterir ve yenileyince bekleyenleri günceller', async ({ page }) => {

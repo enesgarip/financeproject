@@ -3,8 +3,8 @@
  *
  * Tam DataHealth sayfası ayrıntılı kontrolleri yapar; bu dosya aynı invariant
  * ikizlerini (financeSummary.ts'ten cardDebtBreakdown / projectLoanSummary /
- * expectedInstallmentAmount) kullanarak sadece SAYIYI üretir. DRY: kural tek
- * kaynakta, burada yeniden uygulanmaz. errors = mutlaka düzeltilmeli,
+ * expectedInstallmentAmount) kullanarak bulgu sayısını ve kimliklerini üretir.
+ * Kural tek kaynakta, burada yeniden uygulanmaz. errors = mutlaka düzeltilmeli,
  * warnings = göz atılmalı.
  */
 import type {
@@ -28,6 +28,7 @@ export type HealthSummary = {
   warnings: number
   /** Bulgu toplamı (errors + warnings). Yapılan kontrol sayısı DEĞİL. */
   total: number
+  issueIds: string[]
   /**
    * Kaç kontrol koşturuldu. Her kart 4, ödeme planı olan her kredi 2, taksitli
    * her harcama 1, her limit grubu 1 kontrol demek.
@@ -50,8 +51,8 @@ type HealthCountInput = {
 }
 
 export function buildHealthCounts(data: HealthCountInput): HealthSummary {
-  let errors = 0
-  let warnings = 0
+  const errorIds: string[] = []
+  const warningIds: string[] = []
   // Kontrol sayacı bulgu sayacından AYRI ilerler: bir kontrol koştuğunda artar,
   // sonucu temiz olsa da olmasa da.
   let checksRun = 0
@@ -61,10 +62,10 @@ export function buildHealthCounts(data: HealthCountInput): HealthSummary {
   for (const card of data.cards.filter((c) => c.card_type === 'kredi_karti')) {
     const breakdown = cardDebtBreakdown(card, scheduledByCard.get(card.id) ?? 0)
     checksRun += 4
-    if (!card.statement_day || !card.due_day) warnings++
-    if (breakdown.hasSplitOverflow) errors++
-    if (breakdown.hasScheduledDebtGap) errors++
-    if (breakdown.hasUnexplainedDebt) warnings++
+    if (!card.statement_day || !card.due_day) warningIds.push(`card-dates:${card.id}`)
+    if (breakdown.hasSplitOverflow) errorIds.push(`card-split:${card.id}`)
+    if (breakdown.hasScheduledDebtGap) errorIds.push(`card-scheduled-debt:${card.id}`)
+    if (breakdown.hasUnexplainedDebt) warningIds.push(`card-unexplained-debt:${card.id}`)
   }
 
   const installmentsByLoan = new Map<string, LoanInstallment[]>()
@@ -79,8 +80,8 @@ export function buildHealthCounts(data: HealthCountInput): HealthSummary {
     if (!insts || insts.length === 0) continue
     const projected = projectLoanSummary(insts)
     checksRun += 2
-    if (moneyDiffers(loan.remaining_amount, projected.remainingAmount)) errors++
-    if (loan.remaining_installments !== projected.remainingInstallments) warnings++
+    if (moneyDiffers(loan.remaining_amount, projected.remainingAmount)) errorIds.push(`loan-amount:${loan.id}`)
+    if (loan.remaining_installments !== projected.remainingInstallments) warningIds.push(`loan-installments:${loan.id}`)
   }
 
   const installmentsByExpense = new Map<string, CardInstallment[]>()
@@ -94,21 +95,23 @@ export function buildHealthCounts(data: HealthCountInput): HealthSummary {
     if (expense.installment_count <= 1) continue
     const expected = expectedInstallmentAmount(expense.amount, expense.installment_count)
     checksRun += 1
-    if (moneyDiffers(expense.installment_amount, expected)) warnings++
+    if (moneyDiffers(expense.installment_amount, expected)) warningIds.push(`expense-installment:${expense.id}`)
   }
 
   for (const group of buildCreditLimitGroups(data.cards)) {
     // Limitsiz grupta aşım kontrolü yapılamaz.
     if (group.limit <= 0) continue
     checksRun += 1
-    if (exceedsTL(group.debt, group.limit)) warnings++
+    if (exceedsTL(group.debt, group.limit)) warningIds.push(`credit-limit:${group.key}`)
   }
 
-  const total = errors + warnings
+  const issueIds = [...errorIds, ...warningIds]
+  const total = issueIds.length
   return {
-    errors,
-    warnings,
+    errors: errorIds.length,
+    warnings: warningIds.length,
     total,
+    issueIds,
     checksRun,
     // Teorik olarak total > checksRun olamaz ama sayaçlar ayrı ilerlediği için
     // kelepçeliyoruz: negatif "temiz kontrol" ekrana asla çıkmasın.

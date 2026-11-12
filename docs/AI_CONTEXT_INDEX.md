@@ -10,6 +10,7 @@ katmana geç. Tarihli kayıtlar bir kararın geçmişini araştırırken kullan�
 | --- | --- | --- |
 | Kart borcu, ekstre, provizyon | [Kart borcu geçişleri](CARD_DEBT_TRANSITIONS.md) | `src/utils/financeSummary.ts`, `src/utils/financeSummary.test.ts`, ilgili `supabase/tests/*.sql` |
 | Özet, rezerv, harcanabilir tutar | [Özet mimarisi](DASHBOARD_ARCHITECTURE.md) | `src/utils/safeToSpend.ts`, `src/utils/safeToSpend.test.ts`, `src/hooks/useSafeToSpend.ts` |
+| Özet İncelenecekler ve İncelendi | [Özet mimarisi](DASHBOARD_ARCHITECTURE.md) | `src/components/dashboard/ForeignCardSmsNotice.tsx`, `src/utils/dataHealthSummary.ts`, `tests/e2e/simplification.spec.ts` |
 | Veri sağlığı ve onarım | [Veri sağlığı mimarisi](DATA_HEALTH_ARCHITECTURE.md) | `src/pages/DataHealth.logic.ts`, `src/pages/DataHealth.logic.test.ts`, ilgili RPC ve SQL testi |
 | Yazma, RPC, migration veya RLS | [RPC sözleşmeleri](RPC_ACTION_REFERENCE.md), [migration kontrolü](MIGRATION_COMPATIBILITY_CHECKLIST.md) | İlgili `src/data/repositories/*` veya `src/services/*`, `src/types/database.ts`, `supabase/tests/*.sql` |
 | Form, iptal ve mobil gezinme | [UI mimarisi](UI_ARCHITECTURE.md) | `src/components/CrudPage.tsx`, `src/lib/navigationSafety.ts`, `tests/e2e/audit-remediation.spec.ts` |

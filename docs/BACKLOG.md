@@ -1,5 +1,10 @@
 # Priority Backlog
 
+## 2026-11-12 — Özet inceleme listesi
+
+- [x] Özet'te başlık bazında **İncelendi** eylemi. Tarayıcı aynı kayıtları
+  hatırlar; yeni bir kayıt geldiğinde başlık yeniden görünür.
+
 ## 2026-11-09 — Yayın güveni
 
 - [x] Edge fonksiyon seçimini yayın sınıflandırmasının tabanına bağla; arada

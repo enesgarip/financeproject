@@ -1,5 +1,11 @@
 # Dashboard Architecture Note
 
+12 Kasım: Özet'teki **İncelendi** eylemi başlığın o anki kayıt kimliklerini
+tarayıcıda kullanıcı bazında saklar. Yeni bir kimlik başlığı geri getirir;
+gösterilecek başlık kalmayınca kutu kapanır. Hesap farkı ve diğer kayıtlar
+kendi ekranlarında erişilebilir. Dövizli SMS okuma/kurtarma uyarıları
+doğrulanana kadar görünür.
+
 8 Kasım: `ForeignCardSmsNotice` İncelenecekler listesinde dövizli SMS, son
 karşılaştırmadaki açık fark, hafif veri bulgusu ve aktif abonelik adaylarını
 bağlantılarla toplar. Sayaç konu başlığı sayısıdır; snapshot hatasında o kaynaktan
