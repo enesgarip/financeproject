@@ -1,5 +1,11 @@
 # Card Debt Transitions
 
+12 Kasım AI paylaşım özeti: kart borcu kırılımı ve ödeme zamanlaması mevcut
+hesaplara dayanır. Gelecek Taksit Takvimi ekstreye giriş ayını gösterir.
+7/30 günlük nakit yükünde planlı taksit `getScheduledCardCashDueDate` ile
+hesaplanan son ödeme gününde bir kez görünür. Açık ekstre kalan tutarı kısmi
+ödemeler düşülerek gösterilir. [Rapor kapsamı](FINANCE_RULES.md#reporting-and-projection-windows).
+
 9 Kasım birleşik denetim: `docs/AUDIT_REMEDIATION_2026-11-09.md`.
 Yeni submit_finance_operation mevcut domain RPC'lerini aynı transaction'da
 UUID/hash makbuzuyla sarar. Kayıp yanıt tekrarında hesap/varlık/rezerv ve

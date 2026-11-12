@@ -3,6 +3,28 @@ import { bank, base, mockApp, now, tables } from './audit-fixtures'
 
 const sampleDebt = { ...base, id: 'debt-1', person_name: 'Örnek borçlu', direction: 'borç_aldım', value_type: 'TRY', currency: null, amount: 1000, estimated_value_try: 1000, auto_valued: false, due_date: null, status: 'açık' }
 
+test('AI özeti, Analiz verilerinden anonim güncel durumu panoya kopyalar', async ({ page, context }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  await mockApp(page, 'light', {
+    net_worth_snapshots: [{ ...base, id: 'net-worth-1', snapshot_date: '2026-09-26', net_worth: 25000, total_assets: 26000, total_debts: 1000, total_receivables: 0 }],
+  })
+  await page.goto('/analiz')
+  await page.getByRole('button', { name: 'AI özeti', exact: true }).click()
+  const modal = page.getByRole('dialog', { name: 'Finansal özet — AI için' })
+  const preview = modal.locator('pre')
+  await expect(preview).toContainText('Kasa rezervi: ₺300,00')
+  await expect(preview).toContainText('Net değer değişimi (30 gün önceye en yakın eski kayıt')
+  await expect(preview).toContainText('Önümüzdeki 7 günün kayıtlı nakit yükü')
+  await expect(preview).not.toContainText(/Örnek hesap|İş Bankası|Örnek aidat|Örnek hedef/)
+  const markdown = await preview.textContent()
+  await modal.getByRole('button', { name: 'Özeti kopyala', exact: true }).click()
+  await expect(modal.getByRole('status')).toHaveText('Özet Markdown biçiminde kopyalandı.')
+  const clipboard = await page.evaluate(() => navigator.clipboard.readText())
+  expect(clipboard.replaceAll('\r\n', '\n')).toBe(markdown)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
+})
+
 test('bağlı harcama: grup önceden seçilir, araçla aynı harcama yazılır ve mevcut harekete geçilir', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))

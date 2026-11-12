@@ -79,7 +79,7 @@ function downloadCsv(items: SearchItem[]) {
  * (ChatGPT'ye yapıştırıp taktik almak) veya temiz PDF olarak yazdırır. Rapor
  * kategori-bazlı agregasyondur: hesap/banka/kişi adı içermez (gizlilik yapı gereği).
  */
-function AiSummaryButton({ data }: { data: AnalysisData }) {
+function AiSummaryButton({ snapshots }: { snapshots?: NetWorthSnapshot[] }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState('')
@@ -91,14 +91,16 @@ function AiSummaryButton({ data }: { data: AnalysisData }) {
   // rapor + markdown serileştirmesi yapmak her data değişiminde boşa işti.
   const report = useMemo(
     () =>
-      open
-        ? buildFinancialReport(snapshotQuery.data ?? { ...data, cardStatements: data.cardStatementArchives }, {
+      open && snapshotQuery.data
+        ? buildFinancialReport(snapshotQuery.data, {
+            snapshotReadAt: snapshotQuery.dataUpdatedAt,
+            netWorthSnapshots: snapshots,
             ratesSnapshot,
             kasaBuckets: bucketsQuery.isSuccess ? bucketsQuery.data : null,
             safeToSpendBuffer: readSafeToSpendBuffer(),
           })
         : null,
-    [open, data, snapshotQuery.data, ratesSnapshot, bucketsQuery.data, bucketsQuery.isSuccess],
+    [open, snapshotQuery.data, snapshotQuery.dataUpdatedAt, snapshots, ratesSnapshot, bucketsQuery.data, bucketsQuery.isSuccess],
   )
   const markdown = useMemo(() => (report ? reportToMarkdown(report) : ''), [report])
 
@@ -116,22 +118,21 @@ function AiSummaryButton({ data }: { data: AnalysisData }) {
 
   return (
     <>
-      <Button type="button" variant="outline" size="sm" onClick={() => { setCopied(false); setCopyError(''); setOpen(true) }}>
+      <Button type="button" variant="outline" size="sm" disabled={!snapshotQuery.data} onClick={() => { setCopied(false); setCopyError(''); setOpen(true) }}>
         <Sparkles />
         AI özeti
       </Button>
       <SimpleModal title="Finansal özet — AI için" open={open} onClose={() => setOpen(false)}>
         <div className="space-y-3">
           <p className="text-sm text-ink-muted">
-            Aşağıdaki özet hesap/banka/kişi adı içermez — yalnız yapı ve rakam. ChatGPT gibi bir asistana yapıştırıp
-            taktik alabilir veya PDF olarak indirebilirsin.
+            Özet, güncel durumu ve yaklaşan ödemeleri başta gösterir. Anonim ayrıntılarıyla birlikte ChatGPT’ye yapıştırabilir veya PDF olarak yazdırabilirsin.
           </p>
           <div className="grid min-w-0 grid-cols-1 gap-2 sm:flex sm:flex-wrap" aria-label="Özet işlemleri">
-            <Button type="button" onClick={copyMarkdown} className="min-h-11 w-full min-w-0 sm:w-auto">
+            <Button type="button" disabled={!report} onClick={copyMarkdown} className="min-h-11 w-full min-w-0 sm:w-auto">
               {copied ? <Check /> : <Copy />}
               {copied ? 'Kopyalandı' : 'Özeti kopyala'}
             </Button>
-            <Button type="button" variant="outline" className="min-h-11 w-full min-w-0 sm:w-auto" onClick={() => report && printFinancialReport(report)}>
+            <Button type="button" variant="outline" disabled={!report} className="min-h-11 w-full min-w-0 sm:w-auto" onClick={() => report && printFinancialReport(report)}>
               <Download />
               Yazdır / PDF
             </Button>
@@ -147,7 +148,7 @@ function AiSummaryButton({ data }: { data: AnalysisData }) {
   )
 }
 
-export function MonthlyReport({ data }: { data: AnalysisData }) {
+export function MonthlyReport({ data, snapshots }: { data: AnalysisData; snapshots?: NetWorthSnapshot[] }) {
   const { formatAmount } = useBalancePrivacy()
   const cashFlow = buildMonthlyCashFlow(data)
   const cardSpending = sum(
@@ -199,7 +200,7 @@ export function MonthlyReport({ data }: { data: AnalysisData }) {
       </CardHeader>
       <CardContent className="space-y-4 pt-2">
         <div className="flex flex-wrap gap-2">
-          <AiSummaryButton data={data} />
+          <AiSummaryButton snapshots={snapshots} />
           <Button type="button" variant="outline" size="sm" onClick={() => {
             const canvas = renderShareableCard({ cashFlow, summary })
             downloadShareableCard(canvas, cashFlow.monthLabel)

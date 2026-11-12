@@ -21,6 +21,8 @@ export type CategorySpending = {
 export type MonthlySummaryResult = {
   currentMonthTotal: number
   previousMonthTotal: number
+  previousMonthToDateTotal: number
+  previousMonthToDateByCategory: ReadonlyMap<string, number>
   changePercent: number | null
   categories: CategorySpending[]
   topCategory: string | null
@@ -47,6 +49,7 @@ export function buildMonthlySummary(
   const throughDay = dayOfMonthCutoff(now)
 
   const categoryMap = new Map<string, number>()
+  const previousMonthToDateByCategory = new Map<string, number>()
   let currentMonthTotal = 0
   let previousMonthTotal = 0
   let previousMonthToDateTotal = 0
@@ -54,8 +57,8 @@ export function buildMonthlySummary(
 
   for (const e of posted) {
     const eMonth = e.spent_at.slice(0, 7)
+    const cat = e.category || 'Diğer'
     if (eMonth === currentKey) {
-      const cat = e.category || 'Diğer'
       categoryMap.set(cat, sumTL([categoryMap.get(cat), e.amount]))
       currentMonthTotal = sumTL([currentMonthTotal, e.amount])
       activeDaySet.add(e.spent_at.slice(0, 10))
@@ -63,6 +66,7 @@ export function buildMonthlySummary(
       previousMonthTotal = sumTL([previousMonthTotal, e.amount])
       if (isWithinDayOfMonth(e.spent_at, throughDay)) {
         previousMonthToDateTotal = sumTL([previousMonthToDateTotal, e.amount])
+        previousMonthToDateByCategory.set(cat, sumTL([previousMonthToDateByCategory.get(cat), e.amount]))
       }
     }
   }
@@ -85,6 +89,8 @@ export function buildMonthlySummary(
   return {
     currentMonthTotal,
     previousMonthTotal,
+    previousMonthToDateTotal,
+    previousMonthToDateByCategory,
     changePercent,
     categories,
     topCategory: categories.length > 0 ? categories[0].category : null,

@@ -85,12 +85,15 @@ export function getNextCardPaymentDueDate(card: StatementCard | null | undefined
 }
 
 /** Scheduled rows are not yet in current-period debt; count cash once at the real due date. */
+export function getScheduledCardCashDueDate(card: StatementCard | undefined, installment: CardInstallment): string | null {
+  return installment.status === 'scheduled' ? getCardStatementPeriod(card, installment.due_month)?.dueDate ?? null : null
+}
+
 export function scheduledCardCashOutflow(cards: Card[], installments: CardInstallment[], month: Date, includeOverdue = false): number {
   const cardsById = new Map(cards.map((card) => [card.id, card]))
   const monthStart = dateInputValue(startOfMonth(month))
   return sumTL(installments.filter((row) => {
-    if (row.status !== 'scheduled') return false
-    const due = getCardStatementPeriod(cardsById.get(row.card_id), row.due_month)?.dueDate
+    const due = getScheduledCardCashDueDate(cardsById.get(row.card_id), row)
     return due != null && (isDateInMonth(due, month) || (includeOverdue && due < monthStart))
   }).map((row) => row.amount))
 }

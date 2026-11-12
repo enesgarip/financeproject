@@ -34,6 +34,9 @@ function expense(o: Partial<CardExpense>): CardExpense {
 function installment(o: Partial<CardInstallment>): CardInstallment {
   return { ...base, card_id: 'c1', card_expense_id: 'e1', statement_archive_id: null, installment_no: 1, installment_count: 3, due_month: '2026-07-15', amount: 100, description: 'Gizli alışveriş', category: 'Market', status: 'scheduled', posted_at: null, paid_at: null, note: null, ...o }
 }
+function payment(o: Partial<Payment>): Payment {
+  return { ...base, title: 'Gizli kira adresi', category: 'Fatura', amount: 500, amount_status: 'exact', due_date: '2026-06-20', status: 'bekliyor', payment_method: 'manual', recurrence: 'none', recurrence_day: null, recurrence_end_date: null, auto_source_card_id: null, note: null, ...o }
+}
 
 const empty: FinanceSummaryInput = {
   assets: [], cards: [], loans: [], loanInstallments: [], debts: [],
@@ -44,13 +47,14 @@ describe('buildFinancialReport', () => {
   it('eksik kart takviminde harcanabilir tutarı doğrulanmış sayı gibi yazmaz', () => {
     const input = { ...empty, cards: [bankCard({ current_balance: 45000 }), creditCard({ debt_amount: 25000, statement_debt_amount: 10000, current_period_spending: 15000, statement_day: null, due_day: null })] }
     const md = reportToMarkdown(buildFinancialReport(input, { now: NOW, safeToSpendBuffer: 5000, kasaBuckets: [] }))
-    expect(md).toContain('Bu ay harcanabilir: doğrulanamadı; kart kesim/son ödeme günü eksik.')
+    expect(md).toContain('Bu ay harcanabilir: doğrulanamadı (kart kesim veya son ödeme günü eksik).')
   })
   it('produces a titled, dated report with the core sections', () => {
     const report = buildFinancialReport(empty, { now: NOW })
     expect(report.title).toBe('Finansal Özet')
     expect(report.generatedAt).toContain('2026')
     const headings = report.sections.map((s) => s.heading)
+    expect(headings.slice(0, 3)).toEqual(['Güncel Durum', 'Yakın Vadeler', 'Son Dönemdeki Değişim'])
     expect(headings).toContain('Net Değer')
     expect(headings).toContain('Borç Dağılımı')
     expect(headings.some((h) => h.startsWith('6 Aylık Nakit Projeksiyonu'))).toBe(true)
@@ -84,7 +88,7 @@ describe('buildFinancialReport', () => {
     const breakdown = report.sections.find((s) => s.heading === 'Varlık Dağılımı')!
     expect(breakdown.table!.headers).toEqual(['Kategori', 'Değer', 'Pay'])
     expect(breakdown.table!.rows.length).toBe(2)
-    expect(breakdown.note).toContain('Reel/korunaklı')
+    expect(breakdown.note).toContain('TL nakit dışındaki varlıklar')
     expect(breakdown.note).toContain('%75') // 75k of 100k protected
   })
 
@@ -92,13 +96,14 @@ describe('buildFinancialReport', () => {
     const input: FinanceSummaryInput = {
       ...empty,
       cards: [bankCard({ bank_name: 'Gizli Banka', card_name: 'Maaş Hesabım', current_balance: 1000 })],
-      loans: [loan({ bank_name: 'Gizli Kredi Bankası', loan_name: 'Konut Kredim', remaining_amount: 5000 })],
+      loans: [loan({ bank_name: 'Gizli Kredi Bankası', loan_name: 'Konut Kredim', remaining_amount: 5000, remaining_installments: 4, monthly_payment: 1250 })],
     }
     const md = reportToMarkdown(buildFinancialReport(input, { now: NOW }))
     expect(md).not.toContain('Gizli Banka')
     expect(md).not.toContain('Maaş Hesabım')
     expect(md).not.toContain('Gizli Kredi Bankası')
     expect(md).not.toContain('Konut Kredim')
+    expect(md).toContain('| Kredi 1 | ₺5.000,00 | 4 | ₺1.250,00 |')
   })
 
   it('marks first-negative month when cash runs out, else says none', () => {
@@ -107,22 +112,19 @@ describe('buildFinancialReport', () => {
       { now: NOW },
     )
     const fc = positive.sections.find((s) => s.heading.includes('Projeksiyon'))!
-    expect(fc.lines!.some((l) => l.includes('negatife düşen ay yok'))).toBe(true)
-  })
-
-  it('omits the FIRE coverage section when there are no expenses', () => {
-    const report = buildFinancialReport(empty, { now: NOW })
-    expect(report.sections.some((s) => s.heading.startsWith('Servet Kapsama'))).toBe(false)
+    expect(fc.lines).toContain('Kayıtlı planlarla ay sonu nakdi eksiye düşmüyor.')
+    const negative = buildFinancialReport({ ...empty, payments: [payment({ amount: 3000 })] }, { now: NOW })
+    expect(negative.sections[0].lines).toContain('İlk nakit açığı: Haziran 2026 · -₺3.000,00')
   })
 
   it('deducts both cash reserves and buffer, while leaving unverified spending power unknown', () => {
     const input = { ...empty, cards: [bankCard({ current_balance: 10000 }), bankCard({ account_kind: 'cash', current_balance: 2000 })] }
     const buckets: KasaBucket[] = [{ ...base, name: 'Gizli kasa', reserved_amount: 1500, sort_order: 0, note: null, goal_id: null, last_contribution_month: null }]
     const report = buildFinancialReport(input, { now: NOW, safeToSpendBuffer: 500, kasaBuckets: buckets })
-    const lines = report.sections.find((section) => section.heading === 'Hesaplar ve Harcanabilir Tutar')!.lines!.join('\n')
-    expect(lines).toContain('Banka hesapları (1): ₺10.000,00')
-    expect(lines).toContain('Nakit cüzdanları (1): ₺2.000,00')
-    expect(lines).toContain('Bu ay harcanabilir: ₺10.000,00')
+    const accounts = report.sections.find((section) => section.heading === 'Hesaplar ve Nakit')!.lines!
+    expect(accounts).toContain('Banka hesapları (1): ₺10.000,00')
+    expect(accounts).toContain('Nakit cüzdanları (1): ₺2.000,00')
+    expect(report.sections[0].lines).toContain('Bu ay harcanabilir: ₺10.000,00')
     expect(reportToMarkdown(report)).not.toContain('Gizli kasa')
     const unknown = reportToMarkdown(buildFinancialReport(input, { now: NOW, safeToSpendBuffer: 500 }))
     expect(unknown).toContain('harcanabilir tutar hesaplanamadı')
@@ -154,19 +156,38 @@ describe('buildFinancialReport', () => {
     const report = buildFinancialReport(input, { now: NOW })
     const rows = report.sections.find((section) => section.heading === 'Gelecek Taksit Takvimi')!.table!.rows
     expect(rows[1][1]).toBe('₺350,00')
-    const missing = buildFinancialReport({ ...input, missingTables: ['card_installments'] }, { now: NOW })
+    const missing = buildFinancialReport({ ...input, missingTables: ['card_installments'] }, { now: NOW, safeToSpendBuffer: 0, kasaBuckets: [] })
     expect(missing.sections.some((section) => section.heading === 'Gelecek Taksit Takvimi')).toBe(false)
     expect(reportToMarkdown(missing)).toContain('ek veri tabloları bu ortamda mevcut değil')
+    expect(missing.sections[0].lines).toContain('Bu ay harcanabilir: doğrulanamadı (kart verisi eksik).')
   })
 
-  it('describes fair spending comparisons and excludes cancelled purchases and merchant names', () => {
-    const input = { ...empty, cardExpenses: [expense({ amount: 300 }), expense({ spent_at: '2026-05-10', amount: 100 }), expense({ spent_at: '2026-05-25', amount: 900 }), expense({ amount: 500, status: 'cancelled' })], transactionHistory: [] }
-    const report = buildFinancialReport(input, { now: NOW })
+  it('shows same-day spending deltas and dated net worth comparisons without future, cancelled or private values', () => {
+    const input = { ...empty, cards: [bankCard({ current_balance: 10000 })], cardExpenses: [
+      expense({ amount: 300 }),
+      expense({ spent_at: '2026-05-10', amount: 100 }),
+      expense({ spent_at: '2026-05-25', amount: 900 }),
+      expense({ spent_at: '2026-06-25', amount: 900 }),
+      expense({ amount: 500, status: 'cancelled' }),
+      expense({ amount: 50, category: 'Gizli kategori | özel' }),
+    ], transactionHistory: [] }
+    const report = buildFinancialReport(input, {
+      now: NOW, snapshotReadAt: new Date(2026, 5, 14, 20, 10).getTime(),
+      netWorthSnapshots: [
+        { snapshot_date: '2026-06-01', net_worth: 9000 },
+        { snapshot_date: '2026-05-10', net_worth: 8000 },
+      ],
+    })
+    expect(report.sections[0].lines?.[0]).toMatch(/Son veri okuma: .*20:10/)
+    const changes = report.sections[2].lines
+    expect(changes).toContain('Ayın aynı gününe kadar kart harcaması: bu ay ₺350,00 · geçen ay ₺100,00')
+    expect(changes).toContain('Geçen ay aynı güne göre değişim: %250')
+    expect(changes).toContain('En çok artan kategoriler: Market +₺200,00 · Diğer +₺50,00')
+    expect(changes).toContain('Net değer değişimi (30 gün önceye en yakın eski kayıt, 10 May 2026): +₺2.000,00')
+    expect(changes).toContain('90 günlük net değer karşılaştırması için yeterli geçmiş yok.')
     const spending = report.sections.find((section) => section.heading === 'Kart Harcama Eğilimi')!
-    expect(spending.lines).toContain('Bu ay kaydedilen kart harcaması: ₺300,00')
-    expect(spending.lines).toContain('Geçen ay aynı güne göre değişim: %200')
-    expect(spending.table!.rows).toEqual([['Market', '₺300,00', '%100']])
-    expect(reportToMarkdown(report)).not.toContain('Gizli açıklama')
+    expect(spending.table!.rows).toEqual([['Market', '₺300,00', '%86'], ['Diğer', '₺50,00', '%14']])
+    expect(reportToMarkdown(report)).not.toMatch(/Gizli açıklama|Gizli kategori/)
     expect(reportToMarkdown(report)).toContain('Planlanan nakit çıkışı:')
     expect(reportToMarkdown(report)).toContain('Toplam kayıtlı nakit ödeme:')
   })
@@ -176,20 +197,52 @@ describe('buildFinancialReport', () => {
     const report = buildFinancialReport(input, { now: NOW })
     const rows = report.sections.find((section) => section.heading === 'Birikim Hedefleri')!.table!.rows
     expect(rows[0][1]).toContain('2.500,00')
+    expect(rows[0][3]).toBe('%25')
     expect(rows[1][1]).toBe('Kaynak doğrulanamadı')
-    expect(rows[2][2]).toBe('Güncel çıpa verisi eksik')
+    expect(rows[2][2]).toBe('Güncel hedef verisi eksik')
+    expect(rows[1][3]).toBe('—')
+    expect(rows[2][3]).toBe('—')
     expect(reportToMarkdown(report)).not.toContain('Gizli hedefim')
     const missingSourceTable = buildFinancialReport({ ...input, savingsGoalSources: [], missingTables: ['savings_goal_sources'] }, { now: NOW })
     expect(missingSourceTable.sections.find((section) => section.heading === 'Birikim Hedefleri')!.table!.rows[0][1]).toBe('Kaynak doğrulanamadı')
   })
 
   it('counts a shared credit limit once and does not expose payment titles', () => {
-    const payment: Payment = { ...base, title: 'Gizli kira adresi', category: 'Fatura', amount: 500, amount_status: 'estimated', due_date: '2026-06-20', status: 'bekliyor', payment_method: 'manual', recurrence: 'none', recurrence_day: null, recurrence_end_date: null, auto_source_card_id: null, note: null }
-    const input = { ...empty, cards: [creditCard({ id: 'c1', limit_group_name: 'Gizli aile', credit_limit: 10000 }), creditCard({ id: 'c2', limit_group_name: 'Gizli aile', credit_limit: 10000 })], payments: [payment] }
+    const input = { ...empty, cards: [creditCard({ id: 'c1', limit_group_name: 'Gizli aile', credit_limit: 10000 }), creditCard({ id: 'c2', limit_group_name: 'Gizli aile', credit_limit: 10000 })], payments: [payment({ amount_status: 'estimated' })] }
     const report = buildFinancialReport(input, { now: NOW })
     expect(report.sections.find((section) => section.heading === 'Kart Borcu ve Limit Ayrıntıları')!.lines![0]).toBe('Ortak limitler tek sayılmış toplam limit: ₺10.000,00')
     expect(reportToMarkdown(report)).toContain('(tahmini)')
     expect(reportToMarkdown(report)).not.toMatch(/Gizli aile|Gizli kira adresi/)
+  })
+
+  it('counts overdue obligations separately and places each future card installment once at its cash due date', () => {
+    const report = buildFinancialReport({
+      ...empty,
+      cards: [creditCard({ id: 'c1', statement_day: 25, due_day: 5 })],
+      cardInstallments: [
+        installment({ due_month: '2026-06-25', amount: 350 }),
+        installment({ due_month: '2026-06-25', amount: 900, status: 'posted' }),
+      ],
+      payments: [
+        payment({ id: 'older', due_date: '2026-05-20', amount: 100 }),
+        payment({ id: 'late', due_date: '2026-06-10', amount: 200 }),
+        payment({ id: 'paid', due_date: '2026-06-12', amount: 300, status: 'ödendi' }),
+        payment({ id: 'upcoming' }),
+        payment({ id: 'card', amount: 700, payment_method: 'bank_auto', auto_source_card_id: 'c1' }),
+      ],
+      salaryHistory: [salary({ amount: 4000 })],
+    }, { now: NOW })
+    const lines = report.sections[1].lines!
+    expect(lines[0]).toBe('Vadesi geçmiş açık ödeme: 2 kayıt · kayıtlı nakit yükü ₺300,00')
+    expect(lines[1]).toMatch(/22 Haz 2026\): ₺500,00$/)
+    expect(lines[2]).toMatch(/15 Tem 2026\): ₺850,00$/)
+    expect(lines[3]).toContain('maaş ₺4.000,00')
+    const upcoming = report.sections.find((section) => section.heading === 'Önümüzdeki 30 Gün')!.table!.rows
+    expect(upcoming.filter((row) => row[1].startsWith('Planlı kart taksiti'))).toEqual([
+      ['05 Tem 2026', 'Planlı kart taksiti (tahmini ödeme günü)', 'Çıkış', '₺350,00', '₺350,00'],
+    ])
+    const monthly = report.sections.find((section) => section.heading.startsWith('Bu Ay Nakit Akışı'))!
+    expect(monthly.lines).toContain('Ay sonuna kadar kalan nakit çıkışı (geciken açık yükümlülükler dahil): ₺800,00')
   })
 })
 
@@ -204,7 +257,7 @@ describe('reportToMarkdown', () => {
     expect(md).toContain('## Net Değer')
     expect(md).toContain('| Kategori | Değer | Pay |')
     expect(md).toContain('| --- | --- | --- |')
-    expect(md).toContain('> Reel/korunaklı')
-    expect(md).toContain('yalnız yapı + rakam')
+    expect(md).toContain('> TL nakit dışındaki varlıklar')
+    expect(md).toContain('Ayrıntılar anonimdir.')
   })
 })
