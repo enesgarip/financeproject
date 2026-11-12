@@ -438,6 +438,10 @@ exactly proven historical archive allocation before a full current-period
 payment. It never debits a bank account; recording the payment remains a
 separate action with an explicit source account.
 
+The dashboard's **İncelendi** action hides the reviewed reconciliation IDs
+from its review list in the current browser. New reconciliation IDs appear
+again. Open differences remain available in Data Health.
+
 `cardPayableDebt(card)` is:
 
 ```text

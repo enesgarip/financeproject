@@ -96,10 +96,11 @@ describe('buildHealthCounts', () => {
     const result = buildHealthCounts({ ...emptyInput, cards: [makeCard({ statement_day: null, due_day: null })] })
     expect(result.warnings).toBe(1)
     expect(result.cleanChecks).toBe(4)
+    expect(result.issueIds).toEqual(['card-dates:c1'])
   })
   it('returns zero counts for empty data', () => {
     const result = buildHealthCounts(emptyInput)
-    expect(result).toEqual({ errors: 0, warnings: 0, total: 0, checksRun: 0, cleanChecks: 0 })
+    expect(result).toEqual({ errors: 0, warnings: 0, total: 0, issueIds: [], checksRun: 0, cleanChecks: 0 })
   })
 
   it('returns zero when card debt split is consistent', () => {

@@ -13,7 +13,7 @@
  */
 import { AlertTriangle, ChevronDown, RefreshCw } from 'lucide-react'
 import { ForeignCardSmsNotice } from '../components/dashboard/ForeignCardSmsNotice'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useFinanceSnapshot, useInvalidateFinanceSnapshot } from '../app/useFinanceSnapshot'
 import type {
   AccountReconciliation,
@@ -109,6 +109,7 @@ const DASHBOARD_HISTORY_MONTHS = 3
 const DASHBOARD_SPENDING_MONTHS = 4
 
 export function DashboardPage() {
+  const dashboardRef = useRef<HTMLElement>(null)
   // "Bugün" donuk kalmasın: PWA sekmesi gece boyunca açık kaldığında
   // `useMemo(..., [])` dünün tarihini gösteriyordu (gün sayacı, kalan gün,
   // günlük harcanabilir hepsi bir gün geride kalıyordu). Sekme öne geldiğinde
@@ -230,7 +231,9 @@ export function DashboardPage() {
     [openPaymentDrawer, data.cards, invalidateSnapshot],
   )
   const healthCounts = useMemo(() => buildHealthCounts(data), [data])
-  const subscriptionReviewCount = useMemo(() => snapshotQuery.data ? discoverSubscriptions(snapshotQuery.data.cardExpenses, snapshotQuery.data.payments).filter(candidate => candidate.isActive && candidate.status !== 'planned').length : 0, [snapshotQuery.data])
+  const subscriptionReviewIds = useMemo(() => discoverSubscriptions(data.cardExpenses, data.payments)
+    .filter(candidate => candidate.isActive && candidate.status !== 'planned')
+    .map(candidate => candidate.id), [data.cardExpenses, data.payments])
 
   // ── Şerit katmanı (yeni görsel dil, `2a`/`4e`) ──
   // Kahraman rakam SafeToSpendCard'ın hesabıdır; kart kaldırıldığı için hesap
@@ -349,8 +352,14 @@ export function DashboardPage() {
   const detailsPanelId = 'dashboard-details-panel'
 
   return (
-    <section className="grid gap-6 lg:grid-cols-12 lg:items-start">
-      <ForeignCardSmsNotice cards={error ? [] : data.cards} reconciliations={error ? [] : data.accountReconciliations} healthCount={error ? 0 : healthCounts.total} subscriptionCount={error ? 0 : subscriptionReviewCount} />
+    <section ref={dashboardRef} tabIndex={-1} className="grid gap-6 lg:grid-cols-12 lg:items-start">
+      <ForeignCardSmsNotice
+        cards={error ? [] : data.cards}
+        reconciliations={error ? [] : data.accountReconciliations}
+        healthIssueIds={error ? [] : healthCounts.issueIds}
+        subscriptionIds={error ? [] : subscriptionReviewIds}
+        onLastTopicReviewed={() => dashboardRef.current?.focus({ preventScroll: true })}
+      />
       {error ? <p role="alert" className="lg:col-span-12 text-sm text-warning">Güncel özet alınamadı. Son başarılı okumadaki veriler gösteriliyor. {userMessage(error)}</p> : null}
       {/* ── Şerit katmanı: ekranın cevapladığı tek soru ve onu açan çizgiler ── */}
 

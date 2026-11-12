@@ -61,6 +61,10 @@ corrected/matched ölçümler tekrar açılmaz. Geçmiş güncellenmez. Snapshot
 o kaynaktan yeni iddia yoktur; SMS hata/kurtarma uyarısı ve dövizlerin toplam
 dışında olduğu bilgisi korunur. Bağlantılar ilgili yönetimi açar; otomatik yazmaz.
 
+**İncelendi** eylemi başlığın o anki kayıtlarını bu tarayıcıdaki Özet'te
+gizler. Yeni kayıt başlığı geri getirir. Dövizli SMS okuma/kurtarma uyarısı
+doğrulanana kadar görünür.
+
 ## Doğrulama
 
 Kalıcı kanıt: `tests/e2e/simplification.spec.ts` birleşik alışveriş, hedef,
