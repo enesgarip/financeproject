@@ -404,6 +404,12 @@ body {
   }
 }
 
+.feature-explorer-scroll {
+  scrollbar-color: var(--ink-muted) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+}
+
 button,
 input,
 select,

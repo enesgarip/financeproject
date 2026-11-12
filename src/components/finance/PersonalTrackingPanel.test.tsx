@@ -44,7 +44,7 @@ describe('Sadece takip formu ve listesi', () => {
     fireEvent.change(screen.getByLabelText(/^Tarih/), { target: { value: '2026-10-13' } })
     fireEvent.change(screen.getByLabelText('Açıklama'), { target: { value: ' Tamir ' } })
     mocks.fetch.mockResolvedValue({ ok: true, data: [entry] })
-    fireEvent.submit(screen.getByRole('button', { name: 'Kaydet' }).closest('form')!)
+    fireEvent.click(screen.getByRole('button', { name: 'Kaydet' }))
     await waitFor(() => expect(mocks.save).toHaveBeenCalledExactlyOnceWith('personal_tracking_entries', {
       user_id: 'user-1', person_name: 'Kardeşim', amount: 2500.25, occurred_on: '2026-10-13', note: 'Tamir',
     }, null))
@@ -57,7 +57,7 @@ describe('Sadece takip formu ve listesi', () => {
     expect((screen.getByLabelText('Açıklama') as HTMLTextAreaElement).value).toBe('Tamir')
     fireEvent.change(screen.getByLabelText(/^Tutar/), { target: { value: '3000.50' } })
     mocks.fetch.mockResolvedValue({ ok: true, data: [{ ...entry, amount: 3000.5 }] })
-    fireEvent.submit(screen.getByRole('button', { name: 'Kaydet' }).closest('form')!)
+    fireEvent.click(screen.getByRole('button', { name: 'Kaydet' }))
     await screen.findByText('3.000,50 ₺', { selector: 'dd' })
     expect(mocks.save).toHaveBeenLastCalledWith('personal_tracking_entries', expect.objectContaining({ amount: 3000.5 }), entry.id)
 
@@ -76,7 +76,7 @@ describe('Sadece takip formu ve listesi', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Takip kaydı ekle' })[0])
     fireEvent.change(screen.getByLabelText(/^Kişi/), { target: { value: '   ' } })
     fireEvent.change(screen.getByLabelText(/^Tutar/), { target: { value: '0' } })
-    fireEvent.submit(screen.getByRole('button', { name: 'Kaydet' }).closest('form')!)
+    fireEvent.click(screen.getByRole('button', { name: 'Kaydet' }))
     expect(await screen.findByText('Kişi adını yaz.')).toBeTruthy()
     expect(screen.getByText('Sıfırdan büyük bir tutar gir.')).toBeTruthy()
     expect(mocks.save).not.toHaveBeenCalled()

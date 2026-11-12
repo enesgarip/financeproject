@@ -120,6 +120,10 @@ adları kullanıcı onayıyla güncellendi; Bulgular korundu. Bu dil değişikli
 kart borcu, ödeme, RPC veya ledger geçişlerini değiştirmez.
 
 Kart ayrıntısı düzeni: döküm seçenekleri ikonlu iki sütunlu menüdedir.
+12 Kasım form düzeni. Hızlı harcama açık ayrıntılarla kullanıldığında Kaydet,
+taksit alanları ve ekstre önizlemesinin ardından gelir. Dar ekranda dönem
+aralığı ve ekstre tarihleri satıra sarar. Planlı ödeme ve hızlı harcamada
+seçili kartın tam adı, ekstre içe aktarmada kart adı başlığın altında görünür.
 Manuel kayıt etiketli Harcama ekle veya hızlı işlem menüsünden doğrudan görev ekranında açılır. Kart ayarları ve kayıt geçmişi bölümünde yinelenen borç/limit
 özeti, taksit listesi ve ekstre listesi kaldırıldı; bunların tek ayrıntı kaynağı
 üst özet ve ilgili döküm menüsüdür. Borç/ledger kuralları değişmedi.

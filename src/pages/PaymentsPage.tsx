@@ -338,6 +338,9 @@ export function PaymentsPage() {
       options: creditCardOptions,
       required: true,
       visibleWhen: { field: 'payment_method', value: 'bank_auto' },
+      hint: (values) => values.auto_source_card_id
+        ? creditCardOptions.find((option) => option.value === values.auto_source_card_id)?.label ?? null
+        : null,
     }
     const result: FormField[] = []
     for (const field of baseFields) {

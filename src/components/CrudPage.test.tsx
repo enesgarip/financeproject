@@ -105,7 +105,7 @@ describe('CrudPage — TanStack veri sözleşmesi', () => {
     await screen.findByText('Maaş kaydı')
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Kayıt ekle' })[0])
-    fireEvent.submit(screen.getByRole('button', { name: 'Kaydet' }).closest('form')!)
+    fireEvent.click(screen.getByRole('button', { name: 'Kaydet' }))
 
     await waitFor(() => expect(mocks.saveCrudRow).toHaveBeenCalledOnce())
     expect(mocks.saveCrudRow.mock.calls[0][0]).toBe('salary_history')
@@ -123,11 +123,11 @@ describe('CrudPage — TanStack veri sözleşmesi', () => {
     await screen.findByText('Maaş kaydı')
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Kayıt ekle' })[0])
-    fireEvent.submit(screen.getByRole('button', { name: 'Kaydet' }).closest('form')!)
+    fireEvent.click(screen.getByRole('button', { name: 'Kaydet' }))
 
     expect(await screen.findByText(/Takip işlemi patladı/)).toBeTruthy()
     expect(screen.getByText('Kaydı düzenle')).toBeTruthy()
-    fireEvent.submit(screen.getByRole('button', { name: 'Kaydet' }).closest('form')!)
+    fireEvent.click(screen.getByRole('button', { name: 'Kaydet' }))
     await waitFor(() => expect(mocks.saveCrudRow).toHaveBeenCalledTimes(2))
     expect(mocks.saveCrudRow.mock.calls[1][2]).toBe('r2')
   })

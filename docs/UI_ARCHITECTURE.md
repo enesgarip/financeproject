@@ -1,5 +1,16 @@
 # UI Architecture
 
+12 Kasım form denetimi. Ortak kayıt penceresinde form gövdesi kayar ve Kaydet
+ayrı alt bölümde kalır. Doğrulama ilk hatalı alanı görünür konuma getirip
+odaklar; hata metni alana bağlıdır. Tarih alanı tek takvim simgesi gösterir.
+Planlı ödeme ve hızlı harcama seçili kartın tam adını satıra sarar. Gider
+grubu ve alınacaklarda etiketler dolu değerlerle birlikte görünür. Hızlı
+harcamada ayrıntılar açıksa Kaydet alanların ve önizlemenin sonundadır;
+dönem ve ekstre tarihleri dar ekranda sarar. Ekstre PDF başlığı uzun kart
+adını ayrı satırda, Kapat düğmesini 44 px kutuda tutar. Ara ve keşfet'te
+arama sabit, favoriler ve sonuçlar tek kaydırma alanındadır. Kabul
+senaryoları `tests/e2e/audit-remediation.spec.ts` içindedir.
+
 9 Kasım sözleşmesi: `docs/AUDIT_REMEDIATION_2026-11-09.md`.
 Bekleyen modal kayıt/işleme X/Escape/navigasyonla kapanmaz. Dirty izleme
 kapsama aittir; ilgisiz diyaloğu kapatmak alttaki formu temizlemez. Odak,
