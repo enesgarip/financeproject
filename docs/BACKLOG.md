@@ -1,5 +1,13 @@
 # Priority Backlog
 
+## 2026-11-12 — Paylaşılabilir AI özeti
+
+- [x] Veri okuma zamanı, harcanabilir tutar, gecikmiş ödemeler ve 7/30 günlük
+  nakit yüküyle başlayan anonim Markdown ve PDF özeti.
+- [x] Aynı gün kart harcaması ve kategori değişimi, tarihli 30/90 günlük
+  net değer karşılaştırması, aktif kredi/hedef ayrıntısı ve nakit projeksiyonu.
+  [Rapor hesapları ve kapsamı](FINANCE_RULES.md#reporting-and-projection-windows).
+
 ## 2026-11-12 — Kullanım istatistikleri
 
 - [x] 7/30 günlük dönemi önceki eşit aralıkla karşılaştır. Harcama, transfer,

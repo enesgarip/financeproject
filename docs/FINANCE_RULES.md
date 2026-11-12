@@ -823,11 +823,20 @@ This means any change in card, loan, debt, or payment semantics likely affects d
 
 - AI paylaşım raporu (`src/utils/financialReport.ts`) tam snapshot'ı kullanır:
   ekstre arşivi + kısmi ödemeler, taksitler, hedef kaynakları ve işlem geçmişi.
-  Hesap/kişi/banka/alışveriş/hedef isimleri yerine tür ve anonim sıra numarası
-  basılır. Planlanan nakit akışı ile kaydedilmiş nakit ödemeler ayrı bölümlerdir;
-  harcama eğilimi kart kayıtlarıdır, tüm nakit gider iddiası taşımaz. Kasa rezervi
-  veya tampon bilinmiyorsa harcanabilir rakam basılmaz. Eksik hedef kaynağı/çıpa
-  doğrulanmış değer sayılmaz. Gelecek taksit takvimi toplam borca yeniden eklenmez.
+  Açılışta son okuma zamanı, likit bakiye, rezerv/tampon, harcanabilir tutar,
+  kayıtlı yakın vadeler ve son dönem değişimi gösterilir. Eksik kart takvimi,
+  ekstre/taksit verisi veya doğrulanmamış rezerv/tampon harcanabilir rakamı
+  gizler. Vadesi geçmiş ödenebilir kayıtlar 7/30 günlük ileri vade toplamlarından
+  ayrı gösterilir. Kalan aylık nakit çıkışı açık gecikmeleri içerir.
+  Planlı kart taksiti nakit yüküne hesaplanan son ödeme gününde bir kez girer.
+  Maaş ve beklenen alacak ayrı gösterilir. Maaş ilk iş gününden itibaren
+  bakiyede varsayılır, tahsil edilmemiş alacak harcanabilir tutara girmez.
+- Kart harcama karşılaştırması iki ayı aynı güne kadar alır. Net değer farkı,
+  mevcut konumu 30/90 gün önceki kesim tarihine en yakın eski günlük kayıtla
+  karşılaştırır ve kullanılan tarihi basar. Planlanan nakit akışı ve kaydedilen
+  nakit ödemeler kendi bölümlerindedir. Aktif kredi ve hedefler anonimdir.
+  İlerleme için hedef kaynağı ve çıpa doğrulanmalıdır. Paylaşım metni ve PDF,
+  türleri ve izinli kategorileri kullanır; serbest açıklamalar paylaşılmaz.
 - The shared finance snapshot loads 24 completed months plus the current month,
   so current-year and previous-year reports have a complete source window.
 - Removed features (their utilities no longer exist; do not resurrect their

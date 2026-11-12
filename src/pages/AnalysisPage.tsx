@@ -68,7 +68,9 @@ export function AnalysisPage() {
       {goalsIncomplete ? <p role="alert" className="text-sm text-ink-muted">Bazı hedef kaynakları veya güncel fiyatları doğrulanamadı; hedef tutarlarını eksik veriyle değerlendirmeyin.</p> : null}
       {auxiliaryError ? <QueryError title="Geçmiş veriler yüklenemedi" message="Trend ve fiyat karşılaştırmaları şu an doğrulanamıyor." onRetry={() => void retryAuxiliary()} /> : null}
       <div className="grid items-start gap-5 lg:grid-cols-12">
-        <FeatureSection id="aylik-rapor" className="lg:col-span-12"><MonthlyReport data={data} /></FeatureSection>
+        <FeatureSection id="aylik-rapor" className="lg:col-span-12">
+          <MonthlyReport data={data} snapshots={auxiliaryError || auxiliaryLoading ? undefined : snapshots} />
+        </FeatureSection>
         <AnalysisHero data={data} snapshots={snapshots} historyStatus={auxiliaryError ? "error" : auxiliaryLoading ? "loading" : "ready"} />
         <SchemaMigrationNotice missingTables={missingTables} />
         <FeatureSection id="ay-kapanisi" className="lg:col-span-12"><MonthCloseAssistant data={data} missingTables={missingTables} /></FeatureSection>
