@@ -279,6 +279,7 @@ export function DebtsPage() {
         kind: isBorrowed ? 'personal_debt' : 'personal_receivable',
         action: isBorrowed ? 'settle_debt' : 'collect_debt',
         sourceId: debt.id,
+        debtValueType: debt.value_type,
         title: debt.person_name,
         subtitle: isBorrowed ? 'Kişisel borç' : 'Beklenen tahsilat',
         date: debt.due_date ?? dateInputValue(new Date()),
@@ -296,7 +297,6 @@ export function DebtsPage() {
             <p className="mt-0.5">
               Toplam değer: <span className="font-mono font-semibold text-ink">{formatAmount(effectiveDebtValue(debt, snapshot))}</span>
             </p>
-            <p className="mt-0.5">{isBorrowed ? 'Tam tutar hesaptan düşer; daha az girersen kısmi ödenir, kalan açık kalır.' : 'Tam tutar hesaba eklenir; daha az girersen kısmi tahsil edilir, kalan açık kalır.'}</p>
           </>
         ),
       },

@@ -1,5 +1,11 @@
 # Transaction History Side Effects
 
+Kişisel borç/alacak çekmecesinden SMS bağlama, kaynak hareket tarihinde tek
+`debt` olayı yazar. Giriş `classify_account_income` sözleşmesini kullanır.
+Çıkış, SMS'in `source_event_id` değerini kullanır; kaynak kimliği olmayan
+eski hareketlerde `sms-debt-match:<movement_id>` kullanılır. Kaynak hareket
+ve hesap ledger'ı değişmez. Aynı hareket başka bir borca yeniden bağlanamaz.
+
 8 Kasım: classify_account_income mevcut gerçek transfer türü para girişine
 bağlanır. Maaş/transfer/diğer etiketleri yeni history/bakiye yazmaz. TL alacak
 eşlemesi tek debt olayı yazar; tarihi kaynak hareket tarihidir ve source_event_id

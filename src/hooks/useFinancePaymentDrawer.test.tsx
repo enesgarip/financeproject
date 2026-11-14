@@ -7,6 +7,7 @@ import { readPaymentAttempt } from '../utils/paymentAttempt'
 import { useFinancePaymentDrawer } from './useFinancePaymentDrawer'
 
 const mocks = vi.hoisted(() => ({ submit: vi.fn(), refresh: vi.fn() }))
+vi.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }))
 vi.mock('../auth/useAuth', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }))
 vi.mock('../lib/supabase', () => ({ supabase: { rpc: vi.fn() } }))
 vi.mock('../services/financePaymentActions', async (original) => ({
@@ -50,6 +51,23 @@ it('SQL çakışmasında güncel kalan/bakiyeyi gösterir ve tutar girişini kor
   expect(hook.result.current.drawerProps.amountValue).toBe('600')
   expect(hook.result.current.drawerProps.externalError).toContain('Güncel kalan')
   expect(hook.result.current.drawerProps.externalError).not.toContain('Odeme tutari')
+  expect(readPaymentAttempt('u1', intent)).toBeNull()
+})
+
+it('SMS bağlantısı hesap seçmeden gönderilir ve kayıp yanıtta aynı hareketi doğrular', async () => {
+  mocks.submit.mockResolvedValueOnce({ error: { message: 'Failed to fetch' } }).mockResolvedValueOnce({ error: null })
+  const first = renderHook(useFinancePaymentDrawer)
+  await act(async () => first.result.current.openPaymentDrawer(intent, { cards: [account] }))
+  await act(async () => first.result.current.drawerProps.onSubmit({ account: null, amount: 100, smsMovementId: 'sms-1' }))
+  expect(first.result.current.drawerProps.uncertain).toBe(true)
+  first.unmount()
+
+  const reopened = renderHook(useFinancePaymentDrawer)
+  await act(async () => reopened.result.current.openPaymentDrawer(intent, { cards: [account] }))
+  expect(reopened.result.current.drawerProps.pendingSmsMovementId).toBe('sms-1')
+  await act(async () => reopened.result.current.drawerProps.onSubmit({ account: null, amount: 999 }))
+  expect(mocks.submit.mock.calls[0][0]).toMatchObject({ account: null, amount: 100, smsMovementId: 'sms-1' })
+  expect(mocks.submit.mock.calls[1][0]).toEqual(mocks.submit.mock.calls[0][0])
   expect(readPaymentAttempt('u1', intent)).toBeNull()
 })
 

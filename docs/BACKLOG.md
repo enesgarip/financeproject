@@ -1,5 +1,13 @@
 # Priority Backlog
 
+## 2026-11-14 — Kişisel borç ve alacağı mevcut SMS hareketine bağlama
+
+- [x] Ödeme ve tahsilat çekmecesinde hesap seçmeden gelen/giden bir SMS
+  hareketi seç. Tam ve kısmi işlemlerde bakiyeyi tekrar oynatma.
+- [x] Otomatik/elle bağlanmış hareketleri listeden çıkar. Aynı hareketi
+  tekrar kullanmayı engelle ve kayıp yanıtı mevcut ödeme makbuzuyla doğrula.
+  [Finans kuralları](FINANCE_RULES.md#debts--receivables).
+
 ## 2026-11-12 — Paylaşılabilir AI özeti
 
 - [x] Veri okuma zamanı, harcanabilir tutar, gecikmiş ödemeler ve 7/30 günlük

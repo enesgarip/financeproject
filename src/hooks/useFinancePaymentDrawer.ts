@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../auth/useAuth'
 import { useUsageFlow } from './useUsageFlow'
 import type { UsageSource } from '../utils/usageStatistics'
@@ -23,6 +24,7 @@ type AccountPaymentSubmit = {
   amount: number
   // B4: bakiye SMS/banka hareketiyle zaten düşülmüşse RPC tekrar düşmez.
   skipSourceDebit?: boolean
+  smsMovementId?: string
   /** Gerçek ödeme günü (YYYY-MM-DD); yalnız planlı ödeme/kredi taksiti (UX turu B9). */
   paidAt?: string
 }
@@ -61,6 +63,7 @@ type FinancePaymentDrawerState = {
 
 export function useFinancePaymentDrawer(source: UsageSource) {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const submitting = useRef(false)
   const [state, setState] = useState<FinancePaymentDrawerState | null>(null)
   const { attempt: trackPaymentAttempt } = useUsageFlow(user?.id, 'payment', source, Boolean(state))
@@ -110,7 +113,7 @@ export function useFinancePaymentDrawer(source: UsageSource) {
     setState((current) => (current && !current.uncertain && !current.saving ? { ...current, amountValue: value, error: '' } : current))
   }, [])
 
-  const handleSubmit = useCallback(async ({ account, amount, skipSourceDebit, paidAt }: AccountPaymentSubmit) => {
+  const handleSubmit = useCallback(async ({ account, amount, skipSourceDebit, smsMovementId, paidAt }: AccountPaymentSubmit) => {
     if (!state?.intent.action || !user || submitting.current) return
 
     const current = state
@@ -119,7 +122,7 @@ export function useFinancePaymentDrawer(source: UsageSource) {
       const stored = readPaymentAttempt(user.id, current.intent)
       attempt = stored ?? {
         id: crypto.randomUUID(), accountId: account?.id ?? null, amount,
-        obligationAmount: current.intent.amount, skipSourceDebit: skipSourceDebit ?? false, paidAt,
+        obligationAmount: current.intent.amount, skipSourceDebit: skipSourceDebit ?? false, smsMovementId, paidAt,
       }
       if (stored && !current.attempt) {
         setState({ ...current, attempt, uncertain: true, amountValue: String(attempt.amount), selectedAccountId: attempt.accountId ?? 'outside-accounts', error: UNCERTAIN_MESSAGE })
@@ -142,10 +145,15 @@ export function useFinancePaymentDrawer(source: UsageSource) {
       account: attempt.accountId ? { id: attempt.accountId } : null,
       amount: attempt.amount,
       skipSourceDebit: attempt.skipSourceDebit,
+      smsMovementId: attempt.smsMovementId,
       paidAt: attempt.paidAt,
     }).catch((cause: unknown) => ({ error: { message: cause instanceof Error ? cause.message : 'Bağlantı sonucu doğrulanamadı.' } as SupabaseLikeError }))
     reportPayment(error ? 'failed' : 'completed')
     current.onSubmitEnd?.({ ...submitContext, error })
+    const invalidateSms = () => attempt.smsMovementId ? Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['personal-debt-sms', user.id] }),
+      queryClient.invalidateQueries({ queryKey: ['account-income', user.id] }),
+    ]) : undefined
 
     if (error) {
       const uncertain = !error.code || /fetch|network|timeout|connection/i.test(error.message ?? '')
@@ -153,7 +161,7 @@ export function useFinancePaymentDrawer(source: UsageSource) {
       if (!uncertain) {
         clearPaymentAttempt(user.id, current.intent)
         try { fresh = await refreshFinancePaymentState(current.intent) } catch { /* Hata kullanıcıya söylenir; eski tutar kesin sunulmaz. */ }
-        await Promise.allSettled([current.reload?.(), current.afterSuccess?.()])
+        await Promise.allSettled([current.reload?.(), current.afterSuccess?.(), invalidateSms()])
       }
       setState((latest) => (
         latest?.intent.id === current.intent.id
@@ -167,11 +175,11 @@ export function useFinancePaymentDrawer(source: UsageSource) {
     }
 
     clearPaymentAttempt(user.id, current.intent)
-    setLastUsed(lastUsedKeyForObligation(current.intent), attempt.accountId ?? 'outside-accounts')
+    if (!attempt.smsMovementId) setLastUsed(lastUsedKeyForObligation(current.intent), attempt.accountId ?? 'outside-accounts')
     setState((latest) => latest?.intent.id === current.intent.id ? null : latest)
-    await Promise.allSettled([current.reload?.(), current.afterSuccess?.()])
+    await Promise.allSettled([current.reload?.(), current.afterSuccess?.(), invalidateSms()])
     submitting.current = false
-  }, [state, trackPaymentAttempt, user])
+  }, [queryClient, state, trackPaymentAttempt, user])
 
   const drawerProps = useMemo(() => ({
     intent: state?.intent ?? null,
@@ -185,6 +193,7 @@ export function useFinancePaymentDrawer(source: UsageSource) {
     onSubmit: handleSubmit,
     saving: state?.saving ?? false,
     uncertain: state?.uncertain ?? false,
+    pendingSmsMovementId: state?.attempt?.smsMovementId,
     externalError: state?.error ?? '',
     detail: state?.detail,
   }), [closePaymentDrawer, handleAmountValueChange, handleSelectedAccountChange, handleSubmit, state])

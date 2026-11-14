@@ -45,6 +45,9 @@ type AccountPaymentModalProps = {
   amountActions?: ReactNode
   accountPreviewAmount?: (amount: number) => number
   emptyMessage?: string
+  paymentMethodControl?: ReactNode
+  recordedMovementControl?: ReactNode
+  submitDisabled?: boolean
   info?: ReactNode
   extraControls?: ReactNode
   children?: ReactNode
@@ -91,6 +94,9 @@ export function AccountPaymentModal({
   successAction = false,
   paidAtEditable = false,
   outsideAccountsValue,
+  paymentMethodControl,
+  recordedMovementControl,
+  submitDisabled = false,
 }: AccountPaymentModalProps) {
   const { formatAmount } = useBalancePrivacy()
   const [validationError, setValidationError] = useState('')
@@ -109,6 +115,7 @@ export function AccountPaymentModal({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (saving || submitDisabled) return
     setValidationError('')
 
     if (!navigator.onLine) {
@@ -125,18 +132,19 @@ export function AccountPaymentModal({
       return
     }
 
-    if (!selectedAccount && !outsideAccounts) {
+    if (!recordedMovementControl && !selectedAccount && !outsideAccounts) {
       setValidationError('Hesap seçmelisin.')
       return
     }
 
-    const coverageError = selectedAccount ? accountCanCover(selectedAccount, previewAmount) : null
+    const coverageError = selectedAccount && !recordedMovementControl ? accountCanCover(selectedAccount, previewAmount) : null
     if (coverageError) {
       setValidationError(coverageError)
       return
     }
 
-    const customError = validate?.({ account: selectedAccount ?? null, amount })
+    const paymentAccount = recordedMovementControl ? null : selectedAccount ?? null
+    const customError = validate?.({ account: paymentAccount, amount })
     if (customError) {
       setValidationError(customError)
       return
@@ -153,7 +161,7 @@ export function AccountPaymentModal({
       }
     }
 
-    void onSubmit({ account: selectedAccount ?? null, amount, ...(paidAtEditable ? { paidAt } : {}) })
+    void onSubmit({ account: paymentAccount, amount, ...(paidAtEditable ? { paidAt } : {}) })
   }
 
   return (
@@ -166,9 +174,11 @@ export function AccountPaymentModal({
           </div>
         ) : null}
 
-        <p className="text-xs leading-relaxed text-ink-muted">Bankada yaptığın ödeme veya tahsilatı buraya kaydet. Bu ekran bankadan para göndermez.</p>
+        {recordedMovementControl ? null : <p className="text-xs leading-relaxed text-ink-muted">Bankada yaptığın ödeme veya tahsilatı buraya kaydet. Bu ekran bankadan para göndermez.</p>}
 
         <fieldset disabled={saving || confirming} className="flex min-w-0 flex-col gap-4">
+        {paymentMethodControl}
+        {recordedMovementControl}
         {paidAtEditable ? (
           <label className="block text-sm font-semibold text-ink">
             Ödeme günü
@@ -198,7 +208,7 @@ export function AccountPaymentModal({
           </div>
         )}
 
-        <AccountSelector
+        {recordedMovementControl ? null : <AccountSelector
           accounts={accounts}
           value={selectedAccountId}
           onChange={(value) => {
@@ -209,15 +219,14 @@ export function AccountPaymentModal({
           label={accountLabel}
           emptyMessage={emptyMessage}
           outsideAccountsValue={outsideAccountsValue}
-        />
-
+        />}
         {extraControls}
         </fieldset>
 
         {info ? <Alert variant="success">{info}</Alert> : null}
         {displayedError ? <Alert variant="destructive">{displayedError}</Alert> : null}
 
-        <Button type="submit" disabled={saving} variant={successAction ? 'success' : 'default'} size="xl" className="w-full">
+        <Button type="submit" disabled={saving || submitDisabled} variant={successAction ? 'success' : 'default'} size="xl" className="w-full">
           {saving ? 'Kaydediliyor…' : submitLabel}
         </Button>
       </form>

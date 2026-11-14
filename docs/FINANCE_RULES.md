@@ -768,6 +768,17 @@ app; there is no affordability decision surface anymore.
 - uncollected receivables are excluded from spendable cash; recorded collections enter through the updated account/cash balance
 - an open receivable with a due date can be deferred one calendar month; this changes only `due_date`, never its amount, status, balance, or ledger
 
+### Mevcut SMS hareketine bağlama
+
+Açık TL borcu/alacağı için ödeme çekmecesindeki **SMS hareketine bağla**
+yöntemi, aynı yönde bağlanabilir son 30 hareketi tarih, hesap ve tutarıyla
+gösterir. Kullanıcı hareketi seçer; hesap hareketten alınır. Varsayılan
+tutar hareket ve kalan borç/alacağın küçüğüdür. Kullanıcı daha az tutar
+girebilir. Tam tutar kapatır, kısmi tutar kaydı açık tutar. Hareket bir kez
+bağlanır. Hesap bakiyesi ve hesap ledger'ı değişmez. İşlem geçmişinde
+SMS tarihli tek borç/alacak olayı ve güvenli tekrar için ödeme makbuzu oluşur.
+Otomatik eşlenen veya sınıflandırılan hareketler seçim listesine girmez.
+
 ### Sadece takip (2026-10-13)
 
 `personal_tracking_entries` kişi, pozitif TL tutarı, işlem tarihi ve isteğe bağlı

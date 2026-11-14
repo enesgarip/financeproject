@@ -1075,6 +1075,10 @@ export type Database = {
         Returns: number
       }
       classify_account_income: { Args: { p_movement_id: string; p_kind: AccountIncomeKind; p_debt_id?: string | null; p_debt_amount?: number | null }; Returns: AccountIncomeLabel }
+      list_personal_debt_sms_movements: {
+        Args: { p_debt_id: string }
+        Returns: { id: string; account_name: string; title: string; amount: number; occurred_at: string }[]
+      }
       complete_car_service: { Args: { p_request_id: string; p_input: Json }; Returns: CarServiceCompletion }
       post_account_balance_correction: {
         Args: {

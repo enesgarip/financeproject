@@ -46,6 +46,12 @@ değildir. SMS'in otomatik kapattığı alacak tekrar eşlenmez. Tahsilat mevcut
 olayı kaynak hareket tarihinde `income-match:<movement_id>` ile yazılır.
 Eski history ve ledger güncellenmez. Alacak dışı etiket history üretmez.
 
+Kişisel TL alacağı çekmecesindeki **SMS hareketine bağla** yöntemi de gelen
+SMS'i aynı `classify_account_income` akışından geçirir. Hesap hareketlerindeki
+sınıf böylece her iki giriş noktasında da görünür. Giden SMS, borca aynı
+skip-account yordamıyla bağlanır ve tüketimi borç geçmişindeki kaynak
+kimliğiyle izlenir.
+
 ## Saklama ve sahiplik
 
 `account_income_labels`/`car_service_completions` yalnız sahibi tarafından

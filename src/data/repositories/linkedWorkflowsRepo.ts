@@ -1,6 +1,18 @@
 import { supabase } from '../../lib/supabase'
 import type { AccountIncomeKind, AccountIncomeLabel, CarServiceCompletion, CarServiceInput, TransactionHistory } from '../../types/database'
 import { appErrorFromSupabase, fail, ok, resultFromSupabase, type Result } from '../result'
+import { missingSupabaseCapabilityMessage } from '../../utils/supabaseErrors'
+
+export async function fetchPersonalDebtSmsMovements(debtId: string) {
+  const { data, error } = await supabase.rpc('list_personal_debt_sms_movements', { p_debt_id: debtId })
+  if (error) {
+    const appError = appErrorFromSupabase(error, 'SMS hesap hareketleri yüklenemedi.')
+    return fail(appError.type === 'missing-capability'
+      ? { ...appError, message: missingSupabaseCapabilityMessage('SMS hareketine bağlama', error) }
+      : appError)
+  }
+  return ok(data ?? [])
+}
 
 /** Son 30 gerçek para girişi; düzeltme, açılış ve hesaplar arası transfer dahil değil. */
 export async function fetchAccountIncome(accountId: string): Promise<Result<{ movements: TransactionHistory[]; labels: AccountIncomeLabel[]; automaticallyMatched: string[] }>> {

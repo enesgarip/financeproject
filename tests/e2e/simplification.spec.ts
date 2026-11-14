@@ -25,6 +25,42 @@ test('AI özeti, Analiz verilerinden anonim güncel durumu panoya kopyalar', asy
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
 })
 
+for (const direction of ['borç_aldım', 'borç_verdim'] as const) {
+  const incoming = direction === 'borç_verdim'
+  test(`kişisel SMS bağlantısı hesap seçmeden kaydedilir (${direction})`, async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 900 })
+    await mockApp(page, 'light', { debts: [{ ...sampleDebt, direction }], cards: [bank] })
+    const movement = {
+      id: 'sms-1', account_name: bank.card_name, amount: incoming ? 400 : 1000, occurred_at: now,
+      title: incoming ? 'Örnek kişi tarafından FAST geldi' : 'Örnek kişi adına FAST gonderimi',
+    }
+    const writes: Record<string, unknown>[] = []
+    await page.route('**/rest/v1/rpc/list_personal_debt_sms_movements', route => route.fulfill({ json: [movement] }))
+    await page.route('**/rest/v1/rpc/submit_finance_payment', route => {
+      writes.push(route.request().postDataJSON())
+      return route.fulfill({ status: 204 })
+    })
+    await page.goto('/borclar/kisiler')
+    await page.getByRole('button', { name: incoming ? 'Tahsilat kaydet' : 'Ödeme kaydet', exact: true }).click()
+    const modal = page.getByRole('dialog', { name: incoming ? 'Tahsilat kaydı' : 'Borç ödeme kaydı' })
+    const method = modal.getByRole('combobox', { name: 'Kayıt yöntemi' })
+    await method.selectOption('sms')
+    await expect(modal.getByRole('combobox', { name: /hesap$/i })).toHaveCount(0)
+    const submit = modal.getByRole('button', { name: incoming ? 'Tahsilatı kaydet' : 'Ödemeyi kaydet' })
+    await expect(submit).toBeDisabled()
+    const sms = modal.getByRole('combobox', { name: 'SMS hareketi' })
+    await expect(sms.getByRole('option', { name: new RegExp(bank.card_name) })).toContainText(movement.title)
+    await sms.selectOption(movement.id)
+    await expect(modal.getByText(/hesap bakiyesi aynı kalır/)).toBeVisible()
+    await submit.click()
+    await expect(modal).toHaveCount(0)
+    expect(writes).toEqual([{
+      p_request_id: expect.any(String), p_method: 'link_personal_debt_sms_movement',
+      p_args: { p_debt_id: sampleDebt.id, p_movement_id: movement.id, p_amount: movement.amount },
+    }])
+  })
+}
+
 test('bağlı harcama: grup önceden seçilir, araçla aynı harcama yazılır ve mevcut harekete geçilir', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
@@ -378,7 +414,7 @@ test('kayıp ödeme yanıtından sonra yenileme aynı işlem kimliği ve tutarla
   await page.getByRole('button', { name: 'Ödeme kaydet', exact: true }).click()
   let modal = page.getByRole('dialog')
   await modal.getByLabel(/^Ödeme tutarı/).fill('100')
-  await modal.locator('select').selectOption('bank-1')
+  await modal.getByRole('combobox', { name: 'Ödemenin yapıldığı hesap' }).selectOption('bank-1')
   await modal.getByRole('button', { name: 'Ödemeyi kaydet', exact: true }).click()
   await expect(modal.getByRole('button', { name: 'Sonucu doğrula', exact: true })).toBeEnabled()
   await expect(modal.getByLabel(/^Ödeme tutarı/)).toBeDisabled()

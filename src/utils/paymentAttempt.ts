@@ -7,6 +7,7 @@ export type PaymentAttempt = {
   amount: number
   obligationAmount: number
   skipSourceDebit: boolean
+  smsMovementId?: string
   paidAt?: string
 }
 
@@ -27,6 +28,7 @@ export function readPaymentAttempt(userId: string, intent: FinanceObligation): P
     || !(value.accountId === null || typeof value.accountId === 'string')
     || !Number.isFinite(value.amount) || value.amount <= 0 || !Number.isFinite(value.obligationAmount)
     || typeof value.skipSourceDebit !== 'boolean'
+    || (value.smsMovementId !== undefined && typeof value.smsMovementId !== 'string')
     || (value.paidAt !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(value.paidAt))) {
     throw new Error('Önceki ödeme kaydı okunamadı. Yeni kayıt girmeden işlem geçmişini kontrol et.')
   }
