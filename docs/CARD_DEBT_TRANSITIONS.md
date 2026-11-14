@@ -1,5 +1,10 @@
 # Card Debt Transitions
 
+14 Kasım kişisel ödeme/tahsilat: **Hesap bakiyesine işle** varsayılan boştur;
+boşken banka bakiyesi/ledger değişmez, yalnız kişisel kayıt güncellenir.
+Kart/ekstre ödemelerinin SMS uyarısı ve borç geçişleri aynı kalır.
+[Finans kuralları](FINANCE_RULES.md#debts--receivables).
+
 12 Kasım AI paylaşım özeti: kart borcu kırılımı ve ödeme zamanlaması mevcut
 hesaplara dayanır. Gelecek Taksit Takvimi ekstreye giriş ayını gösterir.
 7/30 günlük nakit yükünde planlı taksit `getScheduledCardCashDueDate` ile

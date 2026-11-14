@@ -1,5 +1,13 @@
 # Priority Backlog
 
+## 2026-11-14 — Kişisel tahsilat/ödeme hesabı seçeneği
+
+- [x] SMS bağlama seçimini varsayılan boş **Hesap bakiyesine işle** kutusuyla
+  değiştir. Boşken yalnız kişisel kayıt güncellenir; bakiye/hesap ledger'ı
+  değişmez. Tam/kısmi kayıt ve belirsiz isteğin aynı makbuzla tekrarı korunur.
+  Önceki SMS bağlantı paketi aşağıdaki tarihsel kayıttır.
+
+
 ## 2026-11-14 — Kişisel borç ve alacağı mevcut SMS hareketine bağlama
 
 - [x] Ödeme ve tahsilat çekmecesinde hesap seçmeden gelen/giden bir SMS

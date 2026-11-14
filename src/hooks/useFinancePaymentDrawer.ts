@@ -193,6 +193,7 @@ export function useFinancePaymentDrawer(source: UsageSource) {
     onSubmit: handleSubmit,
     saving: state?.saving ?? false,
     uncertain: state?.uncertain ?? false,
+    pendingSkipSourceDebit: state?.attempt?.skipSourceDebit,
     pendingSmsMovementId: state?.attempt?.smsMovementId,
     externalError: state?.error ?? '',
     detail: state?.detail,

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { formatSeritAmount } from '../../src/utils/formatCurrency'
 import { bank, base, mockApp, now, tables } from './audit-fixtures'
 
 const sampleDebt = { ...base, id: 'debt-1', person_name: 'Örnek borçlu', direction: 'borç_aldım', value_type: 'TRY', currency: null, amount: 1000, estimated_value_try: 1000, auto_valued: false, due_date: null, status: 'açık' }
@@ -26,39 +27,42 @@ test('AI özeti, Analiz verilerinden anonim güncel durumu panoya kopyalar', asy
 })
 
 for (const direction of ['borç_aldım', 'borç_verdim'] as const) {
-  const incoming = direction === 'borç_verdim'
-  test(`kişisel SMS bağlantısı hesap seçmeden kaydedilir (${direction})`, async ({ page }) => {
-    await page.setViewportSize({ width: 320, height: 900 })
-    await mockApp(page, 'light', { debts: [{ ...sampleDebt, direction }], cards: [bank] })
-    const movement = {
-      id: 'sms-1', account_name: bank.card_name, amount: incoming ? 400 : 1000, occurred_at: now,
-      title: incoming ? 'Örnek kişi tarafından FAST geldi' : 'Örnek kişi adına FAST gonderimi',
+  for (const applyMovement of [false, true]) {
+    for (const amount of [400, 1000]) {
+      const incoming = direction === 'borç_verdim'
+      test(`kişisel kayıt: ${direction}, hesaba işle=${applyMovement}, tutar=${amount}`, async ({ page }) => {
+        await page.setViewportSize({ width: 320, height: 900 })
+        await mockApp(page, 'light', { debts: [{ ...sampleDebt, direction }], cards: [bank] })
+        const writes: Record<string, unknown>[] = []
+        const smsRequests: string[] = []
+        page.on('request', request => {
+          if (/list_personal_debt_sms_movements/.test(request.url())) smsRequests.push(request.url())
+        })
+        await page.route('**/rest/v1/rpc/submit_finance_payment', route => {
+          writes.push(route.request().postDataJSON())
+          return route.fulfill({ status: 204 })
+        })
+        await page.goto('/borclar/kisiler')
+        await page.getByRole('button', { name: incoming ? 'Tahsilat kaydet' : 'Ödeme kaydet', exact: true }).click()
+        const modal = page.getByRole('dialog', { name: incoming ? 'Tahsilat kaydı' : 'Borç ödeme kaydı' })
+        const checkbox = modal.getByRole('checkbox', { name: /Hesap bakiyesine işle/ })
+        await expect(checkbox).not.toBeChecked()
+        await expect(modal.getByRole('combobox', { name: 'SMS hareketi' })).toHaveCount(0)
+        if (applyMovement) await checkbox.check()
+        await modal.getByRole('textbox', { name: /tutarı/ }).fill(String(amount))
+        await modal.getByRole('combobox', { name: /hesap$/i }).selectOption(bank.id)
+        const preview = applyMovement ? bank.current_balance + (incoming ? amount : -amount) : bank.current_balance
+        await expect(modal.getByText(`Kayıt sonrası bakiye: ${formatSeritAmount(preview)}`, { exact: true })).toBeVisible()
+        await modal.getByRole('button', { name: incoming ? 'Tahsilatı kaydet' : 'Ödemeyi kaydet' }).click()
+        await expect(modal).toHaveCount(0)
+        expect(writes).toEqual([{
+          p_request_id: expect.any(String), p_method: 'settle_personal_debt',
+          p_args: { p_debt_id: sampleDebt.id, p_account_card_id: bank.id, p_amount: amount, p_skip_account_move: !applyMovement },
+        }])
+        expect(smsRequests).toEqual([])
+      })
     }
-    const writes: Record<string, unknown>[] = []
-    await page.route('**/rest/v1/rpc/list_personal_debt_sms_movements', route => route.fulfill({ json: [movement] }))
-    await page.route('**/rest/v1/rpc/submit_finance_payment', route => {
-      writes.push(route.request().postDataJSON())
-      return route.fulfill({ status: 204 })
-    })
-    await page.goto('/borclar/kisiler')
-    await page.getByRole('button', { name: incoming ? 'Tahsilat kaydet' : 'Ödeme kaydet', exact: true }).click()
-    const modal = page.getByRole('dialog', { name: incoming ? 'Tahsilat kaydı' : 'Borç ödeme kaydı' })
-    const method = modal.getByRole('combobox', { name: 'Kayıt yöntemi' })
-    await method.selectOption('sms')
-    await expect(modal.getByRole('combobox', { name: /hesap$/i })).toHaveCount(0)
-    const submit = modal.getByRole('button', { name: incoming ? 'Tahsilatı kaydet' : 'Ödemeyi kaydet' })
-    await expect(submit).toBeDisabled()
-    const sms = modal.getByRole('combobox', { name: 'SMS hareketi' })
-    await expect(sms.getByRole('option', { name: new RegExp(bank.card_name) })).toContainText(movement.title)
-    await sms.selectOption(movement.id)
-    await expect(modal.getByText(/hesap bakiyesi aynı kalır/)).toBeVisible()
-    await submit.click()
-    await expect(modal).toHaveCount(0)
-    expect(writes).toEqual([{
-      p_request_id: expect.any(String), p_method: 'link_personal_debt_sms_movement',
-      p_args: { p_debt_id: sampleDebt.id, p_movement_id: movement.id, p_amount: movement.amount },
-    }])
-  })
+  }
 }
 
 test('bağlı harcama: grup önceden seçilir, araçla aynı harcama yazılır ve mevcut harekete geçilir', async ({ page }) => {
