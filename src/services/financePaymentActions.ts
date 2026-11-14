@@ -18,8 +18,10 @@ export async function refreshFinancePaymentState(intent: FinanceObligation) {
   const data = await fetchFinanceSnapshot()
   let amount = intent.amount
   let maxPayableAmount = intent.maxPayableAmount
+  let debtValueType = intent.debtValueType
   if (intent.action === 'settle_debt' || intent.action === 'collect_debt') {
     const row = data.debts.find((row) => row.id === intent.sourceId)
+    debtValueType = row?.value_type
     amount = row?.status === 'açık' ? effectiveDebtValue(row, null) : 0
     maxPayableAmount = amount
   } else if (intent.action === 'pay_card_statement') {
@@ -37,7 +39,7 @@ export async function refreshFinancePaymentState(intent: FinanceObligation) {
     const row = data.payments.find((row) => row.id === intent.sourceId)
     amount = row?.status === 'bekliyor' ? row.amount : 0
   }
-  return { intent: { ...intent, amount, maxPayableAmount, minimumPaymentBase: amount }, accounts: getAccountsForObligation(intent, data.cards) }
+  return { intent: { ...intent, amount, maxPayableAmount, minimumPaymentBase: amount, debtValueType }, accounts: getAccountsForObligation(intent, data.cards) }
 }
 
 function missingCapabilityFeatureForObligation(obligation: FinanceObligation) {
@@ -164,6 +166,7 @@ export async function submitFinanceObligationPayment({
   account,
   amount,
   skipSourceDebit = false,
+  smsMovementId,
   paidAt,
 }: {
   requestId: string
@@ -171,6 +174,7 @@ export async function submitFinanceObligationPayment({
   account: Pick<Card, 'id'> | null
   amount: number
   skipSourceDebit?: boolean
+  smsMovementId?: string
   /** Gerçek ödeme günü (YYYY-MM-DD). Boş/bugün ise RPC bugünü kullanır. */
   paidAt?: string
 }): Promise<FinancePaymentResult> {
@@ -224,17 +228,23 @@ export async function submitFinanceObligationPayment({
     })
     submitError = error
   } else if (obligation.action === 'settle_debt' || obligation.action === 'collect_debt') {
-    if (!account) return { error: { message: 'Borç/alacak işlemi için kaynak hesap seçmelisin.' } }
-    // Kalanla aynı tutar RPC'de tam kapamadır; eski ekrandan gelen tam ödeme
-    // artık null ile sessizce yeni bir tutara dönüşmez. Para iki ondalıktır.
-    const { error } = await paymentRpc('settle_personal_debt', {
-      p_debt_id: obligation.sourceId,
-      p_account_card_id: account.id,
-      p_amount: roundTL(amount),
-      // Para SMS ile zaten hesaba girdi/çıktı: yalnız kaydı kapat.
-      p_skip_account_move: skipSourceDebit,
-    })
-    submitError = error
+    if (smsMovementId) {
+      const { error } = await paymentRpc('link_personal_debt_sms_movement', {
+        p_debt_id: obligation.sourceId,
+        p_movement_id: smsMovementId,
+        p_amount: roundTL(amount),
+      })
+      submitError = error
+    } else {
+      if (!account) return { error: { message: 'Borç/alacak işlemi için kaynak hesap seçmelisin.' } }
+      const { error } = await paymentRpc('settle_personal_debt', {
+        p_debt_id: obligation.sourceId,
+        p_account_card_id: account.id,
+        p_amount: roundTL(amount),
+        p_skip_account_move: skipSourceDebit,
+      })
+      submitError = error
+    }
   }
 
   if (submitError && isMissingSupabaseCapabilityError(submitError)) {

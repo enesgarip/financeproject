@@ -68,6 +68,7 @@ export type FinanceObligation = {
   action: FinanceObligationAction | null
   sourceId: string
   relatedCardId?: string
+  debtValueType?: Debt['value_type']
   title: string
   subtitle: string
   date: string
@@ -485,6 +486,7 @@ export function buildFinanceObligationsForMonth(
       kind: isBorrowed ? 'personal_debt' : 'personal_receivable',
       action: isBorrowed ? 'settle_debt' : 'collect_debt',
       sourceId: debt.id,
+      debtValueType: debt.value_type,
       title: debt.person_name,
       subtitle: isBorrowed ? 'Kişisel borç' : 'Beklenen tahsilat',
       date: debt.due_date,
@@ -542,7 +544,7 @@ export function buildOutstandingObligations(data: FinanceObligationsInput, from:
   for (const debt of data.debts) {
     if (debt.status !== 'açık' || debt.direction !== 'borç_aldım' || debt.due_date) continue
     addObligation(items, {
-      id: `debt-${debt.id}`, kind: 'personal_debt', action: 'settle_debt', sourceId: debt.id,
+      id: `debt-${debt.id}`, kind: 'personal_debt', action: 'settle_debt', sourceId: debt.id, debtValueType: debt.value_type,
       title: debt.person_name, subtitle: 'Vadesiz kişisel borç', date: dateInputValue(from),
       amount: debt.estimated_value_try, direction: 'outflow', isEstimate: debt.auto_valued,
     })
