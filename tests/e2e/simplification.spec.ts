@@ -32,7 +32,7 @@ for (const direction of ['borç_aldım', 'borç_verdim'] as const) {
       const incoming = direction === 'borç_verdim'
       test(`kişisel kayıt: ${direction}, hesaba işle=${applyMovement}, tutar=${amount}`, async ({ page }) => {
         await page.setViewportSize({ width: 320, height: 900 })
-        await mockApp(page, 'light', { debts: [{ ...sampleDebt, direction }], cards: [bank] })
+        await mockApp(page, 'light', { debts: [{ ...sampleDebt, direction }], cards: applyMovement ? [bank] : [] })
         const writes: Record<string, unknown>[] = []
         const smsRequests: string[] = []
         page.on('request', request => {
@@ -48,22 +48,54 @@ for (const direction of ['borç_aldım', 'borç_verdim'] as const) {
         const checkbox = modal.getByRole('checkbox', { name: /Hesap bakiyesine işle/ })
         await expect(checkbox).not.toBeChecked()
         await expect(modal.getByRole('combobox', { name: 'SMS hareketi' })).toHaveCount(0)
+        await expect(modal.getByRole('combobox', { name: /hesap$/i })).toHaveCount(0)
         if (applyMovement) await checkbox.check()
         await modal.getByRole('textbox', { name: /tutarı/ }).fill(String(amount))
-        await modal.getByRole('combobox', { name: /hesap$/i }).selectOption(bank.id)
-        const preview = applyMovement ? bank.current_balance + (incoming ? amount : -amount) : bank.current_balance
-        await expect(modal.getByText(`Kayıt sonrası bakiye: ${formatSeritAmount(preview)}`, { exact: true })).toBeVisible()
+        if (applyMovement) {
+          await modal.getByRole('combobox', { name: /hesap$/i }).selectOption(bank.id)
+          const preview = bank.current_balance + (incoming ? amount : -amount)
+          await expect(modal.getByText(`Kayıt sonrası bakiye: ${formatSeritAmount(preview)}`, { exact: true })).toBeVisible()
+        } else {
+          await expect(modal.getByText(/önce bir banka hesabı/)).toHaveCount(0)
+        }
         await modal.getByRole('button', { name: incoming ? 'Tahsilatı kaydet' : 'Ödemeyi kaydet' }).click()
         await expect(modal).toHaveCount(0)
         expect(writes).toEqual([{
           p_request_id: expect.any(String), p_method: 'settle_personal_debt',
-          p_args: { p_debt_id: sampleDebt.id, p_account_card_id: bank.id, p_amount: amount, p_skip_account_move: !applyMovement },
+          p_args: { p_debt_id: sampleDebt.id, p_account_card_id: applyMovement ? bank.id : null, p_amount: amount, p_skip_account_move: !applyMovement },
         }])
         expect(smsRequests).toEqual([])
       })
     }
   }
 }
+
+test('hesap etkisi kaldırılınca önceden seçilmiş hesap gönderilmez', async ({ page }) => {
+  await mockApp(page, 'light', { debts: [{ ...sampleDebt, direction: 'borç_verdim' }], cards: [bank] })
+  const writes: Record<string, unknown>[] = []
+  await page.route('**/rest/v1/rpc/submit_finance_payment', route => {
+    writes.push(route.request().postDataJSON())
+    return route.fulfill({ status: 204 })
+  })
+  await page.goto('/borclar/kisiler')
+  await page.getByRole('button', { name: 'Tahsilat kaydet', exact: true }).click()
+  const modal = page.getByRole('dialog', { name: 'Tahsilat kaydı' })
+  const checkbox = modal.getByRole('checkbox', { name: /Hesap bakiyesine işle/ })
+  await checkbox.check()
+  const accountSelect = modal.getByRole('combobox', { name: /hesap$/i })
+  await accountSelect.selectOption('')
+  await modal.getByRole('button', { name: 'Tahsilatı kaydet' }).click()
+  expect(writes).toHaveLength(0)
+  await accountSelect.selectOption(bank.id)
+  await checkbox.uncheck()
+  await expect(accountSelect).toHaveCount(0)
+  await modal.getByRole('button', { name: 'Tahsilatı kaydet' }).click()
+  await expect(modal).toHaveCount(0)
+  expect(writes).toEqual([{
+    p_request_id: expect.any(String), p_method: 'settle_personal_debt',
+    p_args: { p_debt_id: sampleDebt.id, p_account_card_id: null, p_amount: 1000, p_skip_account_move: true },
+  }])
+})
 
 test('bağlı harcama: grup önceden seçilir, araçla aynı harcama yazılır ve mevcut harekete geçilir', async ({ page }) => {
   const errors: string[] = []

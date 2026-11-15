@@ -1,5 +1,9 @@
 # Card Debt Transitions
 
+15 Kasım kişisel ödeme/tahsilat: hesap etkisi kapalıyken hesap kimliği null
+olabilir; hesap alanı gizlenir. Kart/ekstre akışı değişmez. Hesap etkisi
+açıkken kaynak hesap doğrulaması ve mevcut ledger hareketleri korunur.
+
 14 Kasım kişisel ödeme/tahsilat: **Hesap bakiyesine işle** varsayılan boştur;
 boşken banka bakiyesi/ledger değişmez, yalnız kişisel kayıt güncellenir.
 Kart/ekstre ödemelerinin SMS uyarısı ve borç geçişleri aynı kalır.

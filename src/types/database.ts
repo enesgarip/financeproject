@@ -1228,10 +1228,10 @@ export type Database = {
       settle_personal_debt: {
         Args: {
           p_debt_id: string
-          p_account_card_id: string
+          p_account_card_id: string | null
           // null/tam değer → kapatır; daha az → kısmi ödeme (kayıt açık kalır).
           p_amount?: number | null
-          /** Para hesaba SMS/banka hareketiyle zaten girdi/çıktı; bakiyeye dokunma (kart ödemesindeki p_skip_source_debit ikizi). */
+          /** Hesap hareketi oluşturma; bu durumda hesap null olabilir. */
           p_skip_account_move?: boolean
         }
         Returns: Debt

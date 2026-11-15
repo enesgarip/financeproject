@@ -1,5 +1,12 @@
 # Priority Backlog
 
+## 2026-11-15 — Hesaba işlenmeyen tahsilatta hesap zorunluluğunu kaldır
+
+- [x] Kişisel ödeme/tahsilatta kutu boşken hesap alanını gizle ve null hesapla
+  kaydet. Banka hesabı bulunmayan kullanıcıda da çalışır; kutu işaretliyken
+  hesap zorunludur. Sunucu sahipliği, kısmi ödeme ve makbuzla tekrar korunur.
+
+
 ## 2026-11-14 — Kişisel tahsilat/ödeme hesabı seçeneği
 
 - [x] SMS bağlama seçimini varsayılan boş **Hesap bakiyesine işle** kutusuyla

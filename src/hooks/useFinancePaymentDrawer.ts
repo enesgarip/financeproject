@@ -92,7 +92,7 @@ export function useFinancePaymentDrawer(source: UsageSource) {
       accounts,
       selectedAccountId: attempt ? attempt.accountId ?? 'outside-accounts' : resolvePreferred(getLastUsed(lastUsedKey), selectableSourceIds),
       amountValue: attempt ? String(attempt.amount) : intent.amount > 0 ? String(intent.amount) : '',
-      error: pendingError || (attempt ? UNCERTAIN_MESSAGE : accounts.length === 0 && intent.action !== 'pay_payment' ? emptyAccountMessageForObligation(intent) : ''),
+      error: pendingError || (attempt ? UNCERTAIN_MESSAGE : accounts.length === 0 && intent.action !== 'pay_payment' && intent.action !== 'collect_debt' && intent.action !== 'settle_debt' ? emptyAccountMessageForObligation(intent) : ''),
       saving: false,
       attempt,
       uncertain: Boolean(attempt || pendingError),
@@ -175,7 +175,7 @@ export function useFinancePaymentDrawer(source: UsageSource) {
     }
 
     clearPaymentAttempt(user.id, current.intent)
-    if (!attempt.smsMovementId) setLastUsed(lastUsedKeyForObligation(current.intent), attempt.accountId ?? 'outside-accounts')
+    if (!attempt.smsMovementId && (attempt.accountId || current.intent.action === 'pay_payment')) setLastUsed(lastUsedKeyForObligation(current.intent), attempt.accountId ?? 'outside-accounts')
     setState((latest) => latest?.intent.id === current.intent.id ? null : latest)
     await Promise.allSettled([current.reload?.(), current.afterSuccess?.(), invalidateSms()])
     submitting.current = false

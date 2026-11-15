@@ -2,7 +2,9 @@
 
 Kişisel borç/alacak çekmecesinde **Hesap bakiyesine işle** kutusu boşken
 `settle_personal_debt` yalnız kişisel kaydı ve `debt` geçmiş olayını yazar;
-seçilen hesabın bakiyesi ve hesap ledger'ı değişmez. Kutu varsayılan boştur.
+hesap kimliği null olabilir; hesap seçimi gizlenir. Hesap bakiyeleri ve
+hesap ledger'ı değişmez. Kutu varsayılan boştur. Hesapsız kaydın notunda
+ödeme/tahsilat yönü korunur; banka hesabı adı uydurulmaz.
 İşaretlenirse mevcut RPC hesabı da ödeme/tahsilat yönünde günceller.
 Çekmeceden yeni SMS eşlemesi başlatılmaz. Önceki sürümün belirsiz SMS
 bağlantıları aynı hareket ve ödeme makbuzuyla tamamlanabilir; kaynak
