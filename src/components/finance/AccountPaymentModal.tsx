@@ -43,6 +43,7 @@ type AccountPaymentModalProps = {
   externalError?: string
   amountEditable?: boolean
   amountActions?: ReactNode
+  accountSelectionRequired?: boolean
   accountPreviewAmount?: (amount: number) => number
   emptyMessage?: string
   paymentMethodControl?: ReactNode
@@ -85,6 +86,7 @@ export function AccountPaymentModal({
   externalError = '',
   amountEditable = true,
   amountActions,
+  accountSelectionRequired = true,
   accountPreviewAmount,
   emptyMessage = 'Kullanılabilir banka hesabı yok.',
   info,
@@ -132,18 +134,18 @@ export function AccountPaymentModal({
       return
     }
 
-    if (!recordedMovementControl && !selectedAccount && !outsideAccounts) {
+    if (accountSelectionRequired && !recordedMovementControl && !selectedAccount && !outsideAccounts) {
       setValidationError('Hesap seçmelisin.')
       return
     }
 
-    const coverageError = selectedAccount && !recordedMovementControl ? accountCanCover(selectedAccount, previewAmount) : null
+    const coverageError = accountSelectionRequired && selectedAccount && !recordedMovementControl ? accountCanCover(selectedAccount, previewAmount) : null
     if (coverageError) {
       setValidationError(coverageError)
       return
     }
 
-    const paymentAccount = recordedMovementControl ? null : selectedAccount ?? null
+    const paymentAccount = recordedMovementControl || !accountSelectionRequired ? null : selectedAccount ?? null
     const customError = validate?.({ account: paymentAccount, amount })
     if (customError) {
       setValidationError(customError)
@@ -208,7 +210,7 @@ export function AccountPaymentModal({
           </div>
         )}
 
-        {recordedMovementControl ? null : <AccountSelector
+        {recordedMovementControl || !accountSelectionRequired ? null : <AccountSelector
           accounts={accounts}
           value={selectedAccountId}
           onChange={(value) => {

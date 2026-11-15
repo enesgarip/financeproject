@@ -772,7 +772,10 @@ app; there is no affordability decision surface anymore.
 
 Ödeme ve tahsilat çekmecesinde **Hesap bakiyesine işle** kutusu varsayılan
 boştur. Boşken `settle_personal_debt` çağrısı `p_skip_account_move=true`
-gönderir: seçilen hesap doğrulanır, bakiye ve hesap ledger'ı değişmez.
+gönderir: hesap seçimi gizlenir ve hesap kimliği `null` gönderilir; bakiye ve
+hesap ledger'ı değişmez. Hiç banka hesabı eklenmeden de kayıt yapılabilir.
+Kutu işaretliyken hesap seçimi görünür ve zorunludur. Eski istemciden/SMS
+eşlemesinden hesap kimliği gelirse sahiplik doğrulanmaya devam eder.
 SMS arama/seçme veya hareket eşleme gerekmez. İşaretlenirse hesap bakiyesi
 ödeme yönünde azalır, tahsilat yönünde artar. Her iki durumda tam tutar
 kaydı kapatır, kısmi tutar kalan değeri/miktarı azaltır; borç/alacak işlem

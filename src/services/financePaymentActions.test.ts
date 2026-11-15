@@ -199,3 +199,24 @@ describe('finance payment action helpers', () => {
     expect(estimatedMinimumCardPayment(10000, minimumCardPaymentRate(120000))).toBe(4000)
   })
 })
+
+for (const action of ['collect_debt', 'settle_debt'] as const) {
+  it(`${action}: hesap etkisi kapalıysa null hesap gönderilir`, async () => {
+    rpcMock.mockResolvedValueOnce({ data: null, error: null } as never)
+    const result = await submitFinanceObligationPayment({
+      requestId: 'no-account', obligation: obligation({ action }), account: null, amount: 40, skipSourceDebit: true,
+    })
+    expect(result.error).toBeNull()
+    expect(rpcMock).toHaveBeenCalledWith('submit_finance_payment', {
+      p_request_id: 'no-account', p_method: 'settle_personal_debt',
+      p_args: { p_debt_id: 'source', p_account_card_id: null, p_amount: 40, p_skip_account_move: true },
+    })
+  })
+  it(`${action}: hesap etkisi açıksa hesapsız gönderim reddedilir`, async () => {
+    const result = await submitFinanceObligationPayment({
+      requestId: 'need-account', obligation: obligation({ action }), account: null, amount: 40,
+    })
+    expect(result.error?.message).toContain('hesap seçmelisin')
+    expect(rpcMock).not.toHaveBeenCalled()
+  })
+}

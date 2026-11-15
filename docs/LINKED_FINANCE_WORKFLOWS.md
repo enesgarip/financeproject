@@ -48,7 +48,8 @@ Eski history ve ledger güncellenmez. Alacak dışı etiket history üretmez.
 
 Kişisel ödeme/tahsilat çekmecesi **Hesap bakiyesine işle** kutusunu
 varsayılan boş açar. Boşken mevcut skip-account yordamıyla yalnız kişisel
-kayıt güncellenir; hesap bakiyesi ve ledger'ı değişmez. Kutu işaretlenirse
+kayıt güncellenir; hesap alanı gizlenir ve hesap kimliği null gönderilir.
+Hesap bakiyesi ve ledger'ı değişmez; banka hesabı yokken de çalışır. Kutu işaretlenirse
 seçilen hesaba ödeme/tahsilat işlenir. SMS hareketi seçilmez. Önceki sürümün
 belirsiz SMS bağlantıları aynı ödeme makbuzuyla doğrulanabilir. Hesap
 hareketlerinden gelen para sınıflandırması mevcut akışı kullanmaya devam eder.

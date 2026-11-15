@@ -198,6 +198,7 @@ function PaymentDrawer({
         </label>
       ) : null}
       recordedMovementControl={movementControl}
+      accountSelectionRequired={!isPersonalDebt || !skipSourceDebit}
       accountPreviewAmount={(amount) =>
         skipSourceDebit ? 0 : intent?.action === 'collect_debt' ? -amount : amount}
       extraControls={!uncertain && smsDebitMatch ? (

@@ -236,10 +236,10 @@ export async function submitFinanceObligationPayment({
       })
       submitError = error
     } else {
-      if (!account) return { error: { message: 'Borç/alacak işlemi için kaynak hesap seçmelisin.' } }
+      if (!account && !skipSourceDebit) return { error: { message: 'Borç/alacak işlemi için kaynak hesap seçmelisin.' } }
       const { error } = await paymentRpc('settle_personal_debt', {
         p_debt_id: obligation.sourceId,
-        p_account_card_id: account.id,
+        p_account_card_id: account?.id ?? null,
         p_amount: roundTL(amount),
         p_skip_account_move: skipSourceDebit,
       })
