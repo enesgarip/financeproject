@@ -19,11 +19,11 @@ const account = { id: 'bank', card_type: 'banka_karti', current_balance: 10000 }
 beforeEach(() => { vi.resetAllMocks(); localStorage.clear() })
 afterEach(cleanup)
 
-it('kayıp yanıt sonrası modal/yenileme aynı kimlik, tutar ve tam/kısmi ödeme kararını taşır', async () => {
+it.each([false, true])('kayıp yanıt sonrası hesap etkisi %s ve aynı kimlik/tutar korunur', async (skipSourceDebit) => {
   mocks.submit.mockResolvedValueOnce({ error: { message: 'Failed to fetch' } }).mockResolvedValueOnce({ error: null })
   const first = renderHook(useFinancePaymentDrawer)
   await act(async () => first.result.current.openPaymentDrawer(intent, { cards: [account] }))
-  await act(async () => first.result.current.drawerProps.onSubmit({ account, amount: 100, skipSourceDebit: true }))
+  await act(async () => first.result.current.drawerProps.onSubmit({ account, amount: 100, skipSourceDebit }))
   const attempt = readPaymentAttempt('u1', intent)!
   expect(attempt.amount).toBe(100)
   expect(first.result.current.drawerProps.uncertain).toBe(true)
@@ -31,9 +31,10 @@ it('kayıp yanıt sonrası modal/yenileme aynı kimlik, tutar ve tam/kısmi öde
   const reopened = renderHook(useFinancePaymentDrawer)
   await act(async () => reopened.result.current.openPaymentDrawer({ ...intent, amount: 900 }, { cards: [account] }))
   expect(reopened.result.current.drawerProps.amountValue).toBe('100')
+  expect(reopened.result.current.drawerProps.pendingSkipSourceDebit).toBe(skipSourceDebit)
   await act(async () => reopened.result.current.drawerProps.onSubmit({ account, amount: 999 }))
-  expect(mocks.submit.mock.calls[0][0]).toMatchObject({ requestId: attempt.id, amount: 100, skipSourceDebit: true })
-  expect(mocks.submit.mock.calls[1][0]).toMatchObject({ requestId: attempt.id, amount: 100, skipSourceDebit: true, obligation: { amount: 1000 } })
+  expect(mocks.submit.mock.calls[0][0]).toMatchObject({ requestId: attempt.id, amount: 100, skipSourceDebit })
+  expect(mocks.submit.mock.calls[1][0]).toMatchObject({ requestId: attempt.id, amount: 100, skipSourceDebit, obligation: { amount: 1000 } })
   expect(readPaymentAttempt('u1', intent)).toBeNull()
   expect(reopened.result.current.drawerProps.open).toBe(false)
 })
