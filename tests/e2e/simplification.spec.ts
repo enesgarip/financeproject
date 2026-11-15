@@ -437,32 +437,40 @@ test('kirli ödeme formunda tarayıcı Geri vazgeçilince rota ve tutar korunur'
   await expect(page).toHaveURL(/\/borclar\/krediler$/)
 })
 
-test('kayıp ödeme yanıtından sonra yenileme aynı işlem kimliği ve tutarla doğrular', async ({ page }) => {
-  await mockApp(page, 'light', { debts: [sampleDebt] })
-  const requests: Record<string, unknown>[] = []
-  await page.route('**/rest/v1/rpc/submit_finance_payment', async route => {
-    requests.push(route.request().postDataJSON())
-    if (requests.length === 1) return route.abort('connectionreset')
-    return route.fulfill({ json: null })
+for (const applyMovement of [false, true]) {
+  test(`kayıp ödeme yanıtından sonra yenileme aynı işlem kimliği ve tutarla doğrular (hesaba işle=${applyMovement})`, async ({ page }) => {
+    await mockApp(page, 'light', { debts: [sampleDebt] })
+    const requests: Record<string, unknown>[] = []
+    await page.route('**/rest/v1/rpc/submit_finance_payment', async route => {
+      requests.push(route.request().postDataJSON())
+      if (requests.length === 1) return route.abort('connectionreset')
+      return route.fulfill({ json: null })
+    })
+    page.on('dialog', dialog => dialog.accept())
+    await page.goto('/borclar/kisiler')
+    await page.getByRole('button', { name: 'Ödeme kaydet', exact: true }).click()
+    let modal = page.getByRole('dialog')
+    await modal.getByLabel(/^Ödeme tutarı/).fill('100')
+    if (applyMovement) {
+      await modal.getByRole('checkbox', { name: /Hesap bakiyesine işle/ }).check()
+      await modal.getByRole('combobox', { name: 'Ödemenin yapıldığı hesap' }).selectOption('bank-1')
+    } else {
+      await expect(modal.getByRole('combobox', { name: 'Ödemenin yapıldığı hesap' })).toHaveCount(0)
+    }
+    await modal.getByRole('button', { name: 'Ödemeyi kaydet', exact: true }).click()
+    await expect(modal.getByRole('button', { name: 'Sonucu doğrula', exact: true })).toBeEnabled()
+    await expect(modal.getByLabel(/^Ödeme tutarı/)).toBeDisabled()
+    await page.reload()
+    await page.getByRole('button', { name: 'Ödeme kaydet', exact: true }).click()
+    modal = page.getByRole('dialog')
+    await expect(modal.getByLabel(/^Ödeme tutarı/)).toHaveValue('100')
+    await modal.getByRole('button', { name: 'Sonucu doğrula', exact: true }).click()
+    await expect(modal).toHaveCount(0)
+    expect(requests).toHaveLength(2)
+    expect(requests[1]).toEqual(requests[0])
+    expect(requests[0]).toMatchObject({ p_args: { p_account_card_id: applyMovement ? 'bank-1' : null, p_skip_account_move: !applyMovement } })
   })
-  page.on('dialog', dialog => dialog.accept())
-  await page.goto('/borclar/kisiler')
-  await page.getByRole('button', { name: 'Ödeme kaydet', exact: true }).click()
-  let modal = page.getByRole('dialog')
-  await modal.getByLabel(/^Ödeme tutarı/).fill('100')
-  await modal.getByRole('combobox', { name: 'Ödemenin yapıldığı hesap' }).selectOption('bank-1')
-  await modal.getByRole('button', { name: 'Ödemeyi kaydet', exact: true }).click()
-  await expect(modal.getByRole('button', { name: 'Sonucu doğrula', exact: true })).toBeEnabled()
-  await expect(modal.getByLabel(/^Ödeme tutarı/)).toBeDisabled()
-  await page.reload()
-  await page.getByRole('button', { name: 'Ödeme kaydet', exact: true }).click()
-  modal = page.getByRole('dialog')
-  await expect(modal.getByLabel(/^Ödeme tutarı/)).toHaveValue('100')
-  await modal.getByRole('button', { name: 'Sonucu doğrula', exact: true }).click()
-  await expect(modal).toHaveCount(0)
-  expect(requests).toHaveLength(2)
-  expect(requests[1]).toEqual(requests[0])
-})
+}
 
 test('320px benzer uzun kişi adları ödeme öncesi tam okunur', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 })
