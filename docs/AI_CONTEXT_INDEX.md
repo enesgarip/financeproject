@@ -29,6 +29,10 @@ Postgres doğrulamasını ekle. Ayrıntılar [doğrulama tablosunda](#verificati
 
 ## Tarihli değişiklik kayıtları
 
+17 Kasım PDF kesim kapsamı: `supabase/migrations/20261117114000_statement_import_cutoff_scope.sql`
+sonraki güne ait tek çekim ve taksiti geçici otomatik arşivden ayırır. Bankanın
+kesim günü PDF kapsamına dahildir. Regresyon `supabase/tests/statement_import_installments.sql`.
+
 9 Kasım düzeltme uygulaması: `docs/AUDIT_REMEDIATION_2026-11-09.md`.
 `data/repositories/readAllRows.ts` PK imleciyle tam okuma ve atomik hata
 sözleşmesidir; CRUD, kredi, snapshot fallback ve trend/radar okumaları kullanır.

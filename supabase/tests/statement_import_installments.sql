@@ -430,4 +430,116 @@ begin
   raise notice 'Ekstre taksit import regresyonu OK (1. / orta / son / PDF açık plan yenileme / atomik rollback / paid re-import reddi / PDF tarih otoritesi / devir iptali terslemesi).';
 end $$;
 
+-- Uygulama 14'ünde otomatik keserken bankanın PDF'i 13'ünü esas alır.
+-- Yanlış arşiv bağı olan yeni tek çekim ve eski alışverişin sonraki taksiti
+-- kendi satır/işlem geçmişiyle açık döneme dönmeli.
+do $scope$
+declare
+  v_user uuid := '11111111-1111-1111-1111-111111111111';
+  v_card uuid;
+  v_bank_cut date := date '2026-11-13';
+  v_provisional_archive uuid;
+  v_later_expense uuid;
+  v_later_plan uuid;
+  v_later_installment uuid;
+  v_history uuid;
+  v_bank_account uuid;
+  v_open_archive uuid;
+  v_archive_status text;
+  v_import jsonb := '[{"kind":"expense","amount":100,"spentAt":"2026-11-13","installmentCount":1,"description":"PDF kesim günü","sourceEventId":"scope-cutoff"}]';
+begin
+  perform set_config('app.today', '2026-11-17', true);
+  insert into public.cards (user_id, bank_name, card_name, card_type, credit_limit, statement_day, due_day)
+  values (v_user, 'SI', 'SI kesim sınırı', 'kredi_karti', 50000, 14, 24) returning id into v_card;
+
+  perform public.add_card_expense(v_card, 90, 'Eski kesim günü', v_bank_cut);
+  select id into v_later_expense from public.add_card_expense(
+    v_card, 200, 'Yeni dönem SMS harcaması', v_bank_cut + 1, 1, 'Diğer', 'posted', null, 'sms', 'scope-later-sms'
+  );
+  select id into v_later_plan from public.record_card_installment_carryover(
+    v_card, 'Yeni dönem taksiti', 50, 3, 1, v_bank_cut + 1, 'Market', 'scope-later-plan'
+  );
+  select id into strict v_later_installment from public.card_installments
+    where card_expense_id = v_later_plan and installment_no = 2;
+  select id into strict v_history from public.transaction_history
+    where source_table = 'card_expenses' and source_id = v_later_expense;
+  select id into v_provisional_archive from public.cut_card_statement(v_card);
+  if (select statement_archive_id from public.card_expenses where id = v_later_expense) is distinct from v_provisional_archive
+    or (select statement_archive_id from public.card_installments where id = v_later_installment) is distinct from v_provisional_archive then
+    raise exception 'FAIL scope setup: sonraki günün hareketleri otomatik arşive girmedi';
+  end if;
+
+  begin
+    update public.card_expenses set statement_archive_id = null where id = v_later_expense;
+    raise exception 'FAIL scope: doğrudan arşiv bağı kaldırılabildi';
+  exception when raise_exception then
+    if sqlerrm <> 'Ekstre bağlantısı yalnız ekstre kesme işlemiyle oluşturulabilir.' then raise; end if;
+  end;
+
+  for i in 1..2 loop
+    perform public.replace_card_statement_import(v_card, v_bank_cut, v_bank_cut + 10, 100, v_import);
+    select id, status into strict v_open_archive, v_archive_status
+      from public.card_statement_archives where card_id = v_card;
+    if v_open_archive = v_provisional_archive or v_archive_status <> 'open'
+      or not exists (select 1 from public.card_statement_archives where id = v_open_archive
+        and statement_date = v_bank_cut and due_date = v_bank_cut + 10 and statement_debt_amount = 100 and reconciled_bank_amount = 100)
+      or not exists (select 1 from public.card_expenses where card_id = v_card and source_event_id = 'scope-cutoff'
+        and statement_archive_id = v_open_archive and amount = 100)
+      or exists (select 1 from public.card_expenses where card_id = v_card and description = 'Eski kesim günü') then
+      raise exception 'FAIL scope: bankanın kesim günü ve PDF satırı doğru arşivlenmedi';
+    end if;
+    if not exists (select 1 from public.card_expenses where id = v_later_expense and status = 'posted' and amount = 200
+        and spent_at = v_bank_cut + 1 and statement_archive_id is null and current_settlement_id is null and source_event_id = 'scope-later-sms')
+      or not exists (select 1 from public.transaction_history where id = v_history and source_id = v_later_expense)
+      or not exists (select 1 from public.card_installments where id = v_later_installment and card_expense_id = v_later_plan
+        and status = 'posted' and amount = 50 and due_month = v_bank_cut + 1 and statement_archive_id is null)
+      or not exists (select 1 from public.card_installments where card_expense_id = v_later_plan and installment_no = 3 and status = 'scheduled') then
+      raise exception 'FAIL scope: PDF sonrası harcama, taksit planı veya geçmiş kaydı korunmadı';
+    end if;
+    if not exists (select 1 from public.cards where id = v_card and debt_amount = 400
+        and statement_debt_amount = 100 and current_period_spending = 250 and provision_amount = 0)
+      or (select sum(amount_kurus) from public.card_ledger where card_id = v_card) <> 40000 then
+      raise exception 'FAIL scope: ekstre 100, güncel 250, toplam borç 400 ve ledger eşit olmalı';
+    end if;
+  end loop;
+
+  insert into public.cards (user_id, bank_name, card_name, card_type, current_balance)
+  values (v_user, 'SI', 'SI kısmi ödeme hesabı', 'banka_karti', 1000) returning id into v_bank_account;
+  perform public.pay_card_statement(v_open_archive, v_bank_account, false, 20);
+  begin
+    perform public.replace_card_statement_import(v_card, v_bank_cut, v_bank_cut + 10, 100, v_import);
+    raise exception 'FAIL scope: kısmi ödeme varken arşiv değiştirilebildi';
+  exception when raise_exception then
+    if sqlerrm not like 'Açık ekstreye ödeme kaydedilmiş.%' then raise; end if;
+  end;
+  if not exists (select 1 from public.card_statement_payments where statement_archive_id = v_open_archive and amount = 20)
+    or (select statement_debt_amount from public.cards where id = v_card) <> 80
+    or (select current_balance from public.cards where id = v_bank_account) <> 980 then
+    raise exception 'FAIL scope: kısmi ödeme veya borç/bakiye değişti';
+  end if;
+
+  insert into public.cards (user_id, bank_name, card_name, card_type, credit_limit, statement_day, due_day)
+  values (v_user, 'SI', 'SI kesim sınırını aşan plan', 'kredi_karti', 50000, 14, 24) returning id into v_card;
+  select id into v_later_plan from public.add_card_expense(v_card, 200, 'İki döneme yayılan plan', date '2026-10-14', 2);
+  select id into v_provisional_archive from public.cut_card_statement(v_card);
+  begin
+    perform public.replace_card_statement_import(v_card, v_bank_cut, v_bank_cut + 10, 100, v_import);
+    raise exception 'FAIL scope: kesim sınırında çakışan plan değiştirilebildi';
+  exception when raise_exception then
+    if sqlerrm not like 'Ekstre kapsamındaki bir planın kesim sonrasında kesinleşmiş taksiti var.%' then raise; end if;
+  end;
+  if (select count(*) from public.card_installments where card_expense_id = v_later_plan and statement_archive_id = v_provisional_archive) <> 2
+    or (select statement_debt_amount from public.cards where id = v_card) <> 200 then
+    raise exception 'FAIL scope: reddedilen aktarım taksitleri veya borcu değiştirdi';
+  end if;
+
+  perform public.set_statement_reconciliation(v_card, 2026, 11, 200, 'Daha yeni banka ekstresi');
+  begin
+    perform public.replace_card_statement_import(v_card, v_bank_cut, v_bank_cut + 10, 100, v_import);
+    raise exception 'FAIL scope: yeni doğrulanmış arşiv değiştirilebildi';
+  exception when raise_exception then
+    if sqlerrm <> 'Bu kartta PDF kesiminden daha yeni, banka tutarı doğrulanmış bir ekstre var.' then raise; end if;
+  end;
+end $scope$;
+
 rollback;

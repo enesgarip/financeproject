@@ -333,6 +333,9 @@ Statement archive behavior:
 - statement amount is the posted current-period spending at cut time
 - cutting a statement links posted card expenses and posted card installments through `statement_archive_id`
 - statements are cut automatically the day **after** the statement day (like banks), so the statement day's own spending is included; the dashboard/cards page calls `cut_due_card_statements` on load and the daily `pg_cron` job runs it server-side. There is no manual "cut statement" action.
+- PDF aktarımında bankanın kesim günü dahildir. Uygulamanın daha geç kestiği
+  ödemesiz geçici arşive bağlanmış sonraki hareketler kendi kayıtlarıyla açık
+  döneme döner. Ödeme kaydı veya daha yeni banka doğrulaması olan arşiv korunur.
 - statement/current movement imports match existing app expenses primarily by amount and same-or-near date, not by identical merchant text. Matching tuning lives in one shared owner, `src/utils/importMatch.ts`: the amount tolerance is `max(5 TL, 1%)` of the larger amount, the near date window is 3 days, and the loose window extends to 7 days where a match additionally REQUIRES compatible descriptions (blind amount-only matching is allowed only in the near window with a single candidate). This lets the user keep personal descriptions while avoiding duplicate imports when bank posting dates drift by a few days.
 
 ## Scheduled Card Maintenance (server-side)

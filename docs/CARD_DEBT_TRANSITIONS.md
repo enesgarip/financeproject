@@ -335,7 +335,7 @@ archive — and warning tones derive from the same total.
 | Card debt manual correction | `post_card_debt_correction` | `debt_amount += signed correction`; positive corrections add to current-period spending, negative reverse entries reduce current period first, then statement, then provision | Writes an auditable `card_ledger.kind='adjustment'` event with the required reason note |
 | Bank total snapshot reconciled | `reconcile_card_bank_snapshot` | `debt_amount = bank total remaining card burden`; with the 4-arg overload (`p_bucket`, migration `20260908120000`, UX tour B1) a positive gap is also added to `current_period_spending` (`'current'`, UI default) or `statement_debt_amount` (`'statement'`); `'none'` and the legacy 3-arg signature leave buckets unchanged; a negative gap only lowers the total (clamp trims buckets) | Bank total must include future installments and cannot be below the visible split. A paid archive's unallocated historical children are attached only when every eligible child plus the linked total exactly equals that archive amount; ambiguous matches are untouched. The total-only change is an auditable ledger adjustment. |
 | Card import reset | `reset_card_import_data` | Sets visible card debt fields to `0` before a clean import rebuilds the non-paid/open scope | Deletes unarchived/non-paid-open expenses, installments, statement archives, and their history under a user/card-bound guard. It fails before mutation if current-settlement or paid-archive installment history makes a clean historical rebuild unsafe. The product import UI remains non-destructive. |
-| Statement PDF authoritative rebuild | `replace_card_statement_import` | Reprojects the rebuildable open scope, replays every validated PDF row, locks the cut amount to the bank total, then cuts/reconciles the statement in one transaction | Preserves paid archives/current-settlement evidence and movements after the PDF statement date. It never matches/reuses a historical installment parent: each PDF installment line creates a fresh current/future open plan, while old paid archives remain untouched. |
+| Statement PDF authoritative rebuild | `replace_card_statement_import` | Reprojects the rebuildable open scope, replays every validated PDF row, locks the cut amount to the bank total, then cuts/reconciles the statement in one transaction | Preserves paid archives, current-settlement evidence and unrelated movements after the PDF statement date. Later rows linked to a provisional auto-cut return to the current period with their existing IDs. A uniquely matched historical installment parent may be reused. |
 | Legacy whole-card reset | removed (`reset_card_data`) | n/a | Removed because it predated immutable statement/current-settlement evidence and had no safe append-only reversal model. Full user reset remains the supported destructive reset. |
 
 ## Calendar
@@ -371,6 +371,15 @@ PDF whose period already has a paid archive (or any paid archive with a newer
 statement date): the rebuild scope only recognizes open archives, so replaying
 a paid period would add the debt a second time and silently delete preserved
 plans' open installments.
+
+When an unpaid automatic archive was cut later than the PDF date, the import
+detaches later purchases and their installment rows from that archive before
+rebuilding. Purchase and installment dates determine membership, and the PDF
+cutoff day is included. The detachment guard permits only the original owner
+and card, an unmatched open archive, and a change to its link and timestamp.
+An open archive with payment evidence or a newer bank-confirmed archive blocks
+replacement. An installment plan that overlaps the PDF and has a later posted
+installment already in the archive requires comparison before replacement.
 
 A carryover action without an explicit `existingExpenseId` reuses the ongoing
 plan server-side: if exactly one preserved parent on the same card matches the
