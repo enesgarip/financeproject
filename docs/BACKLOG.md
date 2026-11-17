@@ -1,5 +1,12 @@
 # Priority Backlog
 
+## 2026-11-17 — PDF aktarımında banka kesiminden sonraki hareketleri koru
+
+- [x] PDF kesimi otomatik kesimden erken olduğunda sonraki günün açık
+  harcamalarını ve taksitlerini kimlikleriyle güncel döneme döndür.
+- [x] Gerçek Postgres regresyonunda aynı PDF'nin tekrar aktarımını, ledger
+  toplamını ve açık ekstreye yapılmış ödemenin korunmasını doğrula.
+
 ## 2026-11-17 — Yapı Kredi ekstre aktarımı sonrası Veri Sağlığı ve kategori toplamı
 
 - [x] Dönem içinde ödenmiş eski taksit planının doğrulanmış ekstredeki tek
