@@ -27,9 +27,9 @@ export async function fetchCategorySpendingHistory(): Promise<Result<CategoryHis
     }
   }
   const [expenses, installments, statements] = await Promise.all([
-    read<CategoryHistory['expenses'][number]>('card_expenses', 'id,card_id,statement_archive_id,spent_at,amount,description,category,installment_count,status'),
+    read<CategoryHistory['expenses'][number]>('card_expenses', 'id,user_id,card_id,created_at,current_settlement_id,statement_archive_id,source,spent_at,amount,description,category,installment_count,status'),
     read<CategoryHistory['installments'][number]>('card_installments', 'id,card_id,card_expense_id,statement_archive_id,due_month,amount,description,category,installment_no,installment_count,status'),
-    read<CategoryHistory['statements'][number]>('card_statement_archives', 'id,card_id,statement_date,statement_debt_amount'),
+    read<CategoryHistory['statements'][number]>('card_statement_archives', 'id,user_id,card_id,statement_date,statement_debt_amount,reconciled_bank_amount,status'),
   ])
   if (!expenses.ok) return expenses
   if (!installments.ok) return installments

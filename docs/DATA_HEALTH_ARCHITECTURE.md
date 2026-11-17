@@ -38,6 +38,12 @@ data.
 
 ## Responsibility
 
+Doğrulanmış ekstreyle eşleşen dönem içi SMS ödemesi için mükerrer iptal
+önerilmez. Aynı kontrol `utils/statementExpenseDuplicates.ts` üzerinden takvim
+kategori toplamında PDF satırını seçer. Ekstrede devamı bulunan ödenmiş eski
+planlar için eksik taksit kontrolü, [kart borcu kurallarındaki](CARD_DEBT_TRANSITIONS.md#data-health-expectations)
+eşleşme kanıtlarını kullanır. Belirsiz adaylar incelemede kalır.
+
 `src/pages/DataHealthPage.tsx` owns route orchestration:
 
 - load all data-health rows from the repository

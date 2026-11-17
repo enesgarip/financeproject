@@ -250,6 +250,11 @@ tam geçmişini 500'lük PK imleciyle okur; snapshot'ın 25 ay/120 ödenmiş ar�
 kullanmaz. `app/useCategorySpendingHistory.ts` kullanıcı cache'i ortak finans
 invalidation'ıyla yenilenir. Ekstrede çocuk taksit, takvim ayında alışveriş
 toplamı sayılır; provizyon/iptal hariçtir. Eksik arşiv ve kapsam farkı açıklanır.
+17 Kasım: `utils/statementExpenseDuplicates.ts` takvim kategorileri ve Veri
+Sağlığı için dönem içinde ödenmiş SMS ile doğrulanmış tek PDF karşılığını
+eşler. `pages/DataHealth.checks.ts` farklı açıklamalı eski taksit planının
+doğrulanmış ve tekil devamını tanır. Regresyonlar `categorySpending.test.ts`
+ve `DataHealth.logic.test.ts` içindedir.
 Sözleşme: `docs/FINANCE_RULES.md`, `docs/UI_ARCHITECTURE.md`.
 
 26 Ekim kart geçmişi eki: `CardLedgerPanel.tsx` borçlanma/ödeme/net tutarlarını
