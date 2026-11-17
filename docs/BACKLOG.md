@@ -1,5 +1,14 @@
 # Priority Backlog
 
+## 2026-11-17 — Yapı Kredi ekstre aktarımı sonrası Veri Sağlığı ve kategori toplamı
+
+- [x] Dönem içinde ödenmiş eski taksit planının doğrulanmış ekstredeki tek
+  devamını tanı. Eski plan için sahte eksik taksit üretme, devam planındaki
+  gerçek eksikleri ve belirsiz eşleşmeleri göster.
+- [x] Aynı kart, gün ve kuruş tutarında tek SMS/PDF eşleşmesi için doğrulanmış
+  ekstre satırını takvim kategorilerinde bir kez göster. Dönem içi ödeme kanıtı
+  ve satıcı eşleşmesi zorunlu. İki kayıt da geçmişte saklanır.
+
 ## 2026-11-15 — Hesaba işlenmeyen tahsilatta hesap zorunluluğunu kaldır
 
 - [x] Kişisel ödeme/tahsilatta kutu boşken hesap alanını gizle ve null hesapla

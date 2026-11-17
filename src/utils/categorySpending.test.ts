@@ -9,8 +9,9 @@ const cards = [
   { id: 'bank', card_name: 'Hesap', card_type: 'banka_karti' },
 ] as Card[]
 const selection: CategorySelection = { mode: 'statement', cardId: 'all', period: 'current' }
-const expense = (id: string, overrides: Partial<CategoryHistory['expenses'][number]> = {}): CategoryHistory['expenses'][number] => ({ id, card_id: 'a', spent_at: '2026-10-10', statement_archive_id: null, amount: 100, description: id, category: 'Market', installment_count: 1, status: 'posted', ...overrides })
+const expense = (id: string, overrides: Partial<CategoryHistory['expenses'][number]> = {}): CategoryHistory['expenses'][number] => ({ id, user_id: 'user', card_id: 'a', created_at: '2026-10-10T12:00:00Z', spent_at: '2026-10-10', statement_archive_id: null, source: null, amount: 100, description: id, category: 'Market', installment_count: 1, status: 'posted', ...overrides })
 const installment = (id: string, overrides: Partial<CategoryHistory['installments'][number]> = {}): CategoryHistory['installments'][number] => ({ id, card_id: 'a', card_expense_id: 'parent', statement_archive_id: null, due_month: '2026-11-01', amount: 50, description: id, category: 'Giyim', installment_no: 2, installment_count: 3, status: 'posted', ...overrides })
+const statement = (id: string, overrides: Partial<CategoryHistory['statements'][number]> = {}): CategoryHistory['statements'][number] => ({ id, user_id: 'user', card_id: 'a', statement_date: '2026-10-04', statement_debt_amount: 100, reconciled_bank_amount: null, status: 'paid', ...overrides })
 const history = (overrides: Partial<CategoryHistory> = {}): CategoryHistory => ({ expenses: [], installments: [], statements: [], ...overrides })
 
 describe('kategori dönemi', () => {
@@ -29,7 +30,7 @@ describe('kategori dönemi', () => {
     const h = history({ expenses: [expense('cut', { spent_at: '2026-11-04' })] })
     expect(buildCategorySpending(cards, h, { ...selection, cardId: 'a' }, new Date(2026, 10, 4)).total).toBe(100)
     expect(buildCategorySpending(cards, h, { ...selection, cardId: 'a' }, new Date(2026, 10, 5)).total).toBe(0)
-    h.statements.push({ id: 'cut', card_id: 'a', statement_date: '2026-11-04', statement_debt_amount: 100 })
+    h.statements.push(statement('cut', { statement_date: '2026-11-04' }))
     expect(buildCategorySpending(cards, h, { ...selection, cardId: 'a' }, new Date(2026, 10, 4)).periods[0].start).toBe('2026-11-05')
   })
   it('ay sonunu, Şubat ve yıl geçişini ortak tarih kuralıyla hesaplar', () => {
@@ -43,7 +44,7 @@ describe('kategori dönemi', () => {
     expect(result.warnings[0]).toContain('Dördünde kesilen')
   })
   it('geçmişi gerçek arşiv bağlantısından bulur; bugünkü kesim gününü geçmişe uygulamaz', () => {
-    const h = history({ statements: [{ id: 'prev', card_id: 'a', statement_date: '2026-09-08', statement_debt_amount: 0 }, { id: 'oct', card_id: 'a', statement_date: '2026-10-08', statement_debt_amount: 150 }], expenses: [expense('old-date', { spent_at: '2026-08-10', statement_archive_id: 'oct' }), expense('unlinked'), expense('parent', { amount: 150, installment_count: 3, statement_archive_id: 'oct' })], installments: [installment('paid', { statement_archive_id: 'oct', status: 'paid' })] })
+    const h = history({ statements: [statement('prev', { statement_date: '2026-09-08', statement_debt_amount: 0 }), statement('oct', { statement_date: '2026-10-08', statement_debt_amount: 150 })], expenses: [expense('old-date', { spent_at: '2026-08-10', statement_archive_id: 'oct' }), expense('unlinked'), expense('parent', { amount: 150, installment_count: 3, statement_archive_id: 'oct' })], installments: [installment('paid', { statement_archive_id: 'oct', status: 'paid' })] })
     const result = buildCategorySpending(cards, h, { ...selection, cardId: 'a', period: '2026-10' }, today)
     expect(result.total).toBe(150)
     expect(result.periods[0]).toMatchObject({ start: '2026-09-09', end: '2026-10-08' })
@@ -56,7 +57,7 @@ describe('kategori dönemi', () => {
     expect(result.categories[0].rows[0].installment).toBe('2/3 taksit')
   })
   it('eksik ekstre ve tutar farkı kısmi veri olarak açıklanır; ilk arşivin başlangıcı uydurulmaz', () => {
-    const result = buildCategorySpending(cards, history({ statements: [{ id: 'oct', card_id: 'a', statement_date: '2026-10-04', statement_debt_amount: 900 }], expenses: [expense('partial', { statement_archive_id: 'oct' })] }), { ...selection, period: '2026-10' }, today)
+    const result = buildCategorySpending(cards, history({ statements: [statement('oct', { statement_debt_amount: 900 })], expenses: [expense('partial', { statement_archive_id: 'oct' })] }), { ...selection, period: '2026-10' }, today)
     expect(result.total).toBe(100)
     expect(result.periods[0].start).toBeNull()
     expect(result.warnings.join(' ')).toContain('tamamını temsil etmeyebilir')
@@ -67,6 +68,24 @@ describe('kategori dönemi', () => {
     expect(result.total).toBe(250)
     expect(result.periods).toEqual([])
   })
+  it('dönem içinde ödenen SMS ile doğrulanmış ekstre satırını takvim ayında bir kez sayar', () => {
+    const sms = expense('sms', { source: 'sms', current_settlement_id: 'settlement', description: 'ABC KİMYA KOZMETİK SANAYİ' })
+    const pdf = expense('pdf', { source: 'statement_import', statement_archive_id: 'nov', created_at: '2026-11-01T12:00:00Z', description: 'ABC KIMYA KOZMETIK' })
+    const archive = statement('nov', { statement_date: '2026-11-01', reconciled_bank_amount: 100 })
+    const h = history({ expenses: [sms, pdf], statements: [archive] })
+    const before = structuredClone(h)
+    const calendar: CategorySelection = { mode: 'calendar', cardId: 'a', period: '2026-10' }
+    expect(buildCategorySpending(cards, h, calendar, today).categories[0]).toMatchObject({
+      amount: 100, rows: [{ id: 'expense:pdf' }],
+    })
+    expect(buildCategorySpending(cards, h, { ...selection, cardId: 'a', period: '2026-11' }, today).total).toBe(100)
+    expect(h).toEqual(before)
+
+    expect(buildCategorySpending(cards, { ...h, statements: [{ ...archive, reconciled_bank_amount: 99 }] }, calendar, today).total).toBe(200)
+    expect(buildCategorySpending(cards, { ...h, expenses: [{ ...sms, current_settlement_id: null }, pdf] }, calendar, today).total).toBe(200)
+    expect(buildCategorySpending(cards, { ...h, expenses: [{ ...sms, description: 'ABC LOJİSTİK' }, pdf] }, calendar, today).total).toBe(200)
+    expect(buildCategorySpending(cards, { ...h, expenses: [sms, pdf, { ...pdf, id: 'another-pdf' }] }, calendar, today).total).toBe(300)
+  })
   it('kuruş toplamı, boş kategori ve tüm kategoriler korunur', () => {
     const result = buildCategorySpending(cards, history({ expenses: [expense('a', { amount: 0.1, category: '' }), expense('b', { amount: 0.2, category: '' }), ...Array.from({ length: 10 }, (_, i) => expense(`c${i}`, { category: `Kategori ${i}` }))] }), selection, today)
     expect(result.total).toBe(1000.3)
@@ -74,7 +93,7 @@ describe('kategori dönemi', () => {
     expect(result.categories.at(-1)).toMatchObject({ category: 'Diğer', amount: 0.3 })
   })
   it('geçmiş seçenekleri kart/kapsam bazında, tarih sınırı olmadan sıralanır', () => {
-    const h = history({ statements: [{ id: 'old', card_id: 'a', statement_date: '2021-05-04', statement_debt_amount: 0 }, { id: 'b', card_id: 'b', statement_date: '2026-10-20', statement_debt_amount: 0 }], expenses: [expense('old', { spent_at: '2021-05-01' }), expense('pending', { spent_at: '2020-01-01', status: 'provision' })] })
+    const h = history({ statements: [statement('old', { statement_date: '2021-05-04', statement_debt_amount: 0 }), statement('b', { card_id: 'b', statement_date: '2026-10-20', statement_debt_amount: 0 })], expenses: [expense('old', { spent_at: '2021-05-01' }), expense('pending', { spent_at: '2020-01-01', status: 'provision' })] })
     expect(categoryPeriodOptions(h, selection, today)).toEqual(['2026-10', '2021-05'])
     expect(categoryPeriodOptions(h, { ...selection, cardId: 'a' }, today)).toEqual(['2021-05'])
     expect(categoryPeriodOptions(h, { ...selection, mode: 'calendar' }, today)).toEqual(['2026-11', '2021-05'])

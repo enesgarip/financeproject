@@ -1,12 +1,13 @@
-import type { Card, CardExpense, CardInstallment, CardStatementArchive } from '../types/database'
+import type { Card, CardExpense, CardInstallment } from '../types/database'
 import { getCardStatementPeriod } from './cardStatement'
 import { addDays, dateInputValue, endOfMonth } from './date'
 import { equalsTL, sumTL } from './money'
+import { settledSmsCopiesInStatement, type StatementArchiveEvidence, type StatementExpenseEvidence } from './statementExpenseDuplicates'
 
 export type CategoryHistory = {
-  expenses: Pick<CardExpense, 'id' | 'card_id' | 'statement_archive_id' | 'spent_at' | 'amount' | 'description' | 'category' | 'installment_count' | 'status'>[]
+  expenses: (StatementExpenseEvidence & Pick<CardExpense, 'category'>)[]
   installments: Pick<CardInstallment, 'id' | 'card_id' | 'card_expense_id' | 'statement_archive_id' | 'due_month' | 'amount' | 'description' | 'category' | 'installment_no' | 'installment_count' | 'status'>[]
-  statements: Pick<CardStatementArchive, 'id' | 'card_id' | 'statement_date' | 'statement_debt_amount'>[]
+  statements: StatementArchiveEvidence[]
 }
 export type CategorySelection = { mode: 'statement' | 'calendar'; cardId: string; period: string }
 export type CategoryTransaction = { id: string; cardId: string; archiveId: string | null; date: string; description: string; amount: number; category: string; installment: string | null }
@@ -37,6 +38,8 @@ export function buildCategorySpending(cards: Card[], history: CategoryHistory, s
   const periods: CategoryPeriod[] = []
   const warnings: string[] = []
   const transactions: CategoryTransaction[] = []
+  const smsCopies = selection.mode === 'calendar'
+    ? settledSmsCopiesInStatement(history.expenses, history.statements) : new Set<string>()
   if (selection.mode === 'statement') {
     for (const card of selectedCards) {
       const archives = history.statements.filter(row => row.card_id === card.id && row.statement_date <= todayKey).sort((a, b) => a.statement_date.localeCompare(b.statement_date))
@@ -71,7 +74,7 @@ export function buildCategorySpending(cards: Card[], history: CategoryHistory, s
   for (const expense of history.expenses) {
     if (!cardIds.has(expense.card_id) || expense.status !== 'posted') continue
     if (selection.mode === 'calendar') {
-      if (expense.spent_at.slice(0, 7) !== selection.period || expense.spent_at > todayKey) continue
+      if (expense.spent_at.slice(0, 7) !== selection.period || expense.spent_at > todayKey || smsCopies.has(expense.id)) continue
     } else if (expense.installment_count > 1 || !includes(expense.card_id, expense.statement_archive_id, expense.spent_at)) continue
     transactions.push({ id: `expense:${expense.id}`, cardId: expense.card_id, archiveId: expense.statement_archive_id, date: expense.spent_at, description: expense.description, amount: expense.amount, category: expense.category || 'Diğer', installment: null })
   }

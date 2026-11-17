@@ -15,7 +15,7 @@ import type {
 } from '../types/database'
 import { balanceDrift, projectAccountBalance, type AccountLedgerEvent } from '../utils/accountLedger'
 import { ledgerDrift, projectCardDebt, projectCardSplit, type CardLedgerEvent } from '../utils/cardLedger'
-import { dateInputValue, formatDate } from '../utils/date'
+import { addDays, dateInputValue, formatDate } from '../utils/date'
 import { normalizeSearchText } from '../utils/searchText'
 import {
   buildCreditLimitGroups,
@@ -29,6 +29,7 @@ import {
 import { formatCurrency } from '../utils/formatCurrency'
 import { diffTL, equalsTL, exceedsTL, moneyDiffers, roundTL, sumTL, toKurus } from '../utils/money'
 import { formatComponentAmount, formatSavingsGoalAmount, savingsGoalBelowTarget, savingsGoalTargetReached, savingsGoalValueTypeLabel } from '../utils/savingsGoal'
+import { isBankMatchedStatement, settledSmsCopiesInStatement } from '../utils/statementExpenseDuplicates'
 import { buildTransactionFingerprint, descriptionSimilarity, descriptionsProveDistinct, normalizedTransactionDescription } from '../utils/transactionFingerprint'
 import type { HealthIssue } from './DataHealth.logic'
 import { addMonthsToDate, currentMonthStart } from './DataHealth.logic'
@@ -111,6 +112,65 @@ function hasInstallmentHistory(row: CardInstallment) {
     || row.current_settlement_id != null
 }
 
+function validInstallmentRows(expense: CardExpense, rows: CardInstallment[]) {
+  return rows.length > 0 && rows.every((row) => row.user_id === expense.user_id
+    && row.card_id === expense.card_id && row.installment_count === expense.installment_count
+    && row.installment_no >= 1 && row.installment_no <= expense.installment_count)
+}
+
+function matchesLegacyInstallmentDate(legacyDate: string, bankDate: string) {
+  // Eski ay başı kayıtları bir önceki ayın son günlerindeki taksiti temsil edebilir.
+  return legacyDate === bankDate || (isMonthStart(legacyDate) && bankDate < legacyDate
+    && dateInputValue(addDays(new Date(`${bankDate}T00:00:00`), 10)) >= legacyDate)
+}
+
+/** Ödenmiş manuel plan, farklı açıklamayla gelen doğrulanmış PDF'de devam edebilir.
+ * Aynı sıra/tutar/tarih ve tek aday kanıtı olmadan eski planın denetimini kaldırma. */
+function supersededSettledPlans(
+  expenses: CardExpense[],
+  installmentsByExpense: Map<string, CardInstallment[]>,
+  archivesById: Map<string, CardStatementArchive>,
+) {
+  const plans = expenses.filter((expense) => expense.status === 'posted' && expense.installment_count > 1
+    && expense.installment_amount > 0)
+  const groups = groupBy(plans, (plan) => JSON.stringify([
+    plan.user_id, plan.card_id, plan.installment_count, toKurus(plan.installment_amount),
+  ]))
+  const superseded = new Set<string>()
+  for (const group of groups.values()) {
+    const matchesByLegacy = new Map<string, string[]>()
+    const matchesByPdf = new Map<string, number>()
+    for (const pdf of group) {
+      if (pdf.source !== 'carryover' || !pdf.note?.includes('taksit ekstre öncesinde tamamlandı; yalnız açık plan tutulur.')) continue
+      const pdfRows = installmentsByExpense.get(pdf.id) ?? []
+      if (!validInstallmentRows(pdf, pdfRows)) continue
+      const currentNo = parseHistoricalPaidCount(pdf) + 1
+      const current = pdfRows.find((row) => row.installment_no === currentNo)
+      const archive = current?.statement_archive_id ? archivesById.get(current.statement_archive_id) : undefined
+      if (!current || current.status === 'scheduled' || !archive || !isBankMatchedStatement(archive, pdf)
+        || current.due_month > archive.statement_date || !equalsTL(current.amount, pdf.installment_amount)) continue
+
+      for (const legacy of group) {
+        if ((legacy.source != null && legacy.source !== 'manual') || moneyDiffers(legacy.amount, pdf.amount)
+          || !(Date.parse(legacy.created_at) < Date.parse(pdf.created_at))
+          || !matchesLegacyInstallmentDate(legacy.spent_at, pdf.spent_at)) continue
+        const rows = installmentsByExpense.get(legacy.id) ?? []
+        if (!validInstallmentRows(legacy, rows) || !rows.some((row) => row.installment_no === currentNo)
+          || !rows.every((row) => row.status === 'paid' && row.current_settlement_id != null
+            && row.installment_no <= currentNo && equalsTL(row.amount, pdf.installment_amount)
+            && matchesLegacyInstallmentDate(row.due_month, addMonthsToDate(pdf.spent_at, row.installment_no - 1)))) continue
+
+        matchesByLegacy.set(legacy.id, [...(matchesByLegacy.get(legacy.id) ?? []), pdf.id])
+        matchesByPdf.set(pdf.id, (matchesByPdf.get(pdf.id) ?? 0) + 1)
+      }
+    }
+    for (const [legacyId, pdfIds] of matchesByLegacy) {
+      if (pdfIds.length === 1 && matchesByPdf.get(pdfIds[0]) === 1) superseded.add(legacyId)
+    }
+  }
+  return superseded
+}
+
 /** Açık devam planı başka parent'a taşınmışsa eski snapshot'ta tekrar aranmaz.
  * Bu yalnız bulgu üretimini etkiler; ekstreye gelmek ödeme kanıtı sayılmaz. */
 function supersededInstallmentPlans(
@@ -126,9 +186,7 @@ function supersededInstallmentPlans(
   for (const expense of expenses) {
     if (expense.status !== 'posted' || expense.installment_count <= 1 || expense.installment_amount <= 0) continue
     const rows = installmentsByExpense.get(expense.id) ?? []
-    if (rows.length === 0 || rows.some((row) => row.user_id !== expense.user_id
-      || row.card_id !== expense.card_id || row.installment_count !== expense.installment_count
-      || row.installment_no < 1 || row.installment_no > expense.installment_count)) continue
+    if (!validInstallmentRows(expense, rows)) continue
     const normalized = normalizedTransactionDescription(expense.description)
     const marker = normalized.match(/\b(\d+)\s+tk\b/)
     const localNo = parseHistoricalPaidCount(expense) + 1
@@ -165,7 +223,7 @@ function supersededInstallmentPlans(
     groups.set(key, group)
   }
 
-  const superseded = new Set<string>()
+  const superseded = supersededSettledPlans(expenses, installmentsByExpense, archivesById)
   for (const group of groups.values()) {
     // Aynı ilerleme seviyesinde iki parent varsa hangi alışverişin devamı
     // olduğu belirsizdir. Bu durumda hiçbir bulguyu örtme.
@@ -775,9 +833,11 @@ export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpe
   const archivesById = new Map(cardStatementArchives.map((archive) => [archive.id, archive]))
   const cardsById = new Map(cards.map((card) => [card.id, card]))
   const activeExpenses = cardExpenses.filter(activeCardExpense)
+  const smsCopies = settledSmsCopiesInStatement(activeExpenses, cardStatementArchives)
+  const comparableExpenses = activeExpenses.filter((expense) => !smsCopies.has(expense.id))
   const exactDuplicateIdSets = new Set<string>()
 
-  for (const [fingerprint, rows] of groupBy(activeExpenses, cardExpenseFingerprint)) {
+  for (const [fingerprint, rows] of groupBy(comparableExpenses, cardExpenseFingerprint)) {
     if (rows.length <= 1) continue
     const ids = rows.map((row) => row.id).sort()
     exactDuplicateIdSets.add(ids.join('|'))
@@ -802,7 +862,7 @@ export function checkCardExpenseDuplicates(cards: Card[], cardExpenses: CardExpe
     })
   }
 
-  for (const [looseKey, rows] of groupBy(activeExpenses, (expense) => (
+  for (const [looseKey, rows] of groupBy(comparableExpenses, (expense) => (
     `${expense.card_id}|${expense.spent_at}|${expense.status}|${toKurus(expense.amount)}`
   ))) {
     if (rows.length <= 1) continue

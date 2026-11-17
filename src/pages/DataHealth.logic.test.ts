@@ -1012,6 +1012,55 @@ describe('buildIssues successive statement installment plans', () => {
     expect(buildIssues(data).some((issue) => issue.id === 'card-expense-missing-old-plan')).toBe(false)
     expect(buildIssues(data).find((issue) => issue.id === 'card-expense-missing-current-plan')?.details).toContain('Eksik: 9/9')
   })
+
+  function settledPlan(legacyDate = '2026-04-01', legacyDue = '2026-11-01') {
+    const count = 9
+    return {
+      ...emptyData,
+      cardExpenses: [
+        cardExpense({ id: 'legacy', source: null, description: 'Elektronik cihaz', spent_at: legacyDate, created_at: '2026-05-27T12:00:00Z', installment_count: count, amount: 900.01, installment_amount: 100, note: '2/9 taksiti uygulama öncesinde ödendi.' }),
+        cardExpense({ id: 'pdf', source: 'carryover', description: 'MAĞAZA PAZARYERİ', spent_at: '2026-03-23', created_at: '2026-11-17T12:00:00Z', installment_count: count, amount: 900, installment_amount: 100, note: '7/9 taksit ekstre öncesinde tamamlandı; yalnız açık plan tutulur.' }),
+      ],
+      cardInstallments: [
+        cardInstallment({ id: 'legacy-8', card_expense_id: 'legacy', installment_no: 8, installment_count: count, amount: 100, due_month: legacyDue, status: 'paid', current_settlement_id: 'settlement' }),
+        cardInstallment({ id: 'pdf-8', card_expense_id: 'pdf', installment_no: 8, installment_count: count, amount: 100, due_month: '2026-10-23', status: 'posted', statement_archive_id: 'verified' }),
+        cardInstallment({ id: 'pdf-9', card_expense_id: 'pdf', installment_no: 9, installment_count: count, amount: 100, due_month: '2026-11-23' }),
+      ],
+      cardStatementArchives: [cardStatementArchive({ id: 'verified', statement_date: '2026-11-13', statement_debt_amount: 100, reconciled_bank_amount: 100, status: 'paid' })],
+    }
+  }
+
+  it.each([['2026-03-23', '2026-10-23'], ['2026-04-01', '2026-11-01']])(
+    'ties a uniquely matched settled plan to its verified PDF continuation (%s)', (legacyDate, legacyDue) => {
+      const data = settledPlan(legacyDate, legacyDue)
+      const before = structuredClone(data)
+      expect(buildIssues(data).filter((issue) => issue.id.startsWith('card-expense-missing-'))).toEqual([])
+      expect(data).toEqual(before)
+
+      data.cardInstallments.pop()
+      expect(buildIssues(data).filter((issue) => issue.id.startsWith('card-expense-missing-')).map((issue) => issue.id))
+        .toEqual(['card-expense-missing-pdf'])
+    },
+  )
+
+  it('requires a bounded legacy date, settlement history and a matched statement for a different description', () => {
+    const hasLegacyFinding = (data: ReturnType<typeof settledPlan>) => buildIssues(data).some((issue) => issue.id === 'card-expense-missing-legacy')
+    expect(hasLegacyFinding(settledPlan('2026-05-01', '2026-12-01'))).toBe(true)
+    const data = settledPlan()
+    data.cardStatementArchives[0].reconciled_bank_amount = null
+    expect(hasLegacyFinding(data)).toBe(true)
+    data.cardStatementArchives[0].reconciled_bank_amount = 100
+    data.cardInstallments[0].current_settlement_id = null
+    expect(hasLegacyFinding(data)).toBe(true)
+  })
+
+  it.each(['legacy', 'pdf'])('keeps the finding when %s has an equally plausible alternative', (planId) => {
+    const data = settledPlan()
+    data.cardExpenses.push({ ...data.cardExpenses.find((row) => row.id === planId)!, id: 'another' })
+    data.cardInstallments.push(...data.cardInstallments.filter((row) => row.card_expense_id === planId)
+      .map((row) => ({ ...row, id: `${row.id}-another`, card_expense_id: 'another' })))
+    expect(buildIssues(data).some((issue) => issue.id === 'card-expense-missing-legacy')).toBe(true)
+  })
 })
 
 describe('buildIssues overdue card statements', () => {
@@ -1178,6 +1227,21 @@ describe('buildIssues card expense duplicate analysis', () => {
     const duplicate = issues.find((issue) => issue.kind === 'duplicateTransactionCandidate')
     expect(duplicate?.payload?.duplicateLevel).toBe('possible')
     expect(duplicate?.severity).toBe('info')
+  })
+
+  it('does not ask to cancel a settled SMS that has a single matching row in a verified statement', () => {
+    const data = {
+      ...emptyData,
+      cards: [creditCard()],
+      cardExpenses: [
+        cardExpense({ id: 'sms', source: 'sms', amount: 150, description: 'ABC KİMYA KOZMETİK SANAYİ', current_settlement_id: 'settlement', created_at: '2026-10-25T12:00:00Z', spent_at: '2026-10-25' }),
+        cardExpense({ id: 'pdf', source: 'statement_import', amount: 150, description: 'ABC KIMYA KOZMETIK', statement_archive_id: 'verified', created_at: '2026-11-17T12:00:00Z', spent_at: '2026-10-25' }),
+      ],
+      cardStatementArchives: [cardStatementArchive({ id: 'verified', statement_date: '2026-11-13', statement_debt_amount: 150, reconciled_bank_amount: 150, status: 'paid' })],
+    }
+    expect(buildIssues(data).some((issue) => issue.kind === 'duplicateTransactionCandidate')).toBe(false)
+    data.cardExpenses.push({ ...data.cardExpenses[1], id: 'second-pdf' })
+    expect(buildIssues(data).some((issue) => issue.kind === 'duplicateTransactionCandidate')).toBe(true)
   })
 
   it('does not flag explicit installment numbers or fee components as duplicates', () => {

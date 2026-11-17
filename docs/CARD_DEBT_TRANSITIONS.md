@@ -698,12 +698,28 @@ cash-advance principal/interest/tax components with varying monthly amounts.
 The latest plan retains real missing-row checks and ambiguous matches retain
 warnings. Billing progression does not assert payment and performs no writes.
 
+An older manual or legacy plan may have a different description from its PDF
+continuation. Data Health accepts that match when all preserved installments
+were paid through current-period settlements and the new plan's observed
+installment belongs to a bank-matched statement. The pair must uniquely agree
+on owner, card, installment count, monthly amount, observed installment number
+and schedule. The plan totals may differ by one kuruş. An old first-of-month
+date can match a bank date up to ten days earlier. The new plan still has its
+own missing-installment checks.
+
 Equal rows from one statement PDF may be legitimate separate bank movements.
 Distinct occurrence indices under the same artifact/signature hashes, together
 with the same validated own-user/card statement archive and matching transaction
 fields, suppress only the duplicate candidate signal. Rows and totals remain
 unchanged. Different files/sources/archives, reused occurrence IDs and legacy
 unknown provenance retain review findings even if their statements are paid.
+
+A settled SMS single-charge expense and its unique verified statement row can
+describe the same movement. The check requires the same owner, card, date and
+kuruş amount, a newer PDF record and a matching merchant name or its shorter
+form on the statement. Data Health uses this evidence to resolve the duplicate
+candidate, and calendar category spending counts the PDF row once. Both
+records remain available as payment and statement evidence.
 
 Data health may flag:
 

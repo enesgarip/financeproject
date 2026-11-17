@@ -144,6 +144,9 @@ sayılır; taksitli parent'ın alışveriş toplamı tekrar eklenmez. Scheduled
 taksitler, provizyonlar ve iptal parent'a bağlı çocuklar dışarıdadır.
 Takvim ayı görünümü kesinleşmiş alışverişin **toplam tutarını işlem ayında**
 sayar; çocuk taksitleri tekrar eklemez, banka hesabı harcamaları da seçilebilir.
+Dönem içinde ödenmiş bir SMS kaydı aynı kart, gün, kuruş tutarı ve satıcıyla
+doğrulanmış ekstrede tek bir karşılık buluyorsa PDF kaydı bir kez sayılır.
+Belirsiz eşleşmeler geçmişteki satırlar üzerinden gösterilmeye devam eder.
 Bu nedenle takvim ayı ile ekstre kategorileri ve borç kovaları aynı sayı olmak
 zorunda değildir. Aylık rapor/bütçe/diğer kategori içgörülerinin mevcut takvim
 ayı sözleşmesi değişmez.
