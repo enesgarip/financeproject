@@ -37,6 +37,8 @@ kapsar. Döküm erişimleri açık, plan/tahmin lazy'dir. Tek kalan ekstre doğr
 mevcut ödeme formunu açar; çoklu dönem dökümden seçilir. Hesap işlemleri
 giriş/çıkış/transfer olarak aynı servise gider. Sözleşme:
 `docs/CARDS_ARCHITECTURE.md`; kabul: `tests/e2e/accounts-flow.spec.ts`.
+PR #307 CI toplam JS gzip ölçümü 1060,3 kB; ölçüm + %10 ile toplam tavan
+`scripts/check-bundle-size.mjs` içinde 1167 kB. Entry/vendor kapıları ayrıdır.
 
 17 Kasım PDF kesim kapsamı: `supabase/migrations/20261117114000_statement_import_cutoff_scope.sql`
 sonraki güne ait tek çekim ve taksiti geçici otomatik arşivden ayırır. Bankanın

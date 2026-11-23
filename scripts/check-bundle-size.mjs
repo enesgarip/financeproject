@@ -40,8 +40,10 @@ const BUDGETS = {
 // .mjs (pdf worker ~365 kB gzip) artık toplama DAHİL — eski 660'lık bütçe
 // worker'ı hiç saymıyordu, "TOPLAM" gerçekte 930 kB'tı ve regresyon görünmezdi.
 // 2026-11-08: bağlı akışların lazy gelir/bakım formlarıyla yerel ölçüm 1038,7 kB.
-// Yeni işlevler için 1060 kB tavan; entry/vendor sınırları değişmedi.
-const TOTAL_BUDGET_KB = 1060
+// 2026-11-23: hesap/kart limit özeti ve görev akışı sonrası CI ölçümü 1060,3 kB
+// (PR #307, run 45153947216). Kanonik ölçüm + %10 kuralıyla toplam tavan 1167 kB.
+// Entry/vendor sınırları yukarıdaki ayrı bütçelerle korunur.
+const TOTAL_BUDGET_KB = 1167
 
 const KB = 1024
 

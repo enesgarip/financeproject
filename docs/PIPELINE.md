@@ -35,6 +35,11 @@ bundle SHA-256 taşır. İnceleme: `docs/CLIENT_ERROR_DIAGNOSTICS.md`.
 
 ## Goal
 
+23 Kasım paket ölçümü: hesap/kart limit özeti ve görev akışı PR #307 CI
+koşusunda toplam JS gzip 1060,3 kB oldu (run `45153947216`). Gerçek özellik
+artışında kanonik ölçüm + %10 kuralıyla toplam tavan 1167 kB'ye güncellendi.
+`scripts/check-bundle-size.mjs` entry/vendor sınırlarını ayrıca denetler.
+
 Gerçek akış: **`main` güncellemesi = üretim deploy.** `main` korumalıdır; değişiklik
 PR üzerinden merge edilir ve production release bu merge push'uyla başlar.
 

@@ -13,6 +13,9 @@
   düğmelerle mevcut forma gider, işlem sonrası bakiye önizlenir.
 - Kaynak: [Kart mimarisi](CARDS_ARCHITECTURE.md),
   `tests/e2e/accounts-flow.spec.ts`. Şema, RPC ve ledger kuralları korunur.
+- [x] PR #307 CI ölçümünde toplam JS gzip 1060,3 kB ile eski 1060 kB
+  tavanını aştı. Gerçek özellik artışı için kanonik ölçüm + %10 kuralıyla
+  toplam bütçe 1167 kB oldu; entry/vendor bütçeleri ayrı korunur.
 
 ## 2026-11-17 — PDF aktarımında banka kesiminden sonraki hareketleri koru
 
