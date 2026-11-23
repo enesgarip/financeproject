@@ -1,5 +1,40 @@
 # Cards Architecture Note
 
+## 23 Kasım 2026 — Limit ve görev akışı
+
+Kart listesinde ödenecek ekstre ana tutardır. Altındaki görünür limit özeti
+`buildCreditLimitGroups` verisinden toplam limit, kullanılan limit, kullanılabilir
+limit ve toplam kullanım oranı gösterir. Kullanılan limit `debt_amount` toplamıdır;
+ekstre/dönem/provizyon/gelecek taksit yeniden eklenmez. Ortak limit grup başına
+en yüksek limit olarak bir kez sayılır. Kullanılabilir limit grup kalanlarının
+toplamıdır; bir grubun aşımı diğerinin kalanından düşülmez. Oran kart yüzdelerinin
+ortalaması değildir; toplam kullanım/toplam limittir. Tanımsız limitte oran `—`,
+kısmi limit kapsamı açıklanır. Aşım grup bazında ayrıca görünür. Tutarlar, kullanım
+oranları ve çubuk gizlilik tercihini izler; değerler uygulama kayıtlarından türetilir.
+
+Özetin kendisi kart/ortak limit dökümünü açar; tekil kartlar da bu dökümdedir.
+Grup kartından detaya gidilir, dönüşte mevcut liste konumu korunur. Borç
+kırılımındaki dört döküm düğmesi artık kapalı bir katmanda değildir. Üç aylık
+tahmin ayrı `Plan ve tahmin · tüm kartlar` ayrıntısının ilk açılışında yüklenir.
+
+Kart detayında kimlikten sonra açık ekstre, vade ve ödeme eylemi; ardından toplam
+kart yükü ve limit gelir. Kısmi ödemeler düşüldükten sonra tek kalan açık ekstre
+mevcut ödeme formunu doğrudan açar. Birden çok kalan ekstrede mevcut dökümden
+dönem seçilir. Kalanı bitmiş açık arşivler seçime dahil edilmez. Ekstre/kısmi ödeme
+okuma hatası ödeme açmaz. `Plan ve tahmin`, `Kart ayarları` ve `Kayıt geçmişi`
+ayrı lazy bölümlerdir; alışveriş geçmişi ilgili dönem dökümündedir.
+
+Hesap/nakit listesinde banka/nakit kırılımı görünürdür. Detayda Para geldi,
+Para gitti ve Hesaplarım arasında aktar düğmeleri aynı para hareketi formunu
+doğru modda açar. İkinci hesap yoksa transfer düğmesi pasiftir. Form yalnız
+uygulamaya kayıt yaptığını anlatır; giriş/çıkış sonrası bakiye, transferde
+kaynak → hedef ve iki bakiye önizlenir. Mevcut servis, makbuz, RPC ve ledger
+kuralları korunur; yeni veri sorgusu veya migration yoktur.
+
+Kabul: `src/pages/CardsPage.summary.test.tsx`, `src/pages/CardsPage.list.test.tsx`,
+`src/components/finance/AllCardStatementProjectionPanel.test.tsx`, `tests/e2e/accounts-flow.spec.ts`.
+Tarayıcı testleri tüm dış istekleri sentetik yanıtlar; gerçek banka işlemi yapmaz.
+
 7 Kasım dövizli SMS: `components/finance/ForeignCardSmsPanel.tsx` liste
 başlığında kesin TL bekleyen döviz kayıtlarını gösterir; manuel harcama ve
 transfer görevinde yinelenmez. `app/useForeignCardSms.ts` Özet ile cache
@@ -41,7 +76,7 @@ menü adı dönem toplamıyla son 20 geçmiş hareketin farklı kapsamını aç�
 eski `panel=donem` bağlantısı korunur.
 
 
-Last reviewed: 2026-10-26
+Last reviewed: 2026-11-23
 
 Borç kırılımındaki dört toplamın açık durumu `panel` URL seçimine bağlıdır:
 safir zemin/üst çizgi, aşağı dönen ok ve “Döküm açık · Kapat” metni birlikte
@@ -52,9 +87,9 @@ Hareketi azalt tercihinde kaydırma anlıktır. İlk URL yüklemesi, kapatma, ma
 harcama açma ve veri yenilemesi bu kaydırmayı tetiklemez. Özet geri bildirimi ve
 navigasyon regresyonları `CardsPage.summary.test.tsx`, `CardsPage.navigation.test.tsx`.
 
-Kredi kartları özetindeki “Borç kırılımı ve dökümler” katmanında, toplam kart
-yükünün ardından “Önümüzdeki 3 ay · tüm kartlar” bulunur; ikinci bir açılır
-katman yoktur. `AllCardStatementProjectionPanel.tsx` borç kırılımının ilk açılışında ortak finance
+Kredi kartları özetindeki “Plan ve tahmin · tüm kartlar” ayrıntısında
+“Önümüzdeki 3 ay · tüm kartlar” bulunur; içinde ikinci bir açılır
+katman yoktur. `AllCardStatementProjectionPanel.tsx` tahminin ilk açılışında ortak finance
 snapshot'ını okur; kart, taksit, harcama ve talimat aynı veri kümesindendir.
 `statementProjection.ts` / `projectAllCardStatements` mevcut kart tahminlerini
 sıra numarasıyla değil gerçek kesim ayıyla birleştirir; en yakın kesimin
@@ -185,7 +220,7 @@ lazy boundary.
   dökümü isimli grupların limit/borç/kalanını ve bağlı kart ayrıntısı bağlantılarını gösterir.
   Grup ataması kart düzenleme formundaki `limit_group_name` alanından yapılır.
   Eski `section=ozet/islemler/ekstreler` bağlantıları çalışır; ayrı menü oluşturmaz.
-- Kart özetinde ödenecek ekstre öndedir; dönem içi ve gelecek taksit kırılımı açılır ayrıntıdadır.
+- Kart özetinde ödenecek ekstre öndedir; limit özeti ve dört borç dökümü görünürdür.
   Provizyon ayrı kovadır; ödenecek ekstre kısmi ödemeler düşülmüş kalandır.
   İlgili toplama dokunmak aynı yüzeyde dökümü açar. Kategori düzenleme yalnız
   dönem hareketleri dökümünde kapalı bir yardımcı bölümdür; ana özet ve kart
@@ -200,14 +235,15 @@ lazy boundary.
 - Hesap özeti banka + nakit cüzdanı toplamını, ayrı banka/nakit tutarlarını ve
   tüm kart yükü sonrası farkı gösterir. Döviz nakit varlıkları bu hesap listesine
   dahil değildir; dashboard likit toplamı daha geniş kaynaktır.
-- Liste satırları hafiftir: kartta dönem içi tutar, hesapta bakiye. Favoriler
+- Liste satırları hafiftir: kartta açık ekstre kalanı/vade, açık ekstre yoksa dönem içi tutar; hesapta bakiye. Favoriler
   mevcut kararlı sırayla önce gelir. Kalp, düzenleme/silme, içe aktarma ve
   finansal eylemler ilgili kaydın ayrıntısındadır.
 - `?section=kartlar&card=<id>` veya `?section=hesaplar&card=<id>` ayrı ayrıntı
   görünümüdür. Yalnız seçilen kayıt çizilir; tarayıcı geri/Listeye dön önceki
   bölümü, liste aramasını ve kaydırma konumunu korur. Doğrudan açılan ayrıntı
   bağlantısı aynı bölümün listesine döner. Bilinmeyen id hata/geri yolu gösterir.
-- Kart ayrıntısında borç/limit ve dönem bilgisi açık, ek teknik bilgiler kapalıdır.
+- Kart ayrıntısında açık ekstre/vade/ödeme önce, toplam yük ve limit sonra gelir;
+  dönem kırılımı, plan/tahmin, ayarlar ve kayıt geçmişi ayrı kapalı bölümlerdir.
   Dönem hareketleri, gelecek taksitler, ekstre ve provizyon dökümleri seçilen
   kartla sınırlıdır. Hesap ayrıntısında kimlik, IBAN, hareketler, para giriş/çıkış
   ve transfer mevcut hesap/ledger akışını kullanır.

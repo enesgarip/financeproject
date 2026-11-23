@@ -1046,7 +1046,7 @@ for (const width of [320, 390, 1280]) {
       card_ledger: Array.from({ length: 1005 }, (_, i) => ({ ...base, id: String(i).padStart(6, '0'), card_id: 'credit-1', kind: 'debit', amount_kurus: 100, occurred_at: now, source_table: null, source_id: null, statement_delta_kurus: null, current_delta_kurus: null, provision_delta_kurus: null, note: `Deneme açıklaması ${i}: Önceki hareketlerin bütün açıklamaları dar ekranda da kesilmeden okunabilmeli. Ödeme 100 TL.` })),
     })
     await page.goto('/kartlar?section=kartlar&card=credit-1')
-    await page.locator('summary').filter({ hasText: 'Kart ayarları ve kayıt geçmişi' }).click()
+    await page.locator('summary').filter({ hasText: /^Kayıt geçmişi$/ }).click()
     const ledger = page.getByRole('region', { name: 'Kart borç hareketleri', exact: true })
     await expect(ledger.getByText('1005 hareket', { exact: true })).toBeVisible()
     await expect(ledger.getByRole('button', { name: /ledger.a göre düzelt/i })).toHaveCount(0)
