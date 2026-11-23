@@ -1,5 +1,15 @@
 # Card Debt Transitions
 
+23 Kasım hesap/kart akışı yalnız sunum ve erişimi değiştirir. Kullanılan
+limit `debt_amount` toplamıdır; provizyon/gelecek taksit yeniden eklenmez.
+Ortak limit bir kez, kullanılabilir tutar her grubun sıfıra kırpılmış
+kalanından toplanır. Tek kalan açık ekstre doğrudan mevcut
+`openStatementPayment` yolunu kullanır; kalan ve asgari tabanı kısmi ödemeler
+düşülmüş tutardır. Tamamı ödenmiş açık arşivler seçenek sayılmaz; çoklu kalan
+ekstrede dönem seçilir. Hesap giriş/çıkış/transfer düğmeleri aynı servis ve
+makbuzlu RPC'leri açar. Şema, ödeme sırası, ledger ve trigger değişmez.
+Sözleşme: `docs/CARDS_ARCHITECTURE.md`.
+
 15 Kasım kişisel ödeme/tahsilat: hesap etkisi kapalıyken hesap kimliği null
 olabilir; hesap alanı gizlenir. Kart/ekstre akışı değişmez. Hesap etkisi
 açıkken kaynak hesap doğrulaması ve mevcut ledger hareketleri korunur.

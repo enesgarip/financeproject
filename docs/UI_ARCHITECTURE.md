@@ -1,5 +1,17 @@
 # UI Architecture
 
+23 Kasım hesap/kart akışı: açık ekstre ana tutardır; görünür limit özeti
+toplam/kullanılan/kullanılabilir limit ve oranı birlikte gösterir. Özete dokunmak
+tekil kartları ve ortak grupları açar; grup aşımı ayrıca yazılır. Dar ekranda
+iki, geniş ekranda dört sütun kullanılır. Gizlilik oranları ve kullanım çubuğunu
+da gizler. Dört borç dökümü doğrudan erişilir; tahmin ayrı kapalı bölümdedir.
+Kart detayında ekstre/vade/ödeme, toplam yük ve limitten önce gelir. Tek kalan
+ekstre doğrudan ödeme formuna, çoklu ekstre dönem seçimine gider. Plan/tahmin,
+ayarlar ve kayıt geçmişi ayrı lazy bölümlerdir. Banka/nakit kırılımı görünür;
+hesapta giriş, çıkış ve transfer doğrudan doğru moddaki formu açar. Formlar
+kayıt işlemini adlandırır; transfer yönü ve işlem sonrası bakiyeler görünürdür.
+Kaynak: `docs/CARDS_ARCHITECTURE.md`; kabul: `tests/e2e/accounts-flow.spec.ts`.
+
 **Kontrol › Kullanım** sayfası 7/30 günlük dönem karşılaştırmasını, işlem
 akışlarını, başlangıç noktalarını ve SMS otomasyonu özetini gösterir.
 Sayfa, sekme ve keşif sayaçları aynı ekrandadır.

@@ -1,4 +1,4 @@
-import { ReceiptText } from 'lucide-react'
+import { ArrowDownRight, ArrowUpRight, ArrowRightLeft } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import type { AccountKind, Card, InsertFor, UpdateFor } from '../types/database'
 import { cardProvisionAmount, cardSplitTotal } from '../utils/financeSummary'
@@ -169,14 +169,17 @@ export function renderCardRowActions(row: Card, helpers: CardRowsHelper, openTra
   if (row.card_type !== 'banka_karti') return null
 
   return (
-    <Button
-      type="button"
-      size="lg"
-      onClick={() => openTransaction(row, helpers.reload, helpers.rows)}
-      className="w-full min-[440px]:w-auto"
-    >
-      <ReceiptText />
-      Para hareketi
-    </Button>
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="group" aria-label="Hesap işlemleri">
+      {([
+        ['in', 'Para geldi', ArrowDownRight],
+        ['out', 'Para gitti', ArrowUpRight],
+        ['transfer', 'Hesaplarım arasında aktar', ArrowRightLeft],
+      ] as const).map(([type, label, Icon]) => <Button key={type} type="button" variant="outline" size="lg"
+        disabled={type === 'transfer' && !helpers.rows.some((card) => card.card_type === 'banka_karti' && card.id !== row.id)}
+        onClick={() => openTransaction(row, helpers.reload, helpers.rows, type)}
+        className={`min-h-12 h-auto min-w-0 whitespace-normal px-3 py-2 text-xs ${type === 'transfer' ? 'col-span-2 sm:col-span-1' : ''}`}>
+        <Icon aria-hidden="true" /><span>{label}</span>
+      </Button>)}
+    </div>
   )
 }

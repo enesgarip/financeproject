@@ -13,7 +13,7 @@ import { fetchAllCardAliases } from '../data/repositories/cardAliasesRepo'
 import { fetchExpensePaceRows } from '../data/repositories/cardsRepo'
 import { fetchAccountLedgerEvents } from '../data/repositories/financePanelsRepo'
 import type { AccountReconciliation, Card, CardInstallment, CardStatementArchive, CardStatementPayment } from '../types/database'
-import { buildStatementPaidMap } from '../utils/cardStatementPayments'
+import { buildStatementPaidMap, openStatementsWithRemaining } from '../utils/cardStatementPayments'
 import type { CardPanel } from './CardsPage.hooks'
 import { addDays, dateInputValue, daysUntil, startOfDay } from '../utils/date'
 import { freshnessConfidence } from '../utils/dataConfidence'
@@ -24,7 +24,7 @@ import { estimateStatementTotal } from '../utils/statementEstimate'
 import { buildStatementPace } from '../utils/statementPace'
 import { quickCardConsistencyScore } from '../utils/cardConsistency'
 import { buildAccountLedgerBalanceRows } from '../utils/accountLedger'
-import { sumTL, toTL } from '../utils/money'
+import { diffTL, greaterThanTL, sumTL, toTL } from '../utils/money'
 import {
   formatIban,
   formatMonthlyDay,
@@ -155,6 +155,7 @@ export function CreditAccountListCard({
   balancesHidden = false,
   formatAmount = formatCurrency,
   onPayDebt,
+  onPayStatement,
   onToggleFavorite,
   onChanged,
   onOpenPanel,
@@ -174,6 +175,7 @@ export function CreditAccountListCard({
   balancesHidden?: boolean
   formatAmount?: (value: number | null | undefined) => string
   onPayDebt: (card: Card) => void
+  onPayStatement?: (statement: CardStatementArchive, card: Card) => void
   onToggleFavorite: (card: Card) => void
   onChanged?: () => void | Promise<void>
   onOpenPanel?: (panel: CardPanel) => void
@@ -283,7 +285,7 @@ export function CreditAccountListCard({
   }
 
   const stats = limitGroupStats(row, rows)
-  const usageRate = Math.round(stats.usageRate)
+  const usageRate = stats.sharedLimit > 0 ? (stats.totalDebt / stats.sharedLimit * 100).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) : null
   const lastReconciledAt = reconciliations
     .filter((item) => item.card_id === row.id)
     .map((item) => item.reconciled_at)
@@ -294,15 +296,15 @@ export function CreditAccountListCard({
     STALE_AFTER_DAYS,
     'Bu kartın borcu',
   )
-  const dueDate = getCreditCardDueDate(row, statements)
   const status = getCreditCardStatus(row, stats.usageRate, statements)
   const paidMap = buildStatementPaidMap(statementPayments)
+  const dueDate = getCreditCardDueDate(row, statements, new Date(), paidMap)
   const displayedOpenStatementAmount = visibleOpenStatementAmount(row, statements, paidMap)
   const scheduledInstallmentTotal = sumTL(installments
     .filter((installment) => installment.card_id === row.id && installment.status === 'scheduled')
     .map((installment) => installment.amount))
   const payableDebt = cardPayableDebt(row)
-  const openStatements = statements.filter((statement) => statement.card_id === row.id && statement.status === 'open')
+  const openStatements = openStatementsWithRemaining(statements.filter((statement) => statement.card_id === row.id), paidMap)
   const cardInstallments = installments
     .filter((installment) => installment.card_id === row.id && installment.status !== 'paid')
     .sort((left, right) => left.due_month.localeCompare(right.due_month))
@@ -337,34 +339,6 @@ export function CreditAccountListCard({
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <p className="text-[11px] font-bold uppercase text-ink-muted">Toplam kart yükü</p>
-              {/* Rakam kesin görünür ama uzun süre doğrulanmadıysa güveni düşer. */}
-              {debtConfidence.level !== 'exact' ? (
-                <span
-                  title={debtConfidence.reason}
-                  className="max-w-full break-words rounded-md bg-secondary px-2 py-1 text-xs font-medium text-ink-muted"
-                >
-                  {lastReconciledAt ? `Son karşılaştırma: ${debtConfidence.label}` : 'Bankayla karşılaştırılmadı'}
-                </span>
-              ) : null}
-            </div>
-            <p className="serit-num mt-1 break-words text-[clamp(1.45rem,6vw,2.15rem)] font-semibold leading-tight">{formatAmount(row.debt_amount)}</p>
-          </div>
-          <span className="rounded-lg bg-secondary px-2.5 py-1 text-xs font-semibold text-ink-muted">%{usageRate}</span>
-        </div>
-
-        <div className="mt-4">
-          <div className="h-1.5 overflow-hidden rounded-full bg-track">
-            <div className="h-full rounded-full bg-primary transition-[width] duration-180" style={{ width: `${stats.usageRate}%` }} />
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-3 text-[11px] font-semibold text-ink-muted">
-            <span>Limit {formatAmount(stats.sharedLimit)}</span>
-            <span>Kalan {formatAmount(stats.availableLimit)}</span>
-          </div>
-        </div>
       </div>
 
       <div className="p-4 pt-3">
@@ -375,14 +349,17 @@ export function CreditAccountListCard({
         </span>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 text-sm">
-        <span className="text-ink-muted">Açık ekstre</span>
-        <strong className="serit-num font-semibold">{statementsKnown ? formatAmount(displayedOpenStatementAmount) : 'Doğrulanamadı'}</strong>
-        {displayedOpenStatementAmount > 0 ? <p className="w-full text-[13px] text-ink-muted">Son ödeme {formatShortDate(dueDate)}</p> : null}
+      <div className="mt-3 text-sm">
+        <p className="serit-eyebrow">Açık ekstre</p>
+        <p className="serit-num mt-2 break-words text-[clamp(1.5rem,7vw,2.75rem)] font-semibold leading-tight">{statementsKnown ? formatAmount(displayedOpenStatementAmount) : 'Doğrulanamadı'}</p>
+        {statementsKnown && displayedOpenStatementAmount > 0 ? <p className="mt-2 text-[13px] text-ink-muted">Son ödeme {formatShortDate(dueDate)}</p> : null}
       </div>
       <div className="mt-3 grid gap-2">
         {!statementsKnown ? <p className="text-xs text-warning">Ödeme için ekstre dökümünün yüklenmesi gerekiyor.</p> : openStatements.length > 0 ? (
-          <button type="button" onClick={() => onOpenPanel?.('ekstreler')} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+          <button type="button" onClick={() => {
+            if (openStatements.length === 1 && onPayStatement) onPayStatement(openStatements[0], row)
+            else onOpenPanel?.('ekstreler')
+          }} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-3 text-xs font-semibold text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
             <Banknote size={18} strokeWidth={1.8} aria-hidden="true" />Ekstre ödemesi kaydet
           </button>
         ) : (
@@ -405,6 +382,22 @@ export function CreditAccountListCard({
         </Button>
         )}
       </div>
+      <section className="mt-4 border-t border-line pt-3" aria-label="Kart yükü ve limit">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
+          <span>Toplam kart yükü</span>
+          <strong className="serit-num break-words text-base text-ink">{formatAmount(row.debt_amount)}</strong>
+        </div>
+        <p className="mt-1 text-xs leading-relaxed text-ink-muted">Ekstre, dönem içi, provizyon ve gelecek taksitler dahil. Tamamı bugün ödenebilir tutar değildir.</p>
+        {debtConfidence.level !== 'exact' ? <p className="mt-2 text-xs text-ink-muted" title={debtConfidence.reason}>{lastReconciledAt ? `Son karşılaştırma: ${debtConfidence.label}` : 'Bankayla karşılaştırılmadı'}</p> : null}
+        <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+          <div className="min-w-0"><dt className="text-xs text-ink-muted">{stats.isShared ? 'Ortak limit' : 'Kart limiti'}</dt><dd className="serit-num mt-1 break-words font-semibold">{formatAmount(stats.sharedLimit)}</dd></div>
+          <div className="min-w-0"><dt className="text-xs text-ink-muted">Kullanılabilir limit</dt><dd className="serit-num mt-1 break-words font-semibold">{formatAmount(stats.availableLimit)}</dd></div>
+        </dl>
+        <p className="mt-2 text-xs text-ink-muted">{stats.isShared ? 'Grubun kullanım oranı' : 'Kullanım oranı'}: {stats.sharedLimit > 0 ? balancesHidden ? '••••' : `%${usageRate}` : '—'}</p>
+        {stats.isShared ? <p className="mt-1 text-xs text-ink-muted">Limit ve kalan tutar bu kartla aynı gruptaki tüm kartlar için ortaktır.</p> : null}
+        {stats.sharedLimit > 0 && greaterThanTL(stats.totalDebt, stats.sharedLimit) ? <p className="mt-2 text-xs text-warning">Limit aşımı: {formatAmount(diffTL(stats.totalDebt, stats.sharedLimit))}</p> : null}
+        {!balancesHidden && stats.sharedLimit > 0 ? <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-track" aria-hidden="true"><div className="h-full bg-primary" style={{ width: `${stats.usageRate}%` }} /></div> : null}
+      </section>
       <details className="group mt-3 border-t border-line pt-1">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-sm font-semibold text-ink-muted marker:hidden hover:text-ink [&::-webkit-details-marker]:hidden">
           Dönem, limit ve taksit ayrıntıları
@@ -434,8 +427,11 @@ export function CreditAccountListCard({
       ) : null}
       </details>
 
-      {detailsOpen ? (
-        <DeferredDetails className="mt-4 rounded-lg border border-line-strong bg-surface-muted/70 p-3 ring-1 ring-line-strong" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold" summary="Kart ayarları ve kayıt geçmişi">
+      {detailsOpen ? <>
+        <DeferredDetails className="mt-4 border-t border-line" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted" summary="Plan ve tahmin">
+          <CardStatementProjectionPanel card={row} installments={cardInstallments} formatAmount={formatAmount} />
+        </DeferredDetails>
+        <DeferredDetails className="border-t border-line" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted" summary="Kart ayarları">
           <div className="mt-4 grid grid-cols-2 gap-2 min-[620px]:grid-cols-3">
             <MiniStat label="Ekstre günü" value={formatMonthlyDay(row.statement_day)} />
             <MiniStat label="Limit tipi" value={stats.isShared ? 'Ortak limit' : 'Tekil limit'} tone={stats.isShared ? 'info' : 'neutral'} />
@@ -454,11 +450,13 @@ export function CreditAccountListCard({
               </div>
             </div>
           </div>
-          <CardStatementProjectionPanel card={row} installments={cardInstallments} formatAmount={formatAmount} />
           <CardAliasPanel card={row} />
+        </DeferredDetails>
+        <DeferredDetails className="border-t border-line" summaryClassName="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink-muted" summary="Kayıt geçmişi">
+          <p className="mb-3 text-xs text-ink-muted">Borcu değiştiren kayıtlar. Alışverişler için aşağıdaki son hareketler ve dönem özeti dökümünü açabilirsin.</p>
           <CardLedgerPanel card={row} onChanged={onChanged} formatAmount={formatAmount} maskText={(text) => maskAmountsInText(text, balancesHidden)} />
         </DeferredDetails>
-      ) : null}
+      </> : null}
       </div>
     </article>
   )

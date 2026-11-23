@@ -309,6 +309,14 @@ rejected and nothing changes.
 
 ## Shared Credit Limits
 
+- Hesaplar ve kartlar toplamında kullanılan limit, gruplardaki `debt_amount`
+  toplamıdır; provizyon ve gelecek taksit zaten bu yükte yer alır, yeniden eklenmez.
+- Kullanılabilir toplam her grubun `max(0, limit − debt)` tutarlarının toplamıdır.
+  Bir grubun aşımı başka grubun kullanılabilir limitini azaltmaz; aşım ayrı gösterilir.
+- Toplam kullanım oranı kullanılan toplam / tekilleştirilmiş toplam limittir;
+  kart yüzdelerinin ortalaması değildir. Limit tanımsızsa oran verilmez, kısmi
+  limit kapsamı açıklanır. Bunlar uygulama kayıtlarından hesaplanan tutarlardır.
+
 - Cards may share a limit through `limit_group_name`.
 - Group limit is treated as the max `credit_limit` among cards in the same group, not the sum.
 - Group debt is the sum of grouped cards' `debt_amount`.

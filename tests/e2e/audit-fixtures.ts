@@ -42,7 +42,8 @@ export async function mockApp(page: Page, theme: string, overrides: typeof table
       if (['card_ledger', 'account_ledger', 'card_expenses', 'card_installments', 'card_statement_archives'].includes(name)) {
         const before = url.searchParams.get('id')?.replace(/^lt\./, '')
         const cardId = url.searchParams.get('card_id')?.replace(/^eq\./, '')
-        data = (rows[name] ?? []).filter(row => (!before || String(row.id) < before) && (!cardId || row.card_id === cardId))
+        const status = url.searchParams.get('status')?.match(/^eq\.(.+)$/)?.[1]
+        data = (rows[name] ?? []).filter(row => (!before || String(row.id) < before) && (!cardId || row.card_id === cardId) && (!status || row.status === status))
           .toSorted((a, b) => String(b.id).localeCompare(String(a.id))).slice(0, Number(url.searchParams.get('limit') ?? 1000))
       }
       return route.fulfill({ json: data })

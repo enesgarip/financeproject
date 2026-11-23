@@ -72,15 +72,16 @@ it('takvimi eksik kartı adlandırır; hesaplanamayan toplamı sıfır saymaz', 
   expect(screen.queryByText(/~0,00/)).toBeNull()
 })
 
-it('tahmini yalnız Borç kırılımı ve dökümler açıldığında kurar; aynı katmanın içinde gösterir', () => {
+it('tahmini yalnız Plan ve tahmin açıldığında kurar; döküm erişimleri açık kalır', () => {
   const cards = [{ ...snapshot().cards[0], debt_amount: 1234.56, statement_debt_amount: 0, provision_amount: 0 }] as Card[]
-  const { container } = render(<BalancePrivacyProvider><CardsSummary rows={cards} installments={[]} statements={[]} statementPayments={[]} installmentsLoading={false} installmentsError="" statementsLoading={false} statementError="" section="kartlar" panel={null} onOpenPanel={vi.fn()} /></BalancePrivacyProvider>)
+  render(<BalancePrivacyProvider><CardsSummary rows={cards} installments={[]} statements={[]} statementPayments={[]} installmentsLoading={false} installmentsError="" statementsLoading={false} statementError="" section="kartlar" panel={null} onOpenPanel={vi.fn()} /></BalancePrivacyProvider>)
   expect(mocks.query).not.toHaveBeenCalled()
   expect(screen.queryByRole('region', { name: 'Tüm kartların ekstre tahmini' })).toBeNull()
-  const details = screen.getByText('Borç kırılımı ve dökümler').closest('details')!
+  expect(screen.getByRole('navigation', { name: 'Kart dökümleri' })).toBeTruthy()
+  const details = screen.getByText('Plan ve tahmin · tüm kartlar').closest('details')!
   details.open = true
   fireEvent(details, new Event('toggle'))
   expect(details.contains(screen.getByRole('region', { name: 'Tüm kartların ekstre tahmini' }))).toBe(true)
   expect(screen.getByRole('heading', { name: 'Önümüzdeki 3 ay · tüm kartlar' })).toBeTruthy()
-  expect(container.querySelectorAll('details')).toHaveLength(1)
+  expect(details.querySelectorAll('details')).toHaveLength(0)
 })

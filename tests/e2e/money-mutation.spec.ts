@@ -71,7 +71,7 @@ test.describe('money mutation (live backend)', () => {
     await expect(card).toContainText('500,00 ₺')
 
     // Kayıt geçmişinde aynı artışın ledger olayı da görünmeli.
-    await card.locator('summary').filter({ hasText: 'Kart ayarları ve kayıt geçmişi' }).click()
+    await card.locator('summary').filter({ hasText: /^Kayıt geçmişi$/ }).click()
     await expect(card.getByText('Borç hareketleri')).toBeVisible({ timeout: 10_000 })
     await expect(card.getByText('Borç arttı').first()).toBeVisible({ timeout: 10_000 })
   })

@@ -8,6 +8,7 @@ katmana geç. Tarihli kayıtlar bir kararın geçmişini araştırırken kullan�
 
 | İş | Kural / kapsam | Kod ve ilk test |
 | --- | --- | --- |
+| Hesap/kart akışı, toplam limit ve doğrudan ekstre ödemesi | [Kart mimarisi](CARDS_ARCHITECTURE.md), [UI mimarisi](UI_ARCHITECTURE.md) | `src/pages/CardsPage.summary.tsx`, `src/pages/CardsPage.list.tsx`, `src/pages/CardsPage.crud.tsx`, `src/pages/CardsPage.movementModal.tsx`, `src/pages/CardsPage.summary.test.tsx`, `src/pages/CardsPage.list.test.tsx`, `tests/e2e/accounts-flow.spec.ts` |
 | Kart borcu, ekstre, provizyon | [Kart borcu geçişleri](CARD_DEBT_TRANSITIONS.md) | `src/utils/financeSummary.ts`, `src/utils/financeSummary.test.ts`, ilgili `supabase/tests/*.sql` |
 | Özet, rezerv, harcanabilir tutar | [Özet mimarisi](DASHBOARD_ARCHITECTURE.md) | `src/utils/safeToSpend.ts`, `src/utils/safeToSpend.test.ts`, `src/hooks/useSafeToSpend.ts` |
 | AI özeti kopyalama ve PDF | [Finansal raporlama](FINANCE_RULES.md#reporting-and-projection-windows) | `src/utils/financialReport.ts`, `src/utils/financialReport.test.ts`, `tests/e2e/simplification.spec.ts` |
@@ -28,6 +29,16 @@ Kapanışta `npm run verify` çalıştır. Migration/trigger değişikliğinde y
 Postgres doğrulamasını ekle. Ayrıntılar [doğrulama tablosunda](#verification-ladder).
 
 ## Tarihli değişiklik kayıtları
+
+23 Kasım hesap/kart akışı: limit özeti mevcut `buildCreditLimitGroups`
+gruplarını toplar; ortak limit bir kez, kullanılabilir limit grup bazında
+sayılır. Aşım ayrı, tanımsız limitte oran belirsizdir; gizlilik oran/çubuğu da
+kapsar. Döküm erişimleri açık, plan/tahmin lazy'dir. Tek kalan ekstre doğrudan
+mevcut ödeme formunu açar; çoklu dönem dökümden seçilir. Hesap işlemleri
+giriş/çıkış/transfer olarak aynı servise gider. Sözleşme:
+`docs/CARDS_ARCHITECTURE.md`; kabul: `tests/e2e/accounts-flow.spec.ts`.
+PR #307 CI toplam JS gzip ölçümü 1060,3 kB; ölçüm + %10 ile toplam tavan
+`scripts/check-bundle-size.mjs` içinde 1167 kB. Entry/vendor kapıları ayrıdır.
 
 17 Kasım PDF kesim kapsamı: `supabase/migrations/20261117114000_statement_import_cutoff_scope.sql`
 sonraki güne ait tek çekim ve taksiti geçici otomatik arşivden ayırır. Bankanın

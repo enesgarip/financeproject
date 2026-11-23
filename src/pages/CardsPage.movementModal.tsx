@@ -43,12 +43,13 @@ export function MovementModal({
   const transferLabel = transferActionLabel(card, target)
 
   return (
-    <SimpleModal busy={saving} title={isTransfer ? transferLabel : 'Para hareketi'} open={Boolean(card)} onClose={onClose}>
+    <SimpleModal busy={saving} title={isTransfer ? `${transferLabel} kaydı` : type === 'in' ? 'Para girişi kaydet' : 'Para çıkışı kaydet'} open={Boolean(card)} onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="rounded-xl border border-line-strong bg-page p-3 text-sm text-ink-muted">
           <p className="font-semibold text-ink">{card?.card_name}</p>
           <p>Mevcut bakiye: {formatAmount(card?.current_balance ?? 0)}</p>
         </div>
+        <p className="text-xs text-ink-muted">Bankada yaptığın işlemi buraya kaydet; hesap bakiyeleri uygulamada güncellenir.</p>
         <label className="block text-sm font-semibold text-ink">
           İşlem tipi
           <Select
@@ -59,7 +60,7 @@ export function MovementModal({
             <option value="in">Para geldi</option>
             <option value="out">Para gitti</option>
             <option value="transfer" disabled={targetAccounts.length === 0}>
-              {targetAccounts.length === 0 ? 'Para aktar (ikinci kaynak gerekli)' : 'Para aktar'}
+              {targetAccounts.length === 0 ? 'Para aktar (ikinci kaynak gerekli)' : 'Hesaplarım arasında aktar'}
             </option>
           </Select>
         </label>
@@ -83,22 +84,25 @@ export function MovementModal({
               </Select>
             </label>
             {target ? (
-              <div className="grid grid-cols-2 gap-2 rounded-xl bg-page px-3 py-2 text-xs text-ink-muted">
+              <div className="rounded-xl bg-page px-3 py-3 text-xs text-ink-muted">
+                <p className="mb-3 break-words font-semibold text-ink">{card?.card_name} → {target.card_name}</p>
+                <div className="grid grid-cols-2 gap-3">
                 <span>
-                  Kaynak sonrası: {formatAmount(diffTL(card?.current_balance, amountValue))}
+                  Kaynak sonrası: <span className="serit-num block break-words">{formatAmount(diffTL(card?.current_balance, amountValue))}</span>
                 </span>
-                <span>Hedef sonrası: {formatAmount(sumTL([target.current_balance, amountValue]))}</span>
+                <span>Hedef sonrası: <span className="serit-num block break-words">{formatAmount(sumTL([target.current_balance, amountValue]))}</span></span>
+                </div>
               </div>
             ) : null}
           </>
-        ) : null}
+        ) : <p className="rounded-xl bg-page px-3 py-3 text-xs text-ink-muted">İşlem sonrası bakiye: <span className="serit-num font-semibold">{formatAmount(type === 'in' ? sumTL([card?.current_balance, amountValue]) : diffTL(card?.current_balance, amountValue))}</span></p>}
         {error ? <p className="rounded-xl border border-destructive/20 bg-destructive/8 p-3 text-sm font-medium text-destructive">{error}</p> : null}
         <Button
           type="submit"
           disabled={saving}
           className="h-12 w-full"
         >
-          {saving ? 'İşleniyor...' : isTransfer ? transferLabel : 'Bakiyeyi güncelle'}
+          {saving ? 'Kaydediliyor...' : isTransfer ? 'Aktarımı kaydet' : type === 'in' ? 'Para girişini kaydet' : 'Para çıkışını kaydet'}
         </Button>
       </form>
     </SimpleModal>
